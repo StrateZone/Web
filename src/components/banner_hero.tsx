@@ -3,9 +3,9 @@
 import { IconButton, Button, Typography } from "@material-tailwind/react";
 import { PlayIcon } from "@heroicons/react/24/solid";
 
-function Hero() {
+export default function BannerHero() {
   return (
-    <div className="relative min-h-screen w-full bg-[url('/image/event.avif')] bg-cover bg-no-repeat">
+    <div className="relative min-h-screen w-full bg-[url('https://png.pngtree.com/background/20230611/original/pngtree-rain-storm-and-a-chess-board-picture-image_3129264.jpg')] bg-cover bg-no-repeat">
       <div className="absolute inset-0 h-full w-full bg-gray-900/60" />
       <div className="grid min-h-screen px-8">
         <div className="container relative z-10 my-auto mx-auto grid place-items-center text-center">
@@ -34,5 +34,3 @@ function Hero() {
     </div>
   );
 }
-
-export default Hero;

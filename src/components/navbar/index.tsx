@@ -16,7 +16,7 @@ import {
   BuildingStorefrontIcon,
 } from "@heroicons/react/24/solid";
 import { FaChessBoard } from "react-icons/fa";
-import { SiSololearn } from "react-icons/si";
+import { FaBookOpen } from "react-icons/fa";
 
 interface NavItemProps {
   children: React.ReactNode;
@@ -29,7 +29,6 @@ function NavItem({ children, href }: NavItemProps) {
       <Typography
         as="a"
         href={href || "#"}
-        target={href ? "_blank" : "_self"}
         variant="paragraph"
         className="flex items-center gap-2 font-medium"
       >
@@ -43,15 +42,16 @@ const NAV_MENU = [
   {
     name: "Home",
     icon: HomeIcon,
+    href: "/",
   },
   {
     name: "Chess Appointment",
     icon: FaChessBoard,
+    href: "/chess_appointment",
   },
   {
     name: "Courses",
-    icon: SiSololearn,
-    href: "https://www.material-tailwind.com/docs/react/installation",
+    icon: FaBookOpen,
   },
   {
     name: "Store",
@@ -150,9 +150,9 @@ export function Navbar() {
           </ul>
           <div className="mt-6 flex items-center gap-4">
             <Button variant="text">Log in</Button>
-            <a href="https://www.materila-tailwind.com/blocks" target="_blank">
-              <Button color="gray">blocks</Button>
-            </a>
+            <Button color={isScrolling ? "gray" : "white"} variant="text">
+              Register
+            </Button>
           </div>
         </div>
       </Collapse>

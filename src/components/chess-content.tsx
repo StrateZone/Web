@@ -40,7 +40,7 @@ export function ChessContent() {
         ))}
         <div className="md:col-span-2">
           <AboutCard
-            title="Chess!"
+            title="Chess"
             subTitle="Strategy & Skills"
             description="A timeless classic, Chess challenges players to outthink their opponents with strategy and foresight. Perfect for players of all skill levels."
             imageUrl="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Chess_pieces_close_up.jpg/640px-Chess_pieces_close_up.jpg"
