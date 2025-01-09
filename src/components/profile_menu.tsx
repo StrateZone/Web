@@ -16,12 +16,14 @@ import {
   LifebuoyIcon,
   PowerIcon,
 } from "@heroicons/react/24/solid";
-import { useSession, signOut } from "next-auth/react";
+import { signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 const profileMenuItems = [
   {
     label: "My Profile",
     icon: UserCircleIcon,
+    onClick: (router: any) => router.push("/account"),
   },
   {
     label: "Edit Profile",
@@ -43,6 +45,8 @@ const profileMenuItems = [
 ];
 
 export default function ProfileMenu() {
+  const router = useRouter();
+
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
 
   const closeMenu = () => setIsMenuOpen(false);
@@ -78,7 +82,7 @@ export default function ProfileMenu() {
               key={label}
               onClick={() => {
                 closeMenu();
-                if (onClick) onClick();
+                if (onClick) onClick(router); // Truyền router vào onClick
               }}
               className={`flex items-center gap-2 rounded ${
                 isLastItem
