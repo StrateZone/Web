@@ -10,13 +10,15 @@ import {
 import {
   HomeIcon,
   UserCircleIcon,
-  CommandLineIcon,
   XMarkIcon,
   Bars3Icon,
   BuildingStorefrontIcon,
 } from "@heroicons/react/24/solid";
+import { useSession } from "next-auth/react";
 import { FaChessBoard } from "react-icons/fa";
 import { FaBookOpen } from "react-icons/fa";
+import { useRouter } from "next/navigation";
+import ProfileMenu from "../profile_menu";
 
 interface NavItemProps {
   children: React.ReactNode;
@@ -64,6 +66,9 @@ const NAV_MENU = [
 ];
 
 export function Navbar() {
+  const { data: session } = useSession();
+  const router = useRouter();
+
   const [open, setOpen] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
 
@@ -118,12 +123,22 @@ export function Navbar() {
           ))}
         </ul>
         <div className="hidden items-center gap-4 lg:flex">
-          <Button color={isScrolling ? "gray" : "white"} variant="text">
-            Log in
-          </Button>
-          <Button color={isScrolling ? "gray" : "white"} variant="text">
-            Register
-          </Button>
+          {session ? (
+            <ProfileMenu />
+          ) : (
+            <>
+              <Button
+                onClick={() => router.push("/login")}
+                color={isScrolling ? "gray" : "white"}
+                variant="text"
+              >
+                Log in
+              </Button>
+              <Button color={isScrolling ? "gray" : "white"} variant="text">
+                Register
+              </Button>
+            </>
+          )}
         </div>
         <IconButton
           variant="text"
