@@ -9,6 +9,7 @@ import {
 import Image from "next/image";
 
 import { User } from "../../../constants/types/user.type";
+import Link from "next/link";
 
 export default function PartnerCard({
   avatar,
@@ -34,9 +35,11 @@ export default function PartnerCard({
       </CardHeader>
 
       <CardBody className="p-0 space-y-2">
-        <Typography variant="h5" className="text-blue-gray-900">
-          {name}
-        </Typography>
+        <Link className="flex justify-center" href={`/chess_appointment/1`}>
+          <Typography variant="h5" className="text-blue-gray-900">
+            {name}
+          </Typography>
+        </Link>
         <Typography className="text-sm font-normal text-gray-500">
           {skillLevel} | {availability}
         </Typography>
