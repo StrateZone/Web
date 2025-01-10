@@ -19,6 +19,7 @@ import { FaChessBoard } from "react-icons/fa";
 import { FaBookOpen } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import ProfileMenu from "../profile_menu";
+import Link from "next/link"; // Import Link từ Next.js
 
 interface NavItemProps {
   children: React.ReactNode;
@@ -28,14 +29,15 @@ interface NavItemProps {
 function NavItem({ children, href }: NavItemProps) {
   return (
     <li>
-      <Typography
-        as="a"
-        href={href || "#"}
-        variant="paragraph"
-        className="flex items-center gap-2 font-medium"
-      >
-        {children}
-      </Typography>
+      <Link href={href || "#"}>
+        <Typography
+          as="a"
+          variant="paragraph"
+          className="flex items-center gap-2 font-medium"
+        >
+          {children}
+        </Typography>
+      </Link>
     </li>
   );
 }
@@ -54,14 +56,17 @@ const NAV_MENU = [
   {
     name: "Courses",
     icon: FaBookOpen,
+    href: "/courses",
   },
   {
     name: "Store",
     icon: BuildingStorefrontIcon,
+    href: "/store",
   },
   {
     name: "Community",
     icon: UserCircleIcon,
+    href: "/community",
   },
 ];
 
@@ -77,7 +82,7 @@ export function Navbar() {
   useEffect(() => {
     window.addEventListener(
       "resize",
-      () => window.innerWidth >= 960 && setOpen(false),
+      () => window.innerWidth >= 960 && setOpen(false)
     );
   }, []);
 
@@ -134,9 +139,11 @@ export function Navbar() {
               >
                 Log in
               </Button>
-              <Button color={isScrolling ? "gray" : "white"} variant="text">
-                Register
-              </Button>
+              <Link href="/register">
+                <Button color={isScrolling ? "gray" : "white"} variant="text">
+                  Register
+                </Button>
+              </Link>
             </>
           )}
         </div>
@@ -165,9 +172,11 @@ export function Navbar() {
           </ul>
           <div className="mt-6 flex items-center gap-4">
             <Button variant="text">Log in</Button>
-            <Button color={isScrolling ? "gray" : "white"} variant="text">
-              Register
-            </Button>
+            <Link href="/register">
+              <Button color={isScrolling ? "gray" : "white"} variant="text">
+                Register
+              </Button>
+            </Link>
           </div>
         </div>
       </Collapse>
