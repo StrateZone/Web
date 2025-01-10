@@ -21,7 +21,7 @@ export default function ForgotPassword() {
     try {
       // Simulating password reset logic (you'll replace this with actual logic)
       // For example: You might call an API to send a password reset link to the user's email.
-      await fakePasswordReset(email); // Replace this with actual API call
+      await fakePasswordReset(); // Replace this with actual API call
       setMessage("A password reset link has been sent to your email.");
     } catch (error) {
       setError("Something went wrong. Please try again.");
@@ -29,7 +29,7 @@ export default function ForgotPassword() {
   };
 
   // Simulate password reset request (replace this with your real logic)
-  async function fakePasswordReset(email) {
+  async function fakePasswordReset() {
     return new Promise((resolve) => setTimeout(resolve, 1000));
   }
 

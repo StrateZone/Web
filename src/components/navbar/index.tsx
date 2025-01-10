@@ -82,7 +82,7 @@ export function Navbar() {
   useEffect(() => {
     window.addEventListener(
       "resize",
-      () => window.innerWidth >= 960 && setOpen(false)
+      () => window.innerWidth >= 960 && setOpen(false),
     );
   }, []);
 
