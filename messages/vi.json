@@ -1,0 +1,15 @@
+{
+  "NavBar": {
+    "home": "Trang Chủ",
+    "chessAppointment": "Hẹn Cờ",
+    "courses": "Khóa Học",
+    "store": "Cửa Hàng",
+    "community": "Cộng Đồng",
+    "siteTitle": "StrateZone",
+    "login": "Đăng Nhập",
+    "register": "Đăng Ký",
+    "english": "Tiếng Anh",
+    "vietnamese": "Tiếng Việt",
+    "chooseLanguage":"Chọn ngôn ngữ"
+  }
+}

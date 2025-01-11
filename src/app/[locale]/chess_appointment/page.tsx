@@ -128,7 +128,6 @@ export default function ChessAppointment() {
       </section>
 
       <div className="flex justify-center">
-        {" "}
         <DefaultPagination />
       </div>
 
