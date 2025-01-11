@@ -7,9 +7,10 @@ import {
   Button,
 } from "@material-tailwind/react";
 import Image from "next/image";
+import Link from "next/link";
+import { useLocale } from "next-intl";
 
 import { User } from "../../../constants/types/user.type";
-import Link from "next/link";
 
 export default function PartnerCard({
   avatar,
@@ -22,6 +23,7 @@ export default function PartnerCard({
   rating,
   matchesPlayed,
 }: User) {
+  const localActive = useLocale();
   return (
     <Card color="transparent" shadow={false}>
       <CardHeader floated={false} className="mx-0 mt-0 mb-6 h-48">
@@ -35,7 +37,10 @@ export default function PartnerCard({
       </CardHeader>
 
       <CardBody className="p-0 space-y-2">
-        <Link className="flex justify-center" href={`/chess_appointment/1`}>
+        <Link
+          className="flex justify-center"
+          href={`/${localActive}/chess_appointment/1`}
+        >
           <Typography variant="h5" className="text-blue-gray-900">
             {name}
           </Typography>
