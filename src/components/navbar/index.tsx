@@ -1,12 +1,15 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useTransition } from "react";
 import {
   Navbar as MTNavbar,
   Collapse,
   Button,
   IconButton,
   Typography,
+  Select,
+  Option,
 } from "@material-tailwind/react";
+import { useTranslations } from "next-intl";
 import {
   HomeIcon,
   UserCircleIcon,
@@ -17,7 +20,9 @@ import {
 import { useSession } from "next-auth/react";
 import { FaChessBoard } from "react-icons/fa";
 import { FaBookOpen } from "react-icons/fa";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { useLocale } from "next-intl";
+
 import ProfileMenu from "../profile_menu";
 import Link from "next/link"; // Import Link từ Next.js
 
@@ -41,47 +46,35 @@ function NavItem({ children, href }: NavItemProps) {
   );
 }
 
-const NAV_MENU = [
-  {
-    name: "Home",
-    icon: HomeIcon,
-    href: "/",
-  },
-  {
-    name: "Chess Appointment",
-    icon: FaChessBoard,
-    href: "/chess_appointment",
-  },
-  {
-    name: "Courses",
-    icon: FaBookOpen,
-    href: "/courses",
-  },
-  {
-    name: "Store",
-    icon: BuildingStorefrontIcon,
-    href: "/store",
-  },
-  {
-    name: "Community",
-    icon: UserCircleIcon,
-    href: "/community",
-  },
-];
-
 export function Navbar() {
+  const t = useTranslations("NavBar");
+  const [isPending, startTransition] = useTransition();
   const { data: session } = useSession();
   const router = useRouter();
+  const localActive = useLocale();
 
   const [open, setOpen] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
+
+  const onSelectChange = (value: string | undefined) => {
+    const currentPath = window.location.pathname.split("/")[2];
+    if (value && currentPath) {
+      startTransition(() => {
+        router.replace(`/${value}/${currentPath}`);
+      });
+    } else {
+      startTransition(() => {
+        router.replace(`/${value}`);
+      });
+    }
+  };
 
   const handleOpen = () => setOpen((cur) => !cur);
 
   useEffect(() => {
     window.addEventListener(
       "resize",
-      () => window.innerWidth >= 960 && setOpen(false)
+      () => window.innerWidth >= 960 && setOpen(false),
     );
   }, []);
 
@@ -99,6 +92,34 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const NAV_MENU = [
+    {
+      name: t("home"),
+      icon: HomeIcon,
+      href: "/",
+    },
+    {
+      name: t("chessAppointment"),
+      icon: FaChessBoard,
+      href: `/${localActive}/chess_appointment`,
+    },
+    {
+      name: t("courses"),
+      icon: FaBookOpen,
+      href: `/${localActive}/courses`,
+    },
+    {
+      name: t("store"),
+      icon: BuildingStorefrontIcon,
+      href: `/${localActive}/store`,
+    },
+    {
+      name: t("community"),
+      icon: UserCircleIcon,
+      href: `/${localActive}/community`,
+    },
+  ];
+
   return (
     <MTNavbar
       shadow={false}
@@ -112,7 +133,7 @@ export function Navbar() {
           color={isScrolling ? "blue-gray" : "white"}
           className="text-lg font-bold"
         >
-          StrateZone
+          {t("siteTitle")}
         </Typography>
         <ul
           className={`ml-10 hidden items-center gap-6 lg:flex ${
@@ -127,23 +148,51 @@ export function Navbar() {
           ))}
         </ul>
         <div className="hidden items-center gap-4 lg:flex">
+          <Select
+            value={localActive}
+            onChange={onSelectChange}
+            disabled={isPending}
+            label={t("chooseLanguage")}
+            color="amber"
+          >
+            <Option value="en">
+              <div className="flex gap-2 justify-start">
+                <img
+                  src="https://flagcdn.com/w40/gb.png"
+                  alt="English"
+                  className="h-5 w-6 rounded"
+                />
+                <div>{t("english")}</div>
+              </div>
+            </Option>
+            <Option value="vi">
+              <div className="flex gap-2 justify-start">
+                <img
+                  src="https://flagcdn.com/w40/vn.png"
+                  alt="Vietnamese"
+                  className="h-5 w-6 rounded"
+                />
+                <div> {t("vietnamese")}</div>
+              </div>
+            </Option>
+          </Select>
           {session ? (
             <ProfileMenu />
           ) : (
             <>
               <Button
-                onClick={() => router.push("/login")}
+                onClick={() => router.push(`/${localActive}/login`)}
                 color={isScrolling ? "gray" : "white"}
                 variant="text"
               >
-                Log in
+                {t("login")}
               </Button>
               <Button
-                onClick={() => router.push("/register")}
+                onClick={() => router.push(`/${localActive}/register`)}
                 color={isScrolling ? "gray" : "white"}
                 variant="text"
               >
-                Register
+                {t("register")}
               </Button>
             </>
           )}
@@ -172,17 +221,54 @@ export function Navbar() {
             ))}
           </ul>
           <div className="mt-6 flex items-center gap-4">
-            <Button onClick={() => router.push("/login")} variant="text">
-              Log in
-            </Button>
+            {session ? (
+              <ProfileMenu />
+            ) : (
+              <>
+                <Button
+                  onClick={() => router.push(`/${localActive}/login`)}
+                  variant="text"
+                >
+                  {t("login")}
+                </Button>
+                <Button
+                  onClick={() => router.push(`/${localActive}/register`)}
+                  variant="text"
+                >
+                  {t("register")}
+                </Button>
+              </>
+            )}
 
-            <Button
-              onClick={() => router.push("/register")}
-              color={isScrolling ? "gray" : "white"}
-              variant="text"
+            <Select
+              value={localActive}
+              onChange={onSelectChange}
+              disabled={isPending}
+              label={t("chooseLanguage")}
+              className="text-black"
+              color="amber"
             >
-              Register
-            </Button>
+              <Option value="en">
+                <div className="flex gap-2 justify-start">
+                  <img
+                    src="https://flagcdn.com/w40/gb.png"
+                    alt="English"
+                    className="h-5 w-6 rounded"
+                  />
+                  <div>{t("english")}</div>
+                </div>
+              </Option>
+              <Option value="vi">
+                <div className="flex gap-2 justify-start">
+                  <img
+                    src="https://flagcdn.com/w40/vn.png"
+                    alt="Vietnamese"
+                    className="h-5 w-6 rounded"
+                  />
+                  <div> {t("vietnamese")}</div>
+                </div>
+              </Option>
+            </Select>
           </div>
         </div>
       </Collapse>
