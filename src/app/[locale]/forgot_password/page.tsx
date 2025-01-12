@@ -1,10 +1,15 @@
-import BannerHero from "@/components/banner_hero";
-import Footer from "@/components/footer";
-import Navbar from "@/components/navbar";
+"use client";
 import React from "react";
 import { Mail } from "lucide-react";
+import Link from "next/link";
+import { useLocale } from "next-intl";
+import { Button, Input } from "@material-tailwind/react";
 
-function ForgotPasswordPage() {
+import Footer from "@/components/footer";
+import Navbar from "@/components/navbar";
+
+export default function ForgotPasswordPage() {
+  const localActive = useLocale();
   return (
     <div>
       <div className="relative min-h-screen w-full bg-[url('https://png.pngtree.com/background/20230611/original/pngtree-rain-storm-and-a-chess-board-picture-image_3129264.jpg')] bg-cover bg-center bg-repeat flex items-center justify-center">
@@ -17,7 +22,7 @@ function ForgotPasswordPage() {
           <div className="text-white text-center flex flex-col gap-4">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <h3 className="text-2xl font-extrabold text-white">
+                <h3 className="text-4xl font-extrabold text-white">
                   Forgot Password
                 </h3>
                 <p className="text-sm text-gray-300">
@@ -26,31 +31,35 @@ function ForgotPasswordPage() {
                 </p>
               </div>
               <div className="relative w-full">
-                <input
-                  type="email"
-                  placeholder="Email"
-                  className="w-full text-white py-3 px-4 pr-10 bg-transparent border-b-2 border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 rounded"
-                />
-                <Mail
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                  size={20}
+                <Input
+                  label="Email"
+                  color="white"
+                  variant="standard"
+                  size="lg"
+                  className="text-white"
+                  icon={<Mail size={20} />}
+                  maxLength={50}
+                  crossOrigin="anonymous"
                 />
               </div>
             </div>
             <div className="flex flex-col gap-3 mt-4">
-              <button
+              <Button
                 className="w-full font-bold bg-black text-white py-3 rounded border-[0.5px] 
               hover:bg-gray-700 transition duration-150 ease-in-out"
               >
                 Send Reset Link
-              </button>
+              </Button>
             </div>
             <div className="text-center text-sm mt-4">
               <p>
                 Remembered your password?{" "}
-                <span className="font-semibold text-gray-200 cursor-pointer hover:text-gray-400">
+                <Link
+                  href={`/${localActive}/login`}
+                  className="font-semibold text-gray-200 cursor-pointer hover:text-gray-400"
+                >
                   Log In
-                </span>
+                </Link>
               </p>
             </div>
           </div>
@@ -60,5 +69,3 @@ function ForgotPasswordPage() {
     </div>
   );
 }
-
-export default ForgotPasswordPage;
