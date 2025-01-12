@@ -1,119 +1,110 @@
-"use client";
-import Link from "next/link";
-import { FormEventHandler, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { signIn, useSession } from "next-auth/react";
-import { toast } from "react-toastify";
+import BannerHero from "@/components/banner_hero";
+import Footer from "@/components/footer";
+import Navbar from "@/components/navbar";
+import React from "react";
+import GOOGLE_ICON from "/icons/icons8-google.svg";
+import { createIcons, icons } from "lucide";
+import { User } from "lucide-react";
 
-export default function Page() {
-  const { status } = useSession();
-  const router = useRouter();
-  const [userInfo, setUserInfo] = useState({ username: "", password: "" });
-  const [error, setError] = useState<string | null>(null);
+const colors = {
+  primary: "#060606",
+  background: "#E0E0E0",
+  disabled: "D9D9D9",
+};
 
-  const handleSubmit: FormEventHandler<HTMLFormElement> = async (e) => {
-    e.preventDefault();
-    setError(null);
-
-    if (!userInfo.username || !userInfo.password) {
-      setError("Please enter both email and password.");
-      return;
-    }
-
-    const res = await signIn("credentials", {
-      username: userInfo.username,
-      password: userInfo.password,
-      redirect: false,
-    });
-
-    if (res && res.error) {
-      setError("Invalid email or password. Please try again.");
-    }
-  };
-
-  useEffect(() => {
-    if (status === "authenticated") {
-      router.push("/");
-      toast.success("Login successfully");
-    }
-  }, [status, router]);
-
+function Page() {
   return (
-    <div className="bg-white bg-cover bg-no-repeat min-h-screen flex items-center justify-center">
-      <div className="bg-primary bg-opacity-80 p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-semibold text-center text-black mb-6">
-          Login
-        </h1>
+    <div>
+      <div className="relative min-h-screen w-full bg-[url('https://png.pngtree.com/background/20230611/original/pngtree-rain-storm-and-a-chess-board-picture-image_3129264.jpg')] bg-cover bg-center bg-repeat flex items-center justify-center">
+        <Navbar />
+        <div className="absolute inset-0 bg-gray-900/60" />
+        <div
+          style={{ marginTop: "80px" }} /* Thêm khoảng cách cho form */
+          className="relative w-full max-w-screen-sm mx-auto border-2 border-white bg-transparent bg-opacity-95 backdrop-blur-sm opacity-90 p-8 rounded-md shadow-lg"
+        >
+          <div className="text-white text-center flex flex-col gap-4">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <h3 className="text-2xl font-extrabold text-white">Login</h3>
+                <p className="text-sm text-gray-300">
+                  Welcome back! Please enter your details.
+                </p>
+              </div>
+              <div className="relative w-full">
+                <input
+                  type="email"
+                  placeholder="Email"
+                  className="w-full text-white py-3 px-4 pr-10 bg-transparent border-b-2 border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 rounded"
+                />
+                <User
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={20}
+                />
+              </div>
 
-        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+              <input
+                type="password"
+                placeholder="Password"
+                className="w-full text-white py-3 px-4 bg-transparent border-b-2 border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 rounded"
+              />
+            </div>
+            <div className="w-full flex items-center justify-between">
+              <div className="w-full flex items-center">
+                <input type="checkbox" className="w-4 h-4 mr-2" />
+                <p className="text-sm">Remember me</p>
+              </div>
+              <p className="text-sm font-medium whitespace-nowrap cursor-pointer underline underline-offset-2 hover:text-gray-400">
+                Forgot Password ?
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 mt-4">
+              <button
+                className="w-full font-bold bg-black text-white py-3 rounded border-[0.5px] 
+              hover:bg-gray-700 transition duration-150 ease-in-out"
+              >
+                Log In
+              </button>
+            </div>
+            <div className="w-full flex items-center justify-center relative">
+              <div className="flex w-full items-center">
+                <div className="flex-grow h-[1px] bg-white"></div>
+                <p className="px-2 text-white">Or</p>
+                <div className="flex-grow h-[1px] bg-white"></div>
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 mt-4">
+              <button className="w-full font-bold bg-gray-300 text-black py-3 rounded flex items-center justify-center hover:bg-gray-400 transition duration-150 ease-in-out">
+                <img
+                  src="https://www.svgrepo.com/show/303108/google-icon-logo.svg"
+                  alt="Google Icon"
+                  className="h-6 w-6 mr-2"
+                />
+                Sign In With Google
+              </button>
+              <button className="w-full font-bold bg-gray-300 text-black py-3 rounded flex items-center justify-center hover:bg-gray-400 transition duration-150 ease-in-out">
+                <img
+                  src="https://www.svgrepo.com/show/303113/facebook-icon-logo.svg"
+                  alt="Google Icon"
+                  className="h-6 w-6 mr-2"
+                />
+                Sign In With Facebook
+              </button>
+            </div>
 
-        <div className="flex justify-center mb-6">
-          <span className="text-sm text-gray-700">
-            Don&apos;t have an account?
-          </span>
-          <Link
-            href="/register"
-            className="text-blue-500 hover:text-blue-700 ml-1 font-medium"
-          >
-            Register
-          </Link>
+            <div className="text-center text-sm mt-4">
+              <p>
+                Don't have an account?{" "}
+                <span className="font-semibold text-gray-200 cursor-pointer hover:text-gray-400">
+                  Sign up for free
+                </span>
+              </p>
+            </div>
+          </div>
         </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-medium mb-1"
-              htmlFor="username"
-            >
-              Username
-            </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-400"
-              id="username"
-              placeholder="username"
-              value={userInfo.username}
-              onChange={({ target }) =>
-                setUserInfo({ ...userInfo, username: target.value })
-              }
-              required
-            />
-          </div>
-          <div className="mb-6">
-            <label
-              className="block text-gray-700 text-sm font-medium mb-1"
-              htmlFor="password"
-            >
-              Password
-            </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-400"
-              id="password"
-              type="password"
-              placeholder="Password"
-              value={userInfo.password}
-              onChange={({ target }) =>
-                setUserInfo({ ...userInfo, password: target.value })
-              }
-              required
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <button
-              className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200"
-              type="submit"
-            >
-              Login
-            </button>
-
-            <Link
-              href="/forgot_password"
-              className="text-sm text-blue-500 hover:text-blue-700"
-            >
-              Forgot Password?
-            </Link>
-          </div>
-        </form>
       </div>
+      <Footer />
     </div>
   );
 }
+
+export default Page;

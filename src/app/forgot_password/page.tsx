@@ -1,85 +1,64 @@
-"use client";
-import { FormEventHandler, useState } from "react";
-import { toast } from "react-toastify";
-import Link from "next/link";
+import BannerHero from "@/components/banner_hero";
+import Footer from "@/components/footer";
+import Navbar from "@/components/navbar";
+import React from "react";
+import { Mail } from "lucide-react";
 
-export default function ForgotPassword() {
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSubmit: FormEventHandler<HTMLFormElement> = async (e) => {
-    e.preventDefault();
-    setError(null);
-    setMessage(null);
-
-    if (!email) {
-      setError("Please enter your email.");
-      return;
-    }
-
-    try {
-      // Simulating password reset logic (you'll replace this with actual logic)
-      // For example: You might call an API to send a password reset link to the user's email.
-      await fakePasswordReset(); // Replace this with actual API call
-      setMessage("A password reset link has been sent to your email.");
-    } catch (error) {
-      setError("Something went wrong. Please try again.");
-    }
-  };
-
-  // Simulate password reset request (replace this with your real logic)
-  async function fakePasswordReset() {
-    return new Promise((resolve) => setTimeout(resolve, 1000));
-  }
-
+function ForgotPasswordPage() {
   return (
-    <div className="bg-white bg-cover bg-no-repeat min-h-screen flex items-center justify-center">
-      <div className="bg-primary bg-opacity-80 p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-semibold text-center text-black mb-6">
-          Forgot Password
-        </h1>
-
-        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
-        {message && (
-          <p className="text-green-500 text-center mb-4">{message}</p>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-medium mb-1"
-              htmlFor="email"
-            >
-              Email
-            </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-400"
-              id="email"
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={({ target }) => setEmail(target.value)}
-              required
-            />
+    <div>
+      <div className="relative min-h-screen w-full bg-[url('https://png.pngtree.com/background/20230611/original/pngtree-rain-storm-and-a-chess-board-picture-image_3129264.jpg')] bg-cover bg-center bg-repeat flex items-center justify-center">
+        <Navbar />
+        <div className="absolute inset-0 bg-gray-900/60" />
+        <div
+          style={{ marginTop: "80px" }}
+          className="relative w-full max-w-screen-sm mx-auto border-2 border-white bg-transparent bg-opacity-95 backdrop-blur-sm opacity-90 p-8 rounded-md shadow-lg"
+        >
+          <div className="text-white text-center flex flex-col gap-4">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <h3 className="text-2xl font-extrabold text-white">
+                  Forgot Password
+                </h3>
+                <p className="text-sm text-gray-300">
+                  Enter your email and we'll send you instructions to reset your
+                  password.
+                </p>
+              </div>
+              <div className="relative w-full">
+                <input
+                  type="email"
+                  placeholder="Email"
+                  className="w-full text-white py-3 px-4 pr-10 bg-transparent border-b-2 border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 rounded"
+                />
+                <Mail
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={20}
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 mt-4">
+              <button
+                className="w-full font-bold bg-black text-white py-3 rounded border-[0.5px] 
+              hover:bg-gray-700 transition duration-150 ease-in-out"
+              >
+                Send Reset Link
+              </button>
+            </div>
+            <div className="text-center text-sm mt-4">
+              <p>
+                Remembered your password?{" "}
+                <span className="font-semibold text-gray-200 cursor-pointer hover:text-gray-400">
+                  Log In
+                </span>
+              </p>
+            </div>
           </div>
-          <div className="flex items-center justify-between">
-            <button
-              className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200"
-              type="submit"
-            >
-              Send Reset Link
-            </button>
-
-            <Link
-              href="/login"
-              className="text-sm text-blue-500 hover:text-blue-700"
-            >
-              Back to Login
-            </Link>
-          </div>
-        </form>
+        </div>
       </div>
+      <Footer />
     </div>
   );
 }
+
+export default ForgotPasswordPage;
