@@ -1,6 +1,6 @@
 "use client";
-import React from "react";
-import { User } from "lucide-react";
+import React, { useState } from "react";
+import { User, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useLocale } from "next-intl";
 import { Button, Input } from "@material-tailwind/react";
@@ -10,6 +10,9 @@ import Navbar from "@/components/navbar";
 
 export default function RegisterPage() {
   const localActive = useLocale();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showRePassword, setShowRePassword] = useState(false);
+
   return (
     <div>
       <div className="relative min-h-screen w-full bg-[url('https://png.pngtree.com/background/20230611/original/pngtree-rain-storm-and-a-chess-board-picture-image_3129264.jpg')] bg-cover bg-center bg-repeat flex items-center justify-center">
@@ -35,7 +38,7 @@ export default function RegisterPage() {
               </div>
               <div className="relative w-full">
                 <Input
-                  label="Email"
+                  label="Name"
                   color="white"
                   variant="standard"
                   size="lg"
@@ -46,8 +49,7 @@ export default function RegisterPage() {
                 />
               </div>
               <Input
-                label="Password"
-                type="password"
+                label="Email"
                 color="white"
                 variant="standard"
                 size="lg"
@@ -55,17 +57,52 @@ export default function RegisterPage() {
                 maxLength={50}
                 crossOrigin="anonymous"
               />
-
-              <Input
-                label="Confirm Password"
-                type="password"
-                color="white"
-                variant="standard"
-                size="lg"
-                className="text-white"
-                maxLength={50}
-                crossOrigin="anonymous"
-              />
+              {/* Password Field */}
+              <div className="relative w-full">
+                <Input
+                  label="Password"
+                  type={showPassword ? "text" : "password"}
+                  color="white"
+                  variant="standard"
+                  size="lg"
+                  className="text-white"
+                  maxLength={50}
+                  crossOrigin="anonymous"
+                />
+                <div
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} color="white" />
+                  ) : (
+                    <Eye size={20} color="white" />
+                  )}
+                </div>
+              </div>
+              {/* Re-type Password Field */}
+              <div className="relative w-full">
+                <Input
+                  label="Re-type Password"
+                  type={showRePassword ? "text" : "password"}
+                  color="white"
+                  variant="standard"
+                  size="lg"
+                  className="text-white"
+                  maxLength={50}
+                  crossOrigin="anonymous"
+                />
+                <div
+                  onClick={() => setShowRePassword(!showRePassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                >
+                  {showRePassword ? (
+                    <EyeOff size={20} color="white" />
+                  ) : (
+                    <Eye size={20} color="white" />
+                  )}
+                </div>
+              </div>
             </div>
             <div className="flex flex-col gap-3 mt-4">
               <Button className="w-full font-bold bg-black text-white py-3 rounded border-[0.5px]">

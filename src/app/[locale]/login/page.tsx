@@ -1,6 +1,6 @@
 "use client";
-import React from "react";
-import { User } from "lucide-react";
+import React, { useState } from "react";
+import { User, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useLocale } from "next-intl";
 import { Input, Checkbox, Button, Typography } from "@material-tailwind/react";
@@ -9,14 +9,20 @@ import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
 
 export default function LoginPage() {
+  const [showPassword, setShowPassword] = useState(false); // Quản lý trạng thái hiển thị mật khẩu
   const localActive = useLocale();
+
+  const togglePasswordVisibility = () => {
+    setShowPassword((prev) => !prev);
+  };
+
   return (
     <div>
       <div className="relative min-h-screen w-full bg-[url('https://png.pngtree.com/background/20230611/original/pngtree-rain-storm-and-a-chess-board-picture-image_3129264.jpg')] bg-cover bg-center bg-repeat flex items-center justify-center">
         <Navbar />
         <div className="absolute inset-0 bg-gray-900/60" />
         <div
-          style={{ marginTop: "80px" }}
+          style={{ marginTop: "120px", marginBottom: "50px" }}
           className="relative w-full max-w-screen-sm mx-auto border-2 border-white bg-transparent bg-opacity-95 backdrop-blur-sm opacity-90 p-8 rounded-md shadow-lg"
         >
           <div className="text-white text-center flex flex-col gap-4">
@@ -40,16 +46,25 @@ export default function LoginPage() {
                 />
               </div>
 
-              <Input
-                label="Password"
-                type="password"
-                color="white"
-                variant="standard"
-                size="lg"
-                className="text-white"
-                maxLength={50}
-                crossOrigin="anonymous"
-              />
+              <div className="relative w-full mt-4">
+                <Input
+                  label="Password"
+                  type={showPassword ? "text" : "password"}
+                  color="white"
+                  variant="standard"
+                  size="lg"
+                  className="text-white"
+                  maxLength={50}
+                  crossOrigin="anonymous"
+                />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="absolute right-2 top-2.5 text-white"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
             <div className="w-full flex items-center justify-between">
               <div className="w-full flex items-center">
