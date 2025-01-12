@@ -117,5 +117,29 @@
     "BeginnerCourse": "Khóa học cơ bản",
     "ChessGrandmaster": "Kiện tướng cờ vua",
     "GoExpert": "Chuyên gia Cờ Vây"
+  },
+  "ChessApointment": {
+    "bannerTitle": "Tham gia Cộng đồng Cờ Vua",
+    "bannerDescription": "Kết nối với những người yêu thích cờ vua, tham gia các giải đấu và nâng cao kỹ năng của bạn tại StrateZone!",
+    "tabs": {
+      "chess": "Cờ Vua",
+      "xiangqi": "Cờ Tướng",
+      "go": "Cờ Vây"
+    },
+    "searchPlaceholder": "Tìm kiếm đối tác",
+    "pagination": {
+      "previous": "Trước",
+      "next": "Tiếp theo"
+    }
+  },
+  "PartnerCard": {
+    "inviteButton": "Mời chơi",
+    "availability": "Khả dụng",
+    "skillLevel": "Trình độ",
+    "preferredTime": "Thời gian ưu tiên",
+    "chessTypes": "Các loại cờ",
+    "location": "Vị trí",
+    "rating": "Đánh giá",
+    "matchesPlayed": "Trận đã chơi"
   }
 }

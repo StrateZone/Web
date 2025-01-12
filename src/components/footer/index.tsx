@@ -38,7 +38,7 @@ export function Footer() {
             variant="h6"
             className="text-gray-900"
           >
-            {t("materialTailwind")}
+            Material Tailwind
           </Typography>
           <ul className="flex justify-center my-4 md:my-0 w-max mx-auto items-center gap-4">
             {LINKS.map((link, index) => (

@@ -113,5 +113,29 @@
     "BeginnerCourse": "Beginner Course",
     "ChessGrandmaster": "Chess Grandmaster",
     "GoExpert": "Go Expert"
+  },
+  "ChessApointment": {
+    "bannerTitle": "Join the Chess Community",
+    "bannerDescription": "Connect with chess enthusiasts, join tournaments, and improve your skills at StrateZone!",
+    "tabs": {
+      "chess": "Chess",
+      "xiangqi": "Xiangqi",
+      "go": "Go"
+    },
+    "searchPlaceholder": "Search for partners",
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next"
+    }
+  },
+  "PartnerCard": {
+    "inviteButton": "Invite to Play",
+    "availability": "Availability",
+    "skillLevel": "Skill Level",
+    "preferredTime": "Preferred Time",
+    "chessTypes": "Chess Types",
+    "location": "Location",
+    "rating": "Rating",
+    "matchesPlayed": "Matches Played"
   }
 }
