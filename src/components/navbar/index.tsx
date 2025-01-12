@@ -31,7 +31,6 @@ function NavItem({ children, href }: NavItemProps) {
     <li>
       <Link href={href || "#"}>
         <Typography
-          as="a"
           variant="paragraph"
           className="flex items-center gap-2 font-medium"
         >
@@ -139,11 +138,13 @@ export function Navbar() {
               >
                 Log in
               </Button>
-              <Link href="/register">
-                <Button color={isScrolling ? "gray" : "white"} variant="text">
-                  Register
-                </Button>
-              </Link>
+              <Button
+                onClick={() => router.push("/register")}
+                color={isScrolling ? "gray" : "white"}
+                variant="text"
+              >
+                Register
+              </Button>
             </>
           )}
         </div>
@@ -171,12 +172,17 @@ export function Navbar() {
             ))}
           </ul>
           <div className="mt-6 flex items-center gap-4">
-            <Button variant="text">Log in</Button>
-            <Link href="/register">
-              <Button color={isScrolling ? "gray" : "white"} variant="text">
-                Register
-              </Button>
-            </Link>
+            <Button onClick={() => router.push("/login")} variant="text">
+              Log in
+            </Button>
+
+            <Button
+              onClick={() => router.push("/register")}
+              color={isScrolling ? "gray" : "white"}
+              variant="text"
+            >
+              Register
+            </Button>
           </div>
         </div>
       </Collapse>
