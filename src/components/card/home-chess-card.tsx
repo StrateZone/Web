@@ -1,4 +1,5 @@
 import { Card, CardBody, Typography, Button } from "@material-tailwind/react";
+import { useTranslations } from "next-intl";
 
 interface AboutCardProp {
   title: string;
@@ -13,6 +14,8 @@ export function AboutCard({
   subTitle,
   imageUrl,
 }: AboutCardProp) {
+  const t = useTranslations("ChessContent"); // Correctly importing the translations
+
   return (
     <Card shadow={false} className="relative overflow-hidden rounded-2xl">
       <div
@@ -35,7 +38,7 @@ export function AboutCard({
           {description}
         </Typography>
         <Button color="white" size="sm">
-          Book Now
+          {t("bookNow")}
         </Button>
       </CardBody>
     </Card>

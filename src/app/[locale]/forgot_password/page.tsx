@@ -2,14 +2,16 @@
 import React from "react";
 import { Mail } from "lucide-react";
 import Link from "next/link";
-import { useLocale } from "next-intl";
 import { Button, Input } from "@material-tailwind/react";
+import { useLocale, useTranslations } from "next-intl";
 
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
 
 export default function ForgotPasswordPage() {
   const localActive = useLocale();
+  const t = useTranslations("forgotPassword");
+
   return (
     <div>
       <div className="relative min-h-screen w-full bg-[url('https://png.pngtree.com/background/20230611/original/pngtree-rain-storm-and-a-chess-board-picture-image_3129264.jpg')] bg-cover bg-center bg-repeat flex items-center justify-center">
@@ -23,16 +25,15 @@ export default function ForgotPasswordPage() {
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <h3 className="text-4xl font-extrabold text-white">
-                  Forgot Password
+                  {t("forgotPasswordTitle")}
                 </h3>
                 <p className="text-sm text-gray-300">
-                  Enter your email and we'll send you instructions to reset your
-                  password.
+                  {t("forgotPasswordDescription")}
                 </p>
               </div>
               <div className="relative w-full">
                 <Input
-                  label="Email"
+                  label={t("labelEmail")}
                   color="white"
                   variant="standard"
                   size="lg"
@@ -48,17 +49,17 @@ export default function ForgotPasswordPage() {
                 className="w-full font-bold bg-black text-white py-3 rounded border-[0.5px] 
               hover:bg-gray-700 transition duration-150 ease-in-out"
               >
-                Send Reset Link
+                {t("buttonSendResetLink")}
               </Button>
             </div>
             <div className="text-center text-sm mt-4">
               <p>
-                Remembered your password?{" "}
+                {t("alreadyRememberPassword")}
                 <Link
                   href={`/${localActive}/login`}
                   className="font-semibold text-gray-200 cursor-pointer hover:text-gray-400"
                 >
-                  Log In
+                  {t("linkLogIn")}
                 </Link>
               </p>
             </div>

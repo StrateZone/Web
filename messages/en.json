@@ -25,5 +25,93 @@
   "404": {
     "errorTitle": "You are all alone here",
     "backHome": "Go back to homepage"
+  },
+  "loginPage": {
+    "title": "Log in",
+    "welcomeMessage": "Welcome back! Please enter your details.",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "rememberMe": "Remember me",
+    "forgotPassword": "Forgot Password?",
+    "loginButton": "Log in",
+    "orText": "Or",
+    "googleSignIn": "Sign in with Google",
+    "facebookSignIn": "Sign in with Facebook",
+    "noAccountMessage": "Don't have an account?",
+    "signUpLink": "Sign up for free"
+  },
+  "signupPage": {
+    "title": "Sign Up",
+    "description": "Create your account by filling in the information below.",
+    "labelName": "Name",
+    "labelEmail": "Email",
+    "labelPassword": "Password",
+    "labelRePassword": "Re-type Password",
+    "buttonSignUp": "Sign Up",
+    "buttonGoogle": "Sign Up With Google",
+    "buttonFacebook": "Sign Up With Facebook",
+    "or": "Or",
+    "alreadyHaveAccount": "Already have an account? ",
+    "linkLogIn": "Log In",
+    "Or": "Or"
+  },
+  "forgotPassword": {
+    "forgotPasswordTitle": "Forgot Password",
+    "forgotPasswordDescription": "Enter your email and we'll send you instructions to reset your password.",
+    "labelEmail": "Email",
+    "buttonSendResetLink": "Send Reset Link",
+    "alreadyRememberPassword": "Remembered your password? ",
+    "linkLogIn": "Log In"
+  },
+
+  "footer": {
+    "joinNow": "Join now and get 30% OFF!",
+    "exclusiveOffer": "Don't miss out on this exclusive offer that will end soon.",
+    "registerNow": "register now",
+    "company": "Company",
+    "aboutUs": "About Us",
+    "team": "Team",
+    "products": "Products",
+    "blog": "Blog",
+    "madeWith": "Made with",
+    "by": "by",
+    "capstoneSpring2025": "Capstone Spring 2025",
+    "materialTailwind": "Material Tailwind"
+  },
+  "heroBanner": {
+    "strateZone": "StrateZone: Where passion meets strategy",
+    "description": "StrateZone is an app that connects chess enthusiasts, making it easy to find suitable opponents, schedule games at the club, join exciting courses, and participate in events.",
+    "bookNow": "Book Now",
+    "playVideo": "Play Video"
+  },
+  "ChessContent": {
+    "findYourPerfectChessPartner": "Find Your Perfect Chess Partner",
+    "scheduleGames": "Schedule individual or group chess games with players who match your skill level and preferred time.",
+    "xiangqi": "Xiangqi",
+    "culturalLegacy": "Cultural Legacy",
+    "go": "Go",
+    "endlessPossibilities": "Endless Possibilities",
+    "chess": "Chess",
+    "strategyAndSkills": "Strategy & Skills",
+    "xiangqiDescription": "Immerse yourself in the ancient art of Chinese Chess, where strategic placement and tactical moves determine the winner.",
+    "goDescription": "One of the oldest board games, Go offers endless possibilities and requires deep strategic thinking to dominate the board.",
+    "chessDescription": "A timeless classic, Chess challenges players to outthink their opponents with strategy and foresight. Perfect for players of all skill levels.",
+    "scheduleGamesDescription": "Schedule individual or group chess games with players who match your skill level and preferred time.",
+    "bookNow": "Book Now"
+  },
+  "CourseContent": {
+    "LearnAndMasterChessSkills": "Learn and Master Chess Skills",
+    "JoinExpertLedClasses": "Join our expert-led classes to enhance your chess skills, whether you're a beginner or an advanced player. Courses available for Chess, Xiangqi, and Go",
+    "ChessForBeginners": "Chess for Beginners",
+    "ChessForBeginnersDescription": "This course covers the basics of chess, including rules, piece movements, strategies, and basic tactics. Whether you're a complete beginner or looking to refresh your knowledge, this course is the perfect starting point.",
+    "IntermediateChessStrategies": "Intermediate Chess Strategies",
+    "IntermediateChessCourse": "Intermediate Course",
+    "IntermediateChessStrategiesDescription": "Learn advanced strategies and techniques for playing chess at a higher level. This course covers tactics, opening principles, middle game strategies, and endgame techniques.",
+    "GoTheArtOfStrategy": "Go: The Art of Strategy",
+    "GoTheArtOfStrategyDescription": "Explore the ancient game of Go. Learn the rules, basic strategies, and how to think ahead in this profound and deep game of strategy. Perfect for those who enjoy challenging and intellectual games.",
+    "InternationalChessMaster": "International Chess Master",
+    "BeginnerCourse": "Beginner Course",
+    "ChessGrandmaster": "Chess Grandmaster",
+    "GoExpert": "Go Expert"
   }
 }

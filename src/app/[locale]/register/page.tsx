@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { User, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Button, Input } from "@material-tailwind/react";
 
 import Footer from "@/components/footer";
@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const localActive = useLocale();
   const [showPassword, setShowPassword] = useState(false);
   const [showRePassword, setShowRePassword] = useState(false);
+  const t = useTranslations("signupPage");
 
   return (
     <div>
@@ -31,14 +32,14 @@ export default function RegisterPage() {
           <div className="text-white text-center flex flex-col gap-4">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <h3 className="text-4xl font-extrabold text-white">Sign Up</h3>
-                <p className="text-sm text-gray-300">
-                  Create your account by filling in the information below.
-                </p>
+                <h3 className="text-4xl font-extrabold text-white">
+                  {t("title")}
+                </h3>
+                <p className="text-sm text-gray-300">{t("description")}</p>
               </div>
               <div className="relative w-full">
                 <Input
-                  label="Name"
+                  label={t("labelName")}
                   color="white"
                   variant="standard"
                   size="lg"
@@ -49,7 +50,7 @@ export default function RegisterPage() {
                 />
               </div>
               <Input
-                label="Email"
+                label={t("labelEmail")}
                 color="white"
                 variant="standard"
                 size="lg"
@@ -60,7 +61,7 @@ export default function RegisterPage() {
               {/* Password Field */}
               <div className="relative w-full">
                 <Input
-                  label="Password"
+                  label={t("labelPassword")}
                   type={showPassword ? "text" : "password"}
                   color="white"
                   variant="standard"
@@ -83,7 +84,7 @@ export default function RegisterPage() {
               {/* Re-type Password Field */}
               <div className="relative w-full">
                 <Input
-                  label="Re-type Password"
+                  label={t("labelRePassword")}
                   type={showRePassword ? "text" : "password"}
                   color="white"
                   variant="standard"
@@ -106,13 +107,13 @@ export default function RegisterPage() {
             </div>
             <div className="flex flex-col gap-3 mt-4">
               <Button className="w-full font-bold bg-black text-white py-3 rounded border-[0.5px]">
-                Sign Up
+                {t("buttonSignUp")}
               </Button>
             </div>
             <div className="w-full flex items-center justify-center relative">
               <div className="flex w-full items-center">
                 <div className="flex-grow h-[1px] bg-white"></div>
-                <p className="px-2 text-white">Or</p>
+                <p className="px-2 text-white">{t("Or")}</p>
                 <div className="flex-grow h-[1px] bg-white"></div>
               </div>
             </div>
@@ -123,7 +124,7 @@ export default function RegisterPage() {
                   alt="Google Icon"
                   className="h-6 w-6 mr-2"
                 />
-                Sign Up With Google
+                {t("buttonGoogle")}
               </Button>
               <Button className="w-full font-bold bg-gray-300 text-black py-3 rounded flex items-center justify-center hover:bg-gray-400 transition duration-150 ease-in-out">
                 <img
@@ -131,18 +132,18 @@ export default function RegisterPage() {
                   alt="Facebook Icon"
                   className="h-6 w-6 mr-2"
                 />
-                Sign Up With Facebook
+                {t("buttonFacebook")}
               </Button>
             </div>
 
             <div className="text-center text-sm mt-4">
               <p>
-                Already have an account?{" "}
+                {t("alreadyHaveAccount")}
                 <Link
                   href={`/${localActive}/login`}
                   className="font-semibold text-gray-200 cursor-pointer hover:text-gray-400"
                 >
-                  Log In
+                  {t("linkLogIn")}
                 </Link>
               </p>
             </div>

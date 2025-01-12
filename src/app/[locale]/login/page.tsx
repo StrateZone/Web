@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { User, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Input, Checkbox, Button, Typography } from "@material-tailwind/react";
 
 import Footer from "@/components/footer";
@@ -11,6 +11,7 @@ import Navbar from "@/components/navbar";
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false); // Quản lý trạng thái hiển thị mật khẩu
   const localActive = useLocale();
+  const t = useTranslations("loginPage");
 
   const togglePasswordVisibility = () => {
     setShowPassword((prev) => !prev);
@@ -28,14 +29,14 @@ export default function LoginPage() {
           <div className="text-white text-center flex flex-col gap-4">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <h3 className="text-4xl font-extrabold text-white">Login</h3>
-                <p className="text-sm text-gray-300">
-                  Welcome back! Please enter your details.
-                </p>
+                <h3 className="text-4xl font-extrabold text-white">
+                  {t("title")}
+                </h3>
+                <p className="text-sm text-gray-300">{t("welcomeMessage")}</p>
               </div>
               <div className="relative w-full">
                 <Input
-                  label="Email"
+                  label={t("emailLabel")}
                   color="white"
                   variant="standard"
                   size="lg"
@@ -48,7 +49,7 @@ export default function LoginPage() {
 
               <div className="relative w-full mt-4">
                 <Input
-                  label="Password"
+                  label={t("passwordLabel")}
                   type={showPassword ? "text" : "password"}
                   color="white"
                   variant="standard"
@@ -72,7 +73,7 @@ export default function LoginPage() {
                   id="remember-me"
                   label={
                     <Typography className="flex font-medium text-white">
-                      Remember me
+                      {t("rememberMe")}
                     </Typography>
                   }
                   color="blue"
@@ -84,18 +85,18 @@ export default function LoginPage() {
                 href={`/${localActive}/forgot_password`}
                 className="text-sm font-medium whitespace-nowrap cursor-pointer underline underline-offset-2 hover:text-gray-400"
               >
-                Forgot Password ?
+                {t("forgotPassword")}
               </Link>
             </div>
             <div className="flex flex-col gap-3 mt-4">
               <Button className="w-full font-bold bg-black text-white py-3 rounded border-[0.5px]">
-                Log In
+                {t("loginButton")}
               </Button>
             </div>
             <div className="w-full flex items-center justify-center relative">
               <div className="flex w-full items-center">
                 <div className="flex-grow h-[1px] bg-white"></div>
-                <p className="px-2 text-white">Or</p>
+                <p className="px-2 text-white">{t("orText")}</p>
                 <div className="flex-grow h-[1px] bg-white"></div>
               </div>
             </div>
@@ -106,26 +107,26 @@ export default function LoginPage() {
                   alt="Google Icon"
                   className="h-6 w-6 mr-2"
                 />
-                Sign In With Google
+                {t("googleSignIn")}
               </Button>
               <Button className="w-full font-bold bg-gray-300 text-black py-3 rounded flex items-center justify-center hover:bg-gray-400 transition duration-150 ease-in-out">
                 <img
                   src="https://www.svgrepo.com/show/303113/facebook-icon-logo.svg"
-                  alt="Google Icon"
+                  alt="Facebook Icon"
                   className="h-6 w-6 mr-2"
                 />
-                Sign In With Facebook
+                {t("facebookSignIn")}
               </Button>
             </div>
 
             <div className="text-center text-sm mt-4">
               <p>
-                Don't have an account?{" "}
+                {t("noAccountMessage")}{" "}
                 <Link
                   href={`/${localActive}/register`}
                   className="font-semibold text-gray-200 cursor-pointer hover:text-gray-400"
                 >
-                  Sign up for free
+                  {t("signUpLink")}
                 </Link>
               </p>
             </div>
