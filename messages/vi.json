@@ -11,5 +11,21 @@
     "english": "Tiếng Anh",
     "vietnamese": "Tiếng Việt",
     "chooseLanguage":"Chọn ngôn ngữ"
+  },
+
+  "communityPage": {
+    "joinCommunityTitle": "Tham gia Cộng đồng Cờ Vua",
+    "joinCommunityDesc": "Kết nối với những người yêu thích cờ vua, tham gia các giải đấu và nâng cao kỹ năng tại StrateZone!",
+    "joinNowButton": "Tham gia ngay",
+    "popularButton": "Phổ biến",
+    "newestButton": "Mới nhất",
+    "followingButton": "Đang theo dõi",
+    "createPostButton": "Tạo Bài Viết",
+    "ChooseTopic": "Chọn chủ đề"
+  },
+  "404": {
+    "errorTitle": "Bạn đang ở một mình ở đây",
+    "backHome": "Trở lại trang chủ"
   }
 }
+

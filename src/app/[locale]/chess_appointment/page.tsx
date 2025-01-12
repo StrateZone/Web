@@ -70,31 +70,23 @@ export default function ChessAppointment() {
   return (
     <>
       <Navbar />
-      <div className="relative min-h-[50vh] w-full bg-[url('https://i.pinimg.com/736x/54/76/be/5476be3d48e1190b7afc56e272ecfd39.jpg')] bg-cover bg-no-repeat">
-        <div className="absolute inset-0 h-full w-full bg-gray-900/60" />
-        <div className="grid min-h-[50vh] px-8">
-          <div className="container relative z-10 my-auto mx-auto grid place-items-center text-center">
-            <Typography variant="h2" color="white" className="lg:max-w-3xl">
-              Find Your Perfect Chess Partner
-            </Typography>
-            <Typography
-              variant="lead"
-              color="white"
-              className="mt-1 mb-8 w-full md:max-w-full lg:max-w-2xl"
-            >
-              Discover like-minded chess enthusiasts, connect with players who
-              share your passion, and schedule exciting matches that suit your
-              skills and preferences.
-            </Typography>
-            <div className="flex items-center gap-4">
-              <Button variant="gradient" color="white">
-                Find Partners
-              </Button>
-              <IconButton className="rounded-full bg-white p-6">
-                <PlayIcon className="h-4 w-4 text-gray-900" />
-              </IconButton>
-            </div>
-          </div>
+      <div className="relative font-sans">
+        <div className="absolute inset-0 w-full h-full bg-gray-900/60 opacity-60 z-20"></div>
+
+        <img
+          src="https://png.pngtree.com/background/20230525/original/pngtree-the-chess-pieces-are-laying-in-a-chaotic-pattern-picture-image_2730698.jpg"
+          alt="Banner Image"
+          className="absolute inset-0 w-full h-full object-cover z-10"
+        />
+
+        <div className="min-h-[350px] relative z-30 h-full max-w-6xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
+          <h2 className="sm:text-4xl text-2xl font-bold mb-6">
+            Join the Chess Community
+          </h2>
+          <p className="sm:text-lg text-base text-center text-gray-200">
+            Connect with chess enthusiasts, join tournaments, and improve your
+            skills at StrateZone!
+          </p>
         </div>
       </div>
 

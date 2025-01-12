@@ -20,11 +20,11 @@ import {
 import { useSession } from "next-auth/react";
 import { FaChessBoard } from "react-icons/fa";
 import { FaBookOpen } from "react-icons/fa";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
+import Link from "next/link";
 
 import ProfileMenu from "../profile_menu";
-import Link from "next/link"; // Import Link từ Next.js
 
 interface NavItemProps {
   children: React.ReactNode;

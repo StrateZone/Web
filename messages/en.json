@@ -1,5 +1,6 @@
 {
-    "NavBar": { "home": "Home",
+  "NavBar": {
+    "home": "Home",
     "chessAppointment": "Chess Appointment",
     "courses": "Courses",
     "store": "Store",
@@ -9,8 +10,20 @@
     "register": "Register",
     "english": "English",
     "vietnamese": "Vietnamese",
-    "chooseLanguage":"Choose Language"
-}
-   
+    "chooseLanguage": "Choose Language"
+  },
+  "communityPage": {
+    "joinCommunityTitle": "Join the Chess Community",
+    "joinCommunityDesc": "Connect with chess enthusiasts, join tournaments, and improve your skills at StrateZone!",
+    "joinNowButton": "Join Now",
+    "popularButton": "Popular",
+    "newestButton": "Newest",
+    "followingButton": "Following",
+    "createPostButton": "Create Post",
+    "ChooseTopic": "Choose Topic"
+  },
+  "404": {
+    "errorTitle": "You are all alone here",
+    "backHome": "Go back to homepage"
   }
-  
+}
