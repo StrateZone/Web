@@ -1,0 +1,16 @@
+{
+    "NavBar": { "home": "Home",
+    "chessAppointment": "Chess Appointment",
+    "courses": "Courses",
+    "store": "Store",
+    "community": "Community",
+    "siteTitle": "StrateZone",
+    "login": "Log in",
+    "register": "Register",
+    "english": "English",
+    "vietnamese": "Vietnamese",
+    "chooseLanguage":"Choose Language"
+}
+   
+  }
+  
