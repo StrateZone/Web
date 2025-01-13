@@ -1,9 +1,11 @@
 import React from "react";
 import { Button, IconButton } from "@material-tailwind/react";
 import { ArrowRightIcon, ArrowLeftIcon } from "@heroicons/react/24/outline";
+import { useLocale, useTranslations } from "next-intl";
 
 export function DefaultPagination() {
   const [active, setActive] = React.useState(1);
+  const t = useTranslations("ChessApointment");
 
   const getItemProps = (index: any) =>
     ({
@@ -32,7 +34,8 @@ export function DefaultPagination() {
         onClick={prev}
         disabled={active === 1}
       >
-        <ArrowLeftIcon strokeWidth={2} className="h-4 w-4" /> Previous
+        <ArrowLeftIcon strokeWidth={2} className="h-4 w-4" />{" "}
+        {t("pagination.previous")}
       </Button>
       <div className="flex items-center gap-2">
         <IconButton {...getItemProps(1)}>1</IconButton>
@@ -47,7 +50,8 @@ export function DefaultPagination() {
         onClick={next}
         disabled={active === 5}
       >
-        Next
+        {t("pagination.next")}
+
         <ArrowRightIcon strokeWidth={2} className="h-4 w-4" />
       </Button>
     </div>

@@ -10,7 +10,7 @@
     "register": "Đăng Ký",
     "english": "Tiếng Anh",
     "vietnamese": "Tiếng Việt",
-    "chooseLanguage":"Chọn ngôn ngữ"
+    "chooseLanguage": "Chọn ngôn ngữ"
   },
 
   "communityPage": {
@@ -26,6 +26,120 @@
   "404": {
     "errorTitle": "Bạn đang ở một mình ở đây",
     "backHome": "Trở lại trang chủ"
+  },
+
+  "loginPage": {
+    "title": "Đăng Nhập",
+    "welcomeMessage": "Chào mừng trở lại! Vui lòng nhập thông tin chi tiết của bạn.",
+    "emailLabel": "Email",
+    "passwordLabel": "Mật khẩu",
+    "rememberMe": "Ghi nhớ tôi",
+    "forgotPassword": "Quên mật khẩu?",
+    "loginButton": "Đăng Nhập",
+    "orText": "Hoặc",
+    "googleSignIn": "Đăng nhập bằng Google",
+    "facebookSignIn": "Đăng nhập bằng Facebook",
+    "noAccountMessage": "Bạn chưa có tài khoản?",
+    "signUpLink": "Đăng ký miễn phí"
+  },
+  "signupPage": {
+    "title": "Đăng Ký",
+    "description": "Tạo tài khoản của bạn bằng cách điền thông tin bên dưới.",
+    "labelName": "Họ và Tên",
+    "labelEmail": "Email",
+    "labelPassword": "Mật khẩu",
+    "labelRePassword": "Nhập lại mật khẩu",
+    "buttonSignUp": "Đăng Ký",
+    "buttonGoogle": "Đăng Ký với Google",
+    "buttonFacebook": "Đăng Ký với Facebook",
+    "or": "Hoặc",
+    "alreadyHaveAccount": "Đã có tài khoản? ",
+    "linkLogIn": "Đăng Nhập",
+    "Or": "Hoặc"
+  },
+
+  "forgotPassword": {
+    "forgotPasswordTitle": "Quên Mật Khẩu",
+    "forgotPasswordDescription": "Nhập email của bạn và chúng tôi sẽ gửi cho bạn hướng dẫn để đặt lại mật khẩu của bạn.",
+    "labelEmail": "Email",
+    "buttonSendResetLink": "Gửi Link Đặt Lại",
+    "alreadyRememberPassword": "Nhớ lại mật khẩu của bạn? ",
+    "linkLogIn": "Đăng Nhập"
+  },
+
+  "footer": {
+    "joinNow": "Đăng ký ngay và nhận 30% GIẢM!",
+    "exclusiveOffer": "Đừng bỏ lỡ ưu đãi độc quyền này sẽ kết thúc sớm.",
+    "registerNow": "đăng ký ngay",
+    "company": "Công ty",
+    "aboutUs": "Về chúng tôi",
+    "team": "Đội ngũ",
+    "products": "Sản phẩm",
+    "blog": "Blog",
+    "madeWith": "Được làm với",
+    "by": "bởi",
+    "capstoneSpring2025": "Capstone Spring 2025",
+    "materialTailwind": "Công nghệ Tailwind"
+  },
+  "heroBanner": {
+    "strateZone": "StrateZone: Nơi đam mê gặp chiến lược",
+    "description": "StrateZone là một ứng dụng kết nối những người yêu cờ vua, giúp dễ dàng tìm kiếm đối thủ phù hợp, sắp xếp các trận đấu tại câu lạc bộ, tham gia các khóa học hấp dẫn và tham gia sự kiện.",
+    "bookNow": "Đặt ngay",
+    "playVideo": "Xem video"
+  },
+
+  "ChessContent": {
+    "findYourPerfectChessPartner": "Tìm Đối Tác Cờ Tướng Hoàn Hảo Của Bạn",
+    "scheduleGames": "Lên lịch chơi cờ cá nhân hoặc nhóm với các người chơi phù hợp với trình độ và thời gian của bạn.",
+    "xiangqi": "Cờ Tướng",
+    "culturalLegacy": "Di Sản Văn Hóa",
+    "go": "Cờ Vây",
+    "endlessPossibilities": "Vô Số Khả Năng",
+    "chess": "Cờ Vua",
+    "strategyAndSkills": "Chiến Lược & Kỹ Năng",
+    "xiangqiDescription": "Đắm mình vào nghệ thuật cờ tướng cổ xưa, nơi các nước đi chiến lược và tính toán quyết định thắng thua.",
+    "goDescription": "Một trong những trò chơi bàn cổ xưa, cờ Vây mang đến những khả năng vô tận và yêu cầu tư duy chiến lược sâu sắc để chiếm ưu thế trên bàn cờ.",
+    "chessDescription": "Một trò chơi kinh điển, cờ vua thách thức người chơi bằng chiến lược và tầm nhìn. Hoàn hảo cho người chơi ở mọi cấp độ kỹ năng.",
+    "scheduleGamesDescription": "Lên lịch các trận cờ cá nhân hoặc nhóm với những người chơi có cùng trình độ kỹ năng và thời gian yêu thích.",
+    "bookNow": "Đặt ngay"
+  },
+  "CourseContent": {
+    "LearnAndMasterChessSkills": "Học và thành thạo kỹ năng cờ vua",
+    "JoinExpertLedClasses": "Tham gia các lớp học do chuyên gia hướng dẫn để nâng cao kỹ năng cờ vua của bạn, cho dù bạn là người mới bắt đầu hay đã chơi lâu năm. Các khóa học có sẵn cho Cờ vua, Cờ tướng và Cờ Go",
+    "ChessForBeginners": "Cờ vua cho người mới bắt đầu",
+    "ChessForBeginnersDescription": "Khóa học này bao gồm những kiến thức cơ bản của cờ vua, bao gồm luật chơi, cách di chuyển các quân cờ, chiến lược, và các phương pháp cơ bản. Cho dù bạn là người mới hoặc muốn ôn lại kiến thức, đây là khóa học lý tưởng để bắt đầu.",
+    "IntermediateChessCourse": "Khóa Học Trung Cấp",
+    "IntermediateChessStrategies": "Chiến lược cờ vua trung cấp",
+    "IntermediateChessStrategiesDescription": "Học những chiến lược và kỹ thuật nâng cao để chơi cờ ở mức độ cao hơn. Khóa học này bao gồm các thủ thuật, nguyên tắc khai cuộc, chiến lược giữa ván và kết cục.",
+    "GoTheArtOfStrategy": "Cờ Vây: Nghệ thuật chiến lược",
+    "GoTheArtOfStrategyDescription": "Khám phá trò chơi cổ xưa của Cờ Vây. Học các quy tắc, chiến lược cơ bản, và cách tư duy trước trong trò chơi sâu sắc này. Hoàn hảo cho những người yêu thích các trò chơi trí tuệ thách thức.",
+    "InternationalChessMaster": "Kiện tướng cờ vua quốc tế",
+    "BeginnerCourse": "Khóa học cơ bản",
+    "ChessGrandmaster": "Kiện tướng cờ vua",
+    "GoExpert": "Chuyên gia Cờ Vây"
+  },
+  "ChessApointment": {
+    "bannerTitle": "Tham gia Cộng đồng Cờ Vua",
+    "bannerDescription": "Kết nối với những người yêu thích cờ vua, tham gia các giải đấu và nâng cao kỹ năng của bạn tại StrateZone!",
+    "tabs": {
+      "chess": "Cờ Vua",
+      "xiangqi": "Cờ Tướng",
+      "go": "Cờ Vây"
+    },
+    "searchPlaceholder": "Tìm kiếm đối tác",
+    "pagination": {
+      "previous": "Trước",
+      "next": "Tiếp theo"
+    }
+  },
+  "PartnerCard": {
+    "inviteButton": "Mời chơi",
+    "availability": "Khả dụng",
+    "skillLevel": "Trình độ",
+    "preferredTime": "Thời gian ưu tiên",
+    "chessTypes": "Các loại cờ",
+    "location": "Vị trí",
+    "rating": "Đánh giá",
+    "matchesPlayed": "Trận đã chơi"
   }
 }
-

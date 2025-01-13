@@ -1,29 +1,32 @@
 "use client";
 import { Typography, Button, IconButton } from "@material-tailwind/react";
+import { useLocale, useTranslations } from "next-intl";
 
 const CURRENT_YEAR = new Date().getFullYear();
-const LINKS = ["Company", "About Us", "Team", "Products", "Blog"];
+const LINKS = ["company", "aboutUs", "team", "products", "blog"];
 
 export function Footer() {
+  const t = useTranslations("footer");
+
   return (
     <footer className="pb-5 p-10 md:pt-10">
       <div className="container flex flex-col mx-auto">
-        <div className="flex !w-full py-10 mb-5 md:mb-20 flex-col justify-center !items-center bg-gray-900 max-w-6xl mx-auto rounded-2xl p-5 ">
+        <div className="flex !w-full py-10 mb-5 md:mb-20 flex-col justify-center !items-center bg-gray-900 max-w-6xl mx-auto rounded-2xl p-5">
           <Typography
-            className="text-2xl md:text-3xl text-center font-bold "
+            className="text-2xl md:text-3xl text-center font-bold"
             color="white"
           >
-            Join now and get 30% OFF!
+            {t("joinNow")}
           </Typography>
           <Typography
             color="white"
-            className=" md:w-7/12 text-center my-3 !text-base"
+            className="md:w-7/12 text-center my-3 !text-base"
           >
-            Don&apos;t miss out on this exclusive offer that will end soon.
+            {t("exclusiveOffer")}
           </Typography>
           <div className="flex w-full md:w-fit gap-3 mt-2 flex-col md:flex-row">
             <Button color="white" size="md">
-              register now
+              {t("registerNow")}
             </Button>
           </div>
         </div>
@@ -47,7 +50,7 @@ export function Footer() {
                   color="white"
                   className="font-normal !text-gray-700 hover:!text-gray-900 transition-colors"
                 >
-                  {link}
+                  {t(link)}
                 </Typography>
               </li>
             ))}
@@ -71,13 +74,13 @@ export function Footer() {
           color="blue-gray"
           className="text-center mt-12 font-normal !text-gray-700"
         >
-          &copy; {CURRENT_YEAR} Made with{" "}
+          &copy; {CURRENT_YEAR} {t("madeWith")}{" "}
           <a href="https://www.material-tailwind.com" target="_blank">
-            Material Tailwind
+            {t("materialTailwind")}
           </a>{" "}
-          by{" "}
+          {t("by")}{" "}
           <a href="https://www.creative-tim.com" target="_blank">
-            Capstone Spring 2025
+            {t("capstoneSpring2025")}
           </a>
           .
         </Typography>

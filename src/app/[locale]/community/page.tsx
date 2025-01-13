@@ -111,7 +111,7 @@ export default function ComunityPage() {
           <div className="w-full lg:w-1/4 px-4">
             <SearchInput />
 
-            <Typography variant="h4" className="my-4">
+            <Typography variant="h4" className="my-4 text-black">
               {t("ChooseTopic")}
             </Typography>
             <TopicCard

@@ -8,6 +8,7 @@ import {
   Typography,
 } from "@material-tailwind/react";
 import { PlayIcon } from "@heroicons/react/24/solid";
+import { useLocale, useTranslations } from "next-intl";
 
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
@@ -15,58 +16,59 @@ import IndexCard from "@/components/card";
 import SearchInput from "@/components/input/search_input";
 import { DefaultPagination } from "@/components/pagination";
 
-const partners = [
-  {
-    id: 1,
-    avatar: "/image/avatar3.jpg",
-    name: "John Doe",
-    skillLevel: "Advanced",
-    availability: "Online",
-    preferredTime: "6:00 PM - 8:00 PM",
-    chessTypes: ["Chess", "Xiangqi"],
-    location: "2 km away",
-    rating: 4.8,
-    matchesPlayed: 50,
-  },
-  {
-    id: 2,
-    avatar: "/image/avatar3.jpg",
-    name: "Jane Smith",
-    skillLevel: "Intermediate",
-    availability: "Busy",
-    preferredTime: "7:00 PM - 9:00 PM",
-    chessTypes: ["Go"],
-    location: "5 km away",
-    rating: 4.5,
-    matchesPlayed: 30,
-  },
-  {
-    id: 3,
-    avatar: "/image/avatar3.jpg",
-    name: "Michael Johnson",
-    skillLevel: "Beginner",
-    availability: "Offline",
-    preferredTime: "8:00 PM - 10:00 PM",
-    chessTypes: ["Chess"],
-    location: "1 km away",
-    rating: 3.9,
-    matchesPlayed: 10,
-  },
-  {
-    id: 4,
-    avatar: "/image/avatar3.jpg",
-    name: "Emily Davis",
-    skillLevel: "Advanced",
-    availability: "Online",
-    preferredTime: "5:00 PM - 7:00 PM",
-    chessTypes: ["Chess", "Go"],
-    location: "3 km away",
-    rating: 4.7,
-    matchesPlayed: 45,
-  },
-];
-
 export default function ChessAppointment() {
+  const partners = [
+    {
+      id: 1,
+      avatar: "/image/avatar3.jpg",
+      name: "John Doe",
+      skillLevel: "Advanced",
+      availability: "Online",
+      preferredTime: "6:00 PM - 8:00 PM",
+      chessTypes: ["Chess", "Xiangqi"],
+      location: "2 km away",
+      rating: 4.8,
+      matchesPlayed: 50,
+    },
+    {
+      id: 2,
+      avatar: "/image/avatar3.jpg",
+      name: "Jane Smith",
+      skillLevel: "Intermediate",
+      availability: "Busy",
+      preferredTime: "7:00 PM - 9:00 PM",
+      chessTypes: ["Go"],
+      location: "5 km away",
+      rating: 4.5,
+      matchesPlayed: 30,
+    },
+    {
+      id: 3,
+      avatar: "/image/avatar3.jpg",
+      name: "Michael Johnson",
+      skillLevel: "Beginner",
+      availability: "Offline",
+      preferredTime: "8:00 PM - 10:00 PM",
+      chessTypes: ["Chess"],
+      location: "1 km away",
+      rating: 3.9,
+      matchesPlayed: 10,
+    },
+    {
+      id: 4,
+      avatar: "/image/avatar3.jpg",
+      name: "Emily Davis",
+      skillLevel: "Advanced",
+      availability: "Online",
+      preferredTime: "5:00 PM - 7:00 PM",
+      chessTypes: ["Chess", "Go"],
+      location: "3 km away",
+      rating: 4.7,
+      matchesPlayed: 45,
+    },
+  ];
+  const t = useTranslations("ChessApointment");
+
   return (
     <>
       <Navbar />
@@ -81,26 +83,24 @@ export default function ChessAppointment() {
 
         <div className="min-h-[350px] relative z-30 h-full max-w-6xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
           <h2 className="sm:text-4xl text-2xl font-bold mb-6">
-            Join the Chess Community
+            {t("bannerTitle")}
           </h2>
           <p className="sm:text-lg text-base text-center text-gray-200">
-            Connect with chess enthusiasts, join tournaments, and improve your
-            skills at StrateZone!
+            {t("bannerDescription")}
           </p>
         </div>
       </div>
-
       <Tabs value="Chess" className="my-16">
         <div className="w-full flex flex-col items-center">
           <TabsHeader className="h-12 w-72 md:w-96">
             <Tab value="Chess" className="font-medium">
-              Chess
+              {t("tabs.chess")}
             </Tab>
             <Tab value="Xiangqi" className="font-medium">
-              Xiangqi
+              {t("tabs.xiangqi")}
             </Tab>
             <Tab value="Go" className="font-medium">
-              Go
+              {t("tabs.go")}
             </Tab>
           </TabsHeader>
         </div>
@@ -118,7 +118,6 @@ export default function ChessAppointment() {
           ))}
         </div>
       </section>
-
       <div className="flex justify-center">
         <DefaultPagination />
       </div>

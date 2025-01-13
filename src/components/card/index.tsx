@@ -8,8 +8,7 @@ import {
 } from "@material-tailwind/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useLocale } from "next-intl";
-
+import { useLocale, useTranslations } from "next-intl";
 import { User } from "../../../constants/types/user.type";
 
 export default function PartnerCard({
@@ -24,6 +23,8 @@ export default function PartnerCard({
   matchesPlayed,
 }: User) {
   const localActive = useLocale();
+  const t = useTranslations("PartnerCard");
+
   return (
     <Card color="transparent" shadow={false}>
       <CardHeader floated={false} className="mx-0 mt-0 mb-6 h-48">
@@ -46,26 +47,26 @@ export default function PartnerCard({
           </Typography>
         </Link>
         <Typography className="text-sm font-normal text-gray-500">
-          {skillLevel} | {availability}
+          {t("skillLevel")}: {skillLevel} | {t("availability")}: {availability}
         </Typography>
         <Typography className="text-sm font-normal text-gray-700">
-          <strong>Preferred Time:</strong> {preferredTime}
+          <strong>{t("preferredTime")}:</strong> {preferredTime}
         </Typography>
         <Typography className="text-sm font-normal text-gray-700">
-          <strong>Chess Types:</strong> {chessTypes.join(", ")}
+          <strong>{t("chessTypes")}:</strong> {chessTypes.join(", ")}
         </Typography>
         <Typography className="text-sm font-normal text-gray-700">
-          <strong>Location:</strong> {location}
+          <strong>{t("location")}:</strong> {location}
         </Typography>
         <Typography className="text-sm font-normal text-gray-700">
-          <strong>Rating:</strong> {rating} ⭐ |{" "}
-          <strong>Matches Played:</strong> {matchesPlayed}
+          <strong>{t("rating")}:</strong> {rating} ⭐ |{" "}
+          <strong>{t("matchesPlayed")}:</strong> {matchesPlayed}
         </Typography>
       </CardBody>
 
       <div className="mt-4">
         <Button size="sm" fullWidth>
-          Invite to Play
+          {t("inviteButton")}
         </Button>
       </div>
     </Card>
