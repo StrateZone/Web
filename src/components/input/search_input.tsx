@@ -1,7 +1,7 @@
 import React from "react";
 import { Input } from "@material-tailwind/react";
 import { FaSearch } from "react-icons/fa";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 
 export default function SearchInput() {
   const t = useTranslations("ChessApointment");
