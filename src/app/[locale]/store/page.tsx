@@ -15,10 +15,12 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 import { useTranslations } from "next-intl";
+import { useParams } from "next/navigation";
 import { DefaultPagination } from "@/components/pagination";
 
 export default function Store() {
   const t = useTranslations("communityPage"); //Will update for store translation
+  const { locale } = useParams(); // Lấy locale từ URL
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -140,7 +142,7 @@ export default function Store() {
           {products.map((product) => (
             <SwiperSlide key={product.id}>
               <div className="bg-white shadow-md hover:shadow-xl transition rounded-lg p-5 transform hover:scale-[1.03]">
-                <a href={`/products/${product.id}`} className="block">
+                <a href={`/${locale}/store/${product.id}`} className="block">
                   <img
                     src={product.url}
                     alt={product.name}
@@ -175,6 +177,9 @@ export default function Store() {
             </SwiperSlide>
           ))}
         </Swiper>
+        <div className="flex justify-center mt-8 mb-8">
+          <DefaultPagination />
+        </div>
       </div>
 
       <Footer />
