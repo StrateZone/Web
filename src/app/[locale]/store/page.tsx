@@ -9,10 +9,11 @@ import Navbar from "@/components/navbar";
 // Import Swiper
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination } from "swiper/modules";
+import { useRouter } from "next/navigation";
+
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
-import { DefaultPagination } from "@/components/DefaultPagination";
 
 export default function Store() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -103,7 +104,7 @@ export default function Store() {
             <option value="2">Cờ tướng</option>
             <option value="3">Cờ vây</option>
           </select>
-          <Button className="bg-blue-600 text-white flex items-center gap-2 px-4 py-2 rounded-md hover:bg-blue-700 transition">
+          <Button className="bg-black text-white flex items-center gap-2 px-4 py-2 rounded-md hover:bg-gray-800 transition">
             <Search size={18} /> Tìm kiếm
           </Button>
         </div>
