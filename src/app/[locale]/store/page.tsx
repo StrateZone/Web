@@ -1,21 +1,25 @@
 "use client";
 import React, { useState } from "react";
-import { Search, Star, StarHalf } from "lucide-react";
-import { Button } from "@material-tailwind/react";
+
+import { Star, StarHalf } from "lucide-react";
+import { Select, Option, Button } from "@material-tailwind/react";
+import { FaShoppingCart } from "react-icons/fa";
 
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
+import SearchInput from "@/components/input/search_input";
 
-// Import Swiper
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination } from "swiper/modules";
-import { useRouter } from "next/navigation";
-
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
+import { useTranslations } from "next-intl";
+import { DefaultPagination } from "@/components/pagination";
 
 export default function Store() {
+  const t = useTranslations("communityPage"); //Will update for store translation
+
   const [searchTerm, setSearchTerm] = useState("");
 
   const products = [
@@ -82,94 +86,95 @@ export default function Store() {
       <Navbar />
 
       {/* Banner */}
-      <div className="relative min-h-screen w-full bg-[url('https://png.pngtree.com/background/20230611/original/pngtree-rain-storm-and-a-chess-board-picture-image_3129264.jpg')] bg-cover bg-center flex flex-col items-center justify-center gap-6 p-5">
-        {/* Tiêu đề */}
-        <div className="text-center text-white mt-24">
-          <h1 className="text-5xl font-extrabold">Strate Zone</h1>
-          <p className="text-lg opacity-80">Nơi nghệ thuật gặp gỡ đam mê</p>
-        </div>
 
-        {/* Thanh tìm kiếm */}
-        <div className="flex items-center gap-3 bg-white/20 p-3 rounded-lg backdrop-blur-md shadow-lg">
-          <input
-            type="text"
-            placeholder="Tìm sản phẩm..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="p-2 w-60 rounded-md border-none outline-none text-black focus:ring-2 focus:ring-blue-400"
-          />
-          <select className="p-2 rounded-md text-black focus:ring-2 focus:ring-blue-400">
-            <option value="0">Tất cả</option>
-            <option value="1">Cờ vua</option>
-            <option value="2">Cờ tướng</option>
-            <option value="3">Cờ vây</option>
-          </select>
-          <Button className="bg-black text-white flex items-center gap-2 px-4 py-2 rounded-md hover:bg-gray-800 transition">
-            <Search size={18} /> Tìm kiếm
-          </Button>
-        </div>
+      <div className="relative font-sans">
+        <div className="absolute inset-0 w-full h-full bg-gray-900/60 opacity-60 z-20"></div>
 
-        {/* Sản phẩm nổi bật */}
-        <div className="container mx-auto px-4 py-10">
-          <h2 className="text-3xl font-bold text-center mb-8 text-white">
-            Sản phẩm nổi bật
+        <img
+          src="https://png.pngtree.com/background/20230524/original/pngtree-the-game-of-chess-picture-image_2710450.jpg"
+          alt="Banner Image"
+          className="absolute inset-0 w-full h-full object-cover z-10"
+        />
+
+        <div className="min-h-[350px] relative z-30 h-full max-w-6xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
+          <h2 className="sm:text-4xl text-2xl font-bold mb-6">
+            Cửa hàng cờ StrateZone
           </h2>
-
-          {/* Swiper Carousel */}
-          <Swiper
-            modules={[Navigation, Pagination]}
-            spaceBetween={20}
-            slidesPerView={1}
-            breakpoints={{
-              640: { slidesPerView: 2 },
-              1024: { slidesPerView: 3 },
-            }}
-            navigation
-            // pagination={{ clickable: true }}
-            className="relative pb-10"
-          >
-            {products.map((product) => (
-              <SwiperSlide key={product.id}>
-                <div className="bg-white shadow-md hover:shadow-xl transition rounded-lg p-5 transform hover:scale-[1.03]">
-                  <a href={`/products/${product.id}`} className="block">
-                    <img
-                      src={product.url}
-                      alt={product.name}
-                      className="w-full h-60 object-cover rounded-lg"
-                    />
-                  </a>
-                  <h3 className="text-lg font-semibold mt-3 text-black">
-                    {product.name}
-                  </h3>
-                  <p className="text-gray-600 text-sm mt-1">
-                    {product.description}
-                  </p>
-                  <p className="text-blue-600 font-bold mt-2">
-                    Giá: ${product.price.toFixed(2)}
-                  </p>
-
-                  {/* Đánh giá sao */}
-                  <div className="flex text-yellow-400 mt-2">
-                    {[...Array(4)].map((_, i) => (
-                      <Star key={i} size={18} />
-                    ))}
-                    <StarHalf size={18} />
-                  </div>
-
-                  {/* Hành động */}
-                  <div className="flex gap-3 mt-4">
-                    <button className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">
-                      Thêm vào giỏ hàng
-                    </button>
-                    <button className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition">
-                      Mua hàng
-                    </button>
-                  </div>
-                </div>
-              </SwiperSlide>
-            ))}
-          </Swiper>
+          <p className="sm:text-lg text-base text-center text-gray-200">
+            Nâng tầm chiến thuật – Trang bị như một kiện tướng!
+          </p>
         </div>
+      </div>
+
+      {/* Thanh tìm kiếm */}
+      <div className="flex justify-center mt-10">
+        <SearchInput />
+        <div className="w-30 ml-2">
+          <Select label="Chọn loại cờ">
+            <Option>Cờ vua</Option>
+            <Option>Cờ tướng</Option>
+            <Option>Cờ vây</Option>
+          </Select>
+        </div>
+      </div>
+
+      {/* Sản phẩm nổi bật */}
+      <div className="container mx-auto px-4 ">
+        <div className="mt-8">
+          <h2 className="text-3xl font-bold text-black">Sản phẩm nổi bật</h2>
+        </div>
+
+        {/* Swiper Carousel */}
+        <Swiper
+          modules={[Navigation, Pagination]}
+          spaceBetween={20}
+          slidesPerView={1}
+          breakpoints={{
+            640: { slidesPerView: 2 },
+            1024: { slidesPerView: 3 },
+          }}
+          navigation
+          // pagination={{ clickable: true }}
+          className="relative pb-10"
+        >
+          {products.map((product) => (
+            <SwiperSlide key={product.id}>
+              <div className="bg-white shadow-md hover:shadow-xl transition rounded-lg p-5 transform hover:scale-[1.03]">
+                <a href={`/products/${product.id}`} className="block">
+                  <img
+                    src={product.url}
+                    alt={product.name}
+                    className="w-full h-60 object-cover rounded-lg"
+                  />
+                </a>
+                <h3 className="text-lg font-semibold mt-3 text-black">
+                  {product.name}
+                </h3>
+                <p className="text-gray-600 text-sm mt-1">
+                  {product.description}
+                </p>
+                <p className="text-blue-600 font-bold mt-2">
+                  Giá: ${product.price.toFixed(2)}
+                </p>
+
+                {/* Đánh giá sao */}
+                <div className="flex text-yellow-400 mt-2">
+                  {[...Array(4)].map((_, i) => (
+                    <Star key={i} size={18} />
+                  ))}
+                  <StarHalf size={18} />
+                </div>
+
+                <div className="flex gap-3 mt-4">
+                  <Button className="flex items-center gap-3">
+                    <FaShoppingCart /> Thêm vào giỏ hàng
+                  </Button>
+                  <Button color="green">Mua ngay</Button>
+                </div>
+              </div>
+            </SwiperSlide>
+          ))}
+        </Swiper>
       </div>
 
       <Footer />
