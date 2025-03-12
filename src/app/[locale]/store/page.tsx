@@ -17,10 +17,12 @@ import "swiper/css/pagination";
 import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
 import { DefaultPagination } from "@/components/pagination";
+import { useRouter } from "next/navigation"; // Dùng next/navigation thay vì next/router
 
 export default function Store() {
   const t = useTranslations("communityPage"); //Will update for store translation
   const { locale } = useParams(); // Lấy locale từ URL
+  const router = useRouter(); // Khởi tạo router
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -171,7 +173,14 @@ export default function Store() {
                   <Button className="flex items-center gap-3">
                     <FaShoppingCart /> Thêm vào giỏ hàng
                   </Button>
-                  <Button color="green">Mua ngay</Button>
+                  <Button
+                    onClick={() =>
+                      router.push(`/${locale}/store/product_order`)
+                    }
+                    color="green"
+                  >
+                    Mua ngay
+                  </Button>
                 </div>
               </div>
             </SwiperSlide>
