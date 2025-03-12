@@ -32,14 +32,6 @@ export default function OrderPage() {
     0,
   );
 
-  const handleInputChange = (e) => {
-    setOrderForm({ ...orderForm, [e.target.name]: e.target.value });
-  };
-
-  const removeFromCart = (index) => {
-    setCartItems(cartItems.filter((_, i) => i !== index));
-  };
-
   return (
     <div className="text-black">
       <Navbar />
@@ -83,8 +75,6 @@ export default function OrderPage() {
                   <input
                     type="text"
                     name={field}
-                    value={orderForm[field]}
-                    onChange={handleInputChange}
                     placeholder={field}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-black"
                   />
@@ -98,7 +88,6 @@ export default function OrderPage() {
                 type="text"
                 name="note"
                 value={orderForm.note}
-                onChange={handleInputChange}
                 placeholder="Ghi chú"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg"
               />
@@ -111,7 +100,6 @@ export default function OrderPage() {
               <select
                 name="shipping_method"
                 value={orderForm.shipping_method}
-                onChange={handleInputChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg"
               >
                 <option value="express">Nhanh (Express)</option>
@@ -126,7 +114,6 @@ export default function OrderPage() {
               <select
                 name="payment_method"
                 value={orderForm.payment_method}
-                onChange={handleInputChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg"
               >
                 <option value="cod">Thanh toán khi nhận hàng (COD)</option>
@@ -169,10 +156,7 @@ export default function OrderPage() {
                       {(item.product.price * item.quantity).toLocaleString()}
                     </td>
                     <td className="py-2 px-4">
-                      <button
-                        className="bg-red-500 text-white px-2 py-1 rounded-lg text-sm"
-                        onClick={() => removeFromCart(index)}
-                      >
+                      <button className="bg-red-500 text-white px-2 py-1 rounded-lg text-sm">
                         Xóa
                       </button>
                     </td>
