@@ -129,9 +129,9 @@ export default function ProductDetail() {
     console.log(`Thêm sản phẩm "${product.name}" vào giỏ hàng.`);
   };
 
-  const buyNow = () => {
-    router.push(`/orders/${product.id}`);
-  };
+  // const buyNow = () => {
+  //   router.push(`/orders/${product.id}`);
+  // };
 
   return (
     <div>
@@ -226,7 +226,10 @@ export default function ProductDetail() {
               <Button className="flex items-center gap-3">
                 <FaShoppingCart onClick={addToCart} /> Thêm vào giỏ hàng
               </Button>
-              <Button onClick={buyNow} color="green">
+              <Button
+                onClick={() => router.push(`/${locale}/store/product_order`)}
+                color="green"
+              >
                 Mua ngay
               </Button>
             </div>
@@ -306,7 +309,13 @@ export default function ProductDetail() {
                   <Button className="flex items-center gap-2 text-xs px-2 py-1">
                     <FaShoppingCart size={14} /> Thêm
                   </Button>
-                  <Button color="green" className="text-xs px-2 py-1">
+                  <Button
+                    onClick={() =>
+                      router.push(`/${locale}/store/product_order`)
+                    }
+                    color="green"
+                    className="text-xs px-2 py-1"
+                  >
                     Mua ngay
                   </Button>
                 </div>
