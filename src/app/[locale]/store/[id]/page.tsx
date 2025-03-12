@@ -115,13 +115,13 @@ export default function ProductDetail() {
   // Chuyển đổi ảnh chính
   const previousImage = () => {
     setCurrentImageIndex((prev) =>
-      prev === 0 ? (product.productImages?.length || 1) - 1 : prev - 1
+      prev === 0 ? (product.productImages?.length || 1) - 1 : prev - 1,
     );
   };
 
   const nextImage = () => {
     setCurrentImageIndex((prev) =>
-      prev === (product.productImages?.length || 1) - 1 ? 0 : prev + 1
+      prev === (product.productImages?.length || 1) - 1 ? 0 : prev + 1,
     );
   };
 
