@@ -29,7 +29,7 @@ export default function OrderPage() {
 
   const totalAmount = cartItems.reduce(
     (total, item) => total + item.product.price * item.quantity,
-    0
+    0,
   );
 
   const handleInputChange = (e) => {
@@ -89,7 +89,7 @@ export default function OrderPage() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-black"
                   />
                 </div>
-              )
+              ),
             )}
 
             <div className="mb-4">
