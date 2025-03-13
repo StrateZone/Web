@@ -25,11 +25,29 @@ export default function OrderPage() {
       },
       quantity: 1,
     },
+    {
+      product: {
+        name: "Sản phẩm A",
+        price: 100000,
+        thumbnail:
+          "https://png.pngtree.com/background/20230524/original/pngtree-the-game-of-chess-picture-image_2710450.jpg",
+      },
+      quantity: 1,
+    },
+    {
+      product: {
+        name: "Sản phẩm A",
+        price: 100000,
+        thumbnail:
+          "https://png.pngtree.com/background/20230524/original/pngtree-the-game-of-chess-picture-image_2710450.jpg",
+      },
+      quantity: 1,
+    },
   ]);
 
   const totalAmount = cartItems.reduce(
     (total, item) => total + item.product.price * item.quantity,
-    0,
+    0
   );
 
   return (
@@ -79,7 +97,7 @@ export default function OrderPage() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-black"
                   />
                 </div>
-              ),
+              )
             )}
 
             <div className="mb-4">
@@ -127,9 +145,12 @@ export default function OrderPage() {
             <h2 className="text-xl font-bold text-black mb-4">
               Thông tin sản phẩm đã đặt hàng
             </h2>
-            <table className="w-full border border-gray-300 rounded-lg">
+            <table className="w-[710px] border border-gray-300 rounded-lg">
               <thead>
                 <tr className="bg-gray-200">
+                  <th className="py-2 px-4">
+                    <input type="checkbox" />
+                  </th>
                   <th className="py-2 px-4 text-left">Sản Phẩm</th>
                   <th className="py-2 px-4">Số Lượng</th>
                   <th className="py-2 px-4">Đơn Giá (₫)</th>
@@ -140,6 +161,9 @@ export default function OrderPage() {
               <tbody>
                 {cartItems.map((item, index) => (
                   <tr key={index} className="border-b border-gray-300">
+                    <td className="py-2 px-4">
+                      <input type="checkbox" />
+                    </td>
                     <td className="py-2 px-4 flex items-center">
                       <img
                         src={item.product.thumbnail}
@@ -163,8 +187,8 @@ export default function OrderPage() {
                   </tr>
                 ))}
                 <tr>
-                  <td colSpan={3} className="text-right font-bold py-2 px-4">
-                    Tổng giá:
+                  <td colSpan={4} className="text-right font-bold py-2 px-4">
+                    Thành Tiền:
                   </td>
                   <td className="py-2 px-4">
                     {totalAmount.toLocaleString()} ₫
@@ -182,6 +206,9 @@ export default function OrderPage() {
                 placeholder="Nhập coupon"
               />
               <Button className="flex items-center gap-3">Áp Dụng</Button>
+              <Button className="flex items-center gap-3">
+                Mã Khuyến Mãi Hiện Có
+              </Button>
             </div>
 
             {/* Đặt hàng */}
