@@ -37,7 +37,7 @@ function NavItem({ children, href }: NavItemProps) {
       <Link href={href || "#"}>
         <Typography
           variant="paragraph"
-          className="flex items-center gap-2 font-medium"
+          className="flex items-center gap-2 font-medium transition-colors duration-300 hover:text-gray-500"
         >
           {children}
         </Typography>
@@ -74,7 +74,7 @@ export function Navbar() {
   useEffect(() => {
     window.addEventListener(
       "resize",
-      () => window.innerWidth >= 960 && setOpen(false),
+      () => window.innerWidth >= 960 && setOpen(false)
     );
   }, []);
 
