@@ -76,7 +76,7 @@ function Page() {
       description:
         "Nắm vững những khai cuộc phổ biến và cách triển khai thế trận.",
       price: 44.99,
-      url: "https://chess-teacher.com/wp-content/uploads/2020/07/opening_principles.jpg",
+      url: "https://i.pinimg.com/736x/14/ac/00/14ac005a0d02c5775b71517a514d3022.jpg",
     },
   ];
   const [selectedDate, setSelectedDate] = useState(dayjs());
@@ -160,32 +160,45 @@ function Page() {
             >
               {courses.map((course) => (
                 <SwiperSlide key={course.id}>
-                  <div className="bg-white shadow-md hover:shadow-lg transition rounded-lg p-4">
-                    <a href={`/${locale}/store/${course.id}`} className="block">
+                  <div className="bg-white shadow-md hover:shadow-lg transition rounded-lg p-6">
+                    <a
+                      href={`/${locale}/courses/${course.id}`}
+                      className="block"
+                    >
                       <img
                         src={course.url}
                         alt={course.name}
                         className="w-full h-48 object-cover rounded-lg"
                       />
                     </a>
-                    <h3 className="text-lg font-semibold mt-3 text-black">
+
+                    <h3 className="text-lg font-semibold mt-4 text-black">
                       {course.name}
                     </h3>
-                    <p className="text-gray-600 text-sm">
+
+                    <p className="text-gray-600 text-sm mt-3">
+                      <span className="font-bold">Thể loại - Trình độ:</span>{" "}
                       {course.category} - {course.level}
                     </p>
-                    <p className="text-gray-600 text-sm">
-                      Thời gian bắt đầu: {course.startDate}
+
+                    <p className="text-gray-600 text-sm mt-2">
+                      <span className="font-bold">Thời gian bắt đầu:</span>{" "}
+                      {course.startDate}
                     </p>
-                    <p className="text-gray-600 text-sm">
-                      Độ dài khóa học: {course.duration}
+
+                    <p className="text-gray-600 text-sm mt-2">
+                      <span className="font-bold">Độ dài khóa học:</span>{" "}
+                      {course.duration}
                     </p>
-                    <p className="text-blue-600 font-bold mt-2">
+
+                    <p className="text-blue-600 font-bold mt-4">
                       ${course.price.toFixed(2)}
                     </p>
+
                     <div className="flex gap-3 mt-4">
                       <Button className="flex items-center gap-3">
-                        <FaShoppingCart /> Thêm vào danh sách
+                        <FaShoppingCart />{" "}
+                        <span className="font-bold">Thêm vào danh sách</span>
                       </Button>
                       <Button
                         onClick={() =>
@@ -193,7 +206,7 @@ function Page() {
                         }
                         color="green"
                       >
-                        Ghi danh
+                        <span className="font-bold">Ghi danh</span>
                       </Button>
                     </div>
                   </div>
