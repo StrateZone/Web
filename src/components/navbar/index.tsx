@@ -27,8 +27,11 @@ import { ShoppingCart } from "lucide-react";
 import { Crown } from "lucide-react";
 import { User } from "lucide-react";
 import { Menu } from "@headlessui/react";
+<<<<<<< HEAD
 import { FaWallet } from "react-icons/fa";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
+=======
+>>>>>>> e11fdd8 (Improve UI components: navbar & banner hero)
 
 import ProfileMenu from "../profile_menu";
 
@@ -123,7 +126,11 @@ export function Navbar() {
       href: `/${localActive}/chess_appointment/chess_category`,
     },
     {
+<<<<<<< HEAD
       name: "Giải đấu",
+=======
+      name: "Khóa Học",
+>>>>>>> e11fdd8 (Improve UI components: navbar & banner hero)
       icon: FaBookOpen,
       href: `/${localActive}/tournament`,
     },
@@ -168,6 +175,7 @@ export function Navbar() {
         </ul>
         {isLoggedIn ? (
           <div className="hidden items-center gap-6 lg:flex">
+<<<<<<< HEAD
             <div className="flex items-center gap-4">
               <div className="flex items-center bg-gray-100 px-3 py-1 rounded-md">
                 <FaWallet className="text-blue-500 mr-2" size={16} />
@@ -198,6 +206,43 @@ export function Navbar() {
             <ShoppingCart className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2" />
 
             <ProfileMenu />
+=======
+            <Crown className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2" />
+            <ShoppingCart className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2" />
+            <Menu as="div" className="relative inline-block text-left">
+              <Menu.Button className="flex items-center">
+                <User className="h-6 w-6 cursor-pointer hover:text-green-200 text-green-700" />
+              </Menu.Button>
+              <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                <div className="py-1">
+                  <Menu.Item>
+                    {({ active }) => (
+                      <button
+                        onClick={() => router.push("/profile")}
+                        className={`${
+                          active ? "bg-gray-100 text-gray-900" : "text-gray-700"
+                        } block w-full px-4 py-2 text-left text-sm`}
+                      >
+                        Hồ sơ
+                      </button>
+                    )}
+                  </Menu.Item>
+                  <Menu.Item>
+                    {({ active }) => (
+                      <button
+                        onClick={handleLogout}
+                        className={`${
+                          active ? "bg-gray-100 text-red-600" : "text-red-500"
+                        } block w-full px-4 py-2 text-left text-sm`}
+                      >
+                        Đăng xuất
+                      </button>
+                    )}
+                  </Menu.Item>
+                </div>
+              </Menu.Items>
+            </Menu>
+>>>>>>> e11fdd8 (Improve UI components: navbar & banner hero)
           </div>
         ) : (
           <>
