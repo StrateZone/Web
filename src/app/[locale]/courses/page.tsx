@@ -160,7 +160,7 @@ function Page() {
             >
               {courses.map((course) => (
                 <SwiperSlide key={course.id}>
-                  <div className="bg-white shadow-md hover:shadow-lg transition rounded-lg p-6">
+                  <div className="bg-white shadow-md hover:shadow-lg transition rounded-md p-3 transform hover:scale-105">
                     <a
                       href={`/${locale}/courses/${course.id}`}
                       className="block"
@@ -195,18 +195,18 @@ function Page() {
                       ${course.price.toFixed(2)}
                     </p>
 
-                    <div className="flex gap-3 mt-4">
-                      <Button className="flex items-center gap-3">
-                        <FaShoppingCart />{" "}
-                        <span className="font-bold">Thêm vào danh sách</span>
+                    <div className="flex gap-2 mt-3">
+                      <Button className="flex items-center gap-2 text-xs px-2 py-1">
+                        <FaShoppingCart size={14} /> Thêm
                       </Button>
                       <Button
                         onClick={() =>
                           router.push(`/${locale}/store/product_order`)
                         }
                         color="green"
+                        className="text-xs px-2 py-1"
                       >
-                        <span className="font-bold">Ghi danh</span>
+                        Mua ngay
                       </Button>
                     </div>
                   </div>
