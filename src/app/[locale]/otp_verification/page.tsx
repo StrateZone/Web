@@ -100,30 +100,51 @@ export default function OTPVerificationPage() {
 
   // Xử lý gửi lại mã OTP
   const handleResendOTP = async () => {
+<<<<<<< HEAD
     try {
       setIsResendDisabled(true);
       setTimer(30); // Reset bộ đếm về 30s
 
+=======
+    setIsResendDisabled(true);
+    setTimer(30); // Reset bộ đếm về 30s
+
+    try {
+>>>>>>> f61d03a (Update login, OTP verification, and registration flow)
       const loginUrl = `https://backend-production-5bc5.up.railway.app/api/auth/send-otp?email=${encodeURIComponent(email || "")}`;
 
       console.log("Đang gửi API yêu cầu gửi lại OTP:", { email });
 
+<<<<<<< HEAD
       const response = await axios.post(
         loginUrl,
         {},
         {
           // ✅ Để body rỗng vì API chỉ cần email trên URL
+=======
+      await axios.post(
+        loginUrl,
+        { email },
+        {
+>>>>>>> f61d03a (Update login, OTP verification, and registration flow)
           headers: {
             "Content-Type": "application/json",
           },
         },
       );
 
+<<<<<<< HEAD
       console.log("Gửi lại OTP thành công!", response.data);
     } catch (error) {
       console.error("Lỗi khi gửi lại OTP:", error);
       setError("Không thể gửi lại mã OTP, vui lòng thử lại sau!");
       setIsResendDisabled(false); // ✅ Nếu lỗi thì mở lại nút "Gửi lại mã"
+=======
+      console.log("Gửi lại OTP thành công!");
+    } catch (error) {
+      console.error("Lỗi khi gửi lại OTP:", error);
+      setError("Không thể gửi lại mã OTP, vui lòng thử lại sau!");
+>>>>>>> f61d03a (Update login, OTP verification, and registration flow)
     }
 
     // Bắt đầu đếm ngược lại 30 giây
@@ -138,7 +159,10 @@ export default function OTPVerificationPage() {
       });
     }, 1000);
   };
+<<<<<<< HEAD
 
+=======
+>>>>>>> f61d03a (Update login, OTP verification, and registration flow)
   const inputsRef = useRef<HTMLInputElement[]>([]); // Khai báo useRef
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
