@@ -23,6 +23,10 @@ import { FaBookOpen } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import Link from "next/link";
+import { ShoppingCart } from "lucide-react";
+import { Crown } from "lucide-react";
+import { User } from "lucide-react";
+import { Menu } from "@headlessui/react";
 
 import ProfileMenu from "../profile_menu";
 
@@ -55,6 +59,7 @@ export function Navbar() {
 
   const [open, setOpen] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const onSelectChange = (value: string | undefined) => {
     const currentPath = window.location.pathname.split("/")[2];
@@ -68,7 +73,11 @@ export function Navbar() {
       });
     }
   };
-
+  useEffect(() => {
+    // Kiểm tra nếu có accessToken thì user đã đăng nhập
+    const token = localStorage.getItem("accessToken");
+    setIsLoggedIn(!!token);
+  }, []);
   const handleOpen = () => setOpen((cur) => !cur);
 
   useEffect(() => {
@@ -77,6 +86,12 @@ export function Navbar() {
       () => window.innerWidth >= 960 && setOpen(false),
     );
   }, []);
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    setIsLoggedIn(false);
+    router.push("/"); // Điều hướng về trang chủ sau khi logout
+  };
 
   useEffect(() => {
     function handleScroll() {
@@ -94,27 +109,27 @@ export function Navbar() {
 
   const NAV_MENU = [
     {
-      name: t("home"),
+      name: "Trang chủ",
       icon: HomeIcon,
       href: "/",
     },
     {
-      name: t("chessAppointment"),
+      name: "Hẹn cờ",
       icon: FaChessBoard,
       href: `/${localActive}/chess_appointment`,
     },
     {
-      name: t("courses"),
+      name: "Khóa Học",
       icon: FaBookOpen,
       href: `/${localActive}/courses`,
     },
     {
-      name: t("store"),
+      name: "Cửa Hàng",
       icon: BuildingStorefrontIcon,
       href: `/${localActive}/store`,
     },
     {
-      name: t("community"),
+      name: "Cộng đồng",
       icon: UserCircleIcon,
       href: `/${localActive}/community`,
     },
@@ -147,56 +162,65 @@ export function Navbar() {
             </NavItem>
           ))}
         </ul>
-        <div className="hidden items-center gap-4 lg:flex">
-          <Select
-            value={localActive}
-            onChange={onSelectChange}
-            disabled={isPending}
-            label={t("chooseLanguage")}
-            color="amber"
-          >
-            <Option value="en">
-              <div className="flex gap-2 justify-start">
-                <img
-                  src="https://flagcdn.com/w40/gb.png"
-                  alt="English"
-                  className="h-5 w-6 rounded"
-                />
-                <div>{t("english")}</div>
-              </div>
-            </Option>
-            <Option value="vi">
-              <div className="flex gap-2 justify-start">
-                <img
-                  src="https://flagcdn.com/w40/vn.png"
-                  alt="Vietnamese"
-                  className="h-5 w-6 rounded"
-                />
-                <div> {t("vietnamese")}</div>
-              </div>
-            </Option>
-          </Select>
-          {session ? (
-            <ProfileMenu />
-          ) : (
-            <>
+        {isLoggedIn ? (
+          <div className="hidden items-center gap-6 lg:flex">
+            <Crown className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2" />
+            <ShoppingCart className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2" />
+            <Menu as="div" className="relative inline-block text-left">
+              <Menu.Button className="flex items-center">
+                <User className="h-6 w-6 cursor-pointer hover:text-green-200 text-green-700" />
+              </Menu.Button>
+              <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                <div className="py-1">
+                  <Menu.Item>
+                    {({ active }) => (
+                      <button
+                        onClick={() => router.push("/profile")}
+                        className={`${
+                          active ? "bg-gray-100 text-gray-900" : "text-gray-700"
+                        } block w-full px-4 py-2 text-left text-sm`}
+                      >
+                        Hồ sơ
+                      </button>
+                    )}
+                  </Menu.Item>
+                  <Menu.Item>
+                    {({ active }) => (
+                      <button
+                        onClick={handleLogout}
+                        className={`${
+                          active ? "bg-gray-100 text-red-600" : "text-red-500"
+                        } block w-full px-4 py-2 text-left text-sm`}
+                      >
+                        Đăng xuất
+                      </button>
+                    )}
+                  </Menu.Item>
+                </div>
+              </Menu.Items>
+            </Menu>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-x-2">
               <Button
                 onClick={() => router.push(`/${localActive}/login`)}
                 color={isScrolling ? "gray" : "white"}
                 variant="text"
               >
-                {t("login")}
+                Đăng nhập
               </Button>
               <Button
                 onClick={() => router.push(`/${localActive}/register`)}
                 color={isScrolling ? "gray" : "white"}
                 variant="text"
               >
-                {t("register")}
+                Đăng kí
               </Button>
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
+
         <IconButton
           variant="text"
           color={isScrolling ? "gray" : "white"}
