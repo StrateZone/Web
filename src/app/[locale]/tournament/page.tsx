@@ -98,10 +98,10 @@ function Page() {
 
           <div className="min-h-[350px] relative z-30 h-full max-w-6xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
             <h2 className="sm:text-4xl text-2xl font-bold mb-6">
-              Các Khóa Học Của StrateZone
+              Các Giải Đấu Của StrateZone
             </h2>
             <p className="sm:text-lg text-base text-center text-gray-200">
-              Bổ Sung Kiến Thức, Nâng Tầm Cuộc Chơi Của Bạn!
+              Sáng Tạo Chiến Thuật - Chinh Phục Đỉnh Cao!
             </p>
           </div>
         </div>
@@ -112,16 +112,17 @@ function Page() {
             <SearchInput />
             <div className="w-30 ml-2">
               <Select label="Chọn loại cờ">
-                <Option>Cờ vua</Option>
-                <Option>Cờ tướng</Option>
-                <Option>Cờ vây</Option>
+                <Option>Cờ Vua</Option>
+                <Option>Cờ Tướng</Option>
+                <Option>Cờ Vây</Option>
               </Select>
             </div>
             <div className="w-30 ml-2">
               <Select label="Chọn trình độ">
-                <Option>Cơ bản</Option>
-                <Option>Trung cấp</Option>
-                <Option>Cao cấp</Option>
+                <Option>Mới Chơi</Option>
+                <Option>Cấp độ Bạc</Option>
+                <Option>Cấp độ Vàng</Option>
+                <Option>Cấp độ Bạch Kim</Option>
               </Select>
             </div>
             <div className="w-30 ml-2">
@@ -142,7 +143,7 @@ function Page() {
           <div className="container mx-auto px-4 ">
             <div className="mt-8">
               <h2 className="text-3xl font-bold text-black">
-                Khóa Học Nổi Bật
+                Các giải đấu sắp diễn ra
               </h2>
             </div>
 
@@ -162,7 +163,7 @@ function Page() {
                 <SwiperSlide key={course.id}>
                   <div className="bg-white shadow-md hover:shadow-lg transition rounded-md p-3 transform hover:scale-105">
                     <a
-                      href={`/${locale}/courses/${course.id}`}
+                      href={`/${locale}/tournament/${course.id}`}
                       className="block"
                     >
                       <img

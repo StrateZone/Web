@@ -20,13 +20,15 @@ import {
 import { useSession } from "next-auth/react";
 import { FaChessBoard } from "react-icons/fa";
 import { FaBookOpen } from "react-icons/fa";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
 import { Crown } from "lucide-react";
 import { User } from "lucide-react";
 import { Menu } from "@headlessui/react";
+import { FaWallet } from "react-icons/fa";
+import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 
 import ProfileMenu from "../profile_menu";
 
@@ -56,6 +58,8 @@ export function Navbar() {
   const { data: session } = useSession();
   const router = useRouter();
   const localActive = useLocale();
+  const [showBalance, setShowBalance] = useState(true);
+  const { locale } = useParams(); // Lấy locale từ URL
 
   const [open, setOpen] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
@@ -83,7 +87,7 @@ export function Navbar() {
   useEffect(() => {
     window.addEventListener(
       "resize",
-      () => window.innerWidth >= 960 && setOpen(false),
+      () => window.innerWidth >= 960 && setOpen(false)
     );
   }, []);
   const handleLogout = () => {
@@ -116,12 +120,12 @@ export function Navbar() {
     {
       name: "Hẹn cờ",
       icon: FaChessBoard,
-      href: `/${localActive}/chess_appointment`,
+      href: `/${localActive}/chess_appointment/chess_category`,
     },
     {
-      name: "Khóa Học",
+      name: "Giải đấu",
       icon: FaBookOpen,
-      href: `/${localActive}/courses`,
+      href: `/${localActive}/tournament`,
     },
     {
       name: "Cửa Hàng",
@@ -164,41 +168,36 @@ export function Navbar() {
         </ul>
         {isLoggedIn ? (
           <div className="hidden items-center gap-6 lg:flex">
-            <Crown className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2" />
+            <div className="flex items-center gap-4">
+              <div className="flex items-center bg-gray-100 px-3 py-1 rounded-md">
+                <FaWallet className="text-blue-500 mr-2" size={16} />
+                <span className="text-gray-800 font-semibold">
+                  {showBalance ? "100.000 VNĐ" : "******"}
+                </span>
+                <button
+                  onClick={() => setShowBalance(!showBalance)}
+                  className="ml-2 text-gray-600 hover:text-gray-800"
+                >
+                  {showBalance ? (
+                    <AiFillEyeInvisible size={18} />
+                  ) : (
+                    <AiFillEye size={18} />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <Crown
+              onClick={() =>
+                router.push(
+                  `/${locale}/chess_appointment/chess_appointment_order`
+                )
+              }
+              className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
+            />
             <ShoppingCart className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2" />
-            <Menu as="div" className="relative inline-block text-left">
-              <Menu.Button className="flex items-center">
-                <User className="h-6 w-6 cursor-pointer hover:text-green-200 text-green-700" />
-              </Menu.Button>
-              <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                <div className="py-1">
-                  <Menu.Item>
-                    {({ active }) => (
-                      <button
-                        onClick={() => router.push("/profile")}
-                        className={`${
-                          active ? "bg-gray-100 text-gray-900" : "text-gray-700"
-                        } block w-full px-4 py-2 text-left text-sm`}
-                      >
-                        Hồ sơ
-                      </button>
-                    )}
-                  </Menu.Item>
-                  <Menu.Item>
-                    {({ active }) => (
-                      <button
-                        onClick={handleLogout}
-                        className={`${
-                          active ? "bg-gray-100 text-red-600" : "text-red-500"
-                        } block w-full px-4 py-2 text-left text-sm`}
-                      >
-                        Đăng xuất
-                      </button>
-                    )}
-                  </Menu.Item>
-                </div>
-              </Menu.Items>
-            </Menu>
+
+            <ProfileMenu />
           </div>
         ) : (
           <>
@@ -245,7 +244,7 @@ export function Navbar() {
             ))}
           </ul>
           <div className="mt-6 flex items-center gap-4">
-            {session ? (
+            {isLoggedIn ? (
               <ProfileMenu />
             ) : (
               <>
@@ -263,36 +262,6 @@ export function Navbar() {
                 </Button>
               </>
             )}
-
-            <Select
-              value={localActive}
-              onChange={onSelectChange}
-              disabled={isPending}
-              label={t("chooseLanguage")}
-              className="text-black"
-              color="amber"
-            >
-              <Option value="en">
-                <div className="flex gap-2 justify-start">
-                  <img
-                    src="https://flagcdn.com/w40/gb.png"
-                    alt="English"
-                    className="h-5 w-6 rounded"
-                  />
-                  <div>{t("english")}</div>
-                </div>
-              </Option>
-              <Option value="vi">
-                <div className="flex gap-2 justify-start">
-                  <img
-                    src="https://flagcdn.com/w40/vn.png"
-                    alt="Vietnamese"
-                    className="h-5 w-6 rounded"
-                  />
-                  <div> {t("vietnamese")}</div>
-                </div>
-              </Option>
-            </Select>
           </div>
         </div>
       </Collapse>

@@ -9,6 +9,7 @@ import axios from "axios"; // Import axios
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify"; // Import toast
 
 export default function LoginPage() {
   const localActive = useLocale();
@@ -43,14 +44,21 @@ export default function LoginPage() {
           `https://backend-production-5bc5.up.railway.app/api/auth/send-otp?email=${encodeURIComponent(email)}`
         );
 
-        if (response.status === 200) {
-          router.push(
-            `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`
-          );
+        console.log("API Response:", response.data); // Kiểm tra dữ liệu trả về
+
+        // Kiểm tra nếu API trả về lỗi dù HTTP status vẫn là 200
+        if (
+          response.data?.success === false ||
+          response.data?.statusCode === 404
+        ) {
+          toast.error("Tài khoản không tồn tại. Vui lòng kiểm tra lại email.");
+          return; // Dừng lại nếu tài khoản không tồn tại
         }
-      } catch (error) {
-        console.error("Lỗi khi gửi OTP:");
-      }
+
+        router.push(
+          `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`
+        );
+      } catch (error) {}
     }
   };
 
@@ -87,6 +95,11 @@ export default function LoginPage() {
                   onChange={handleEmailChange}
                   onBlur={() => validateEmail(email)}
                   error={!!emailError}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleLogin();
+                    }
+                  }}
                 />
                 {emailError && (
                   <p className="text-red-500 text-sm mt-1">{emailError}</p>
