@@ -53,7 +53,7 @@ const TableDetailsPage = () => {
               startTime: startTime ? decodeURIComponent(startTime) : undefined,
               endTime: endTime ? decodeURIComponent(endTime) : undefined,
             },
-          }
+          },
         );
 
         const data = response.data;
@@ -342,7 +342,7 @@ const TableDetailsPage = () => {
                     className="flex-1 py-2 text-sm"
                     onClick={() =>
                       router.push(
-                        `/${locale}/chess_appointment/chess_appointment_order`
+                        `/${locale}/chess_appointment/chess_appointment_order`,
                       )
                     }
                   >

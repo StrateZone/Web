@@ -71,7 +71,7 @@ export default function OTPVerificationPage() {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       console.log("Phản hồi từ API:", response.data);
@@ -145,7 +145,7 @@ export default function OTPVerificationPage() {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
 <<<<<<< HEAD

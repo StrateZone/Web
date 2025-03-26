@@ -95,7 +95,7 @@ export function Navbar() {
   useEffect(() => {
     window.addEventListener(
       "resize",
-      () => window.innerWidth >= 960 && setOpen(false)
+      () => window.innerWidth >= 960 && setOpen(false),
     );
   }, []);
   const handleLogout = () => {
@@ -211,10 +211,14 @@ export function Navbar() {
               onClick={() =>
                 router.push(
 <<<<<<< HEAD
+<<<<<<< HEAD
                   `/${locale}/chess_appointment/chess_appointment_order`,
 =======
                   `/${locale}/chess_appointment/chess_appointment_order`
 >>>>>>> dc47781 (add appoinment flow)
+=======
+                  `/${locale}/chess_appointment/chess_appointment_order`,
+>>>>>>> 400f95d (fix ci/cd)
                 )
               }
               className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
