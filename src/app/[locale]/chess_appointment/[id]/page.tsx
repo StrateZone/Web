@@ -123,7 +123,7 @@ const TableDetailsPage = () => {
               startTime: startTime ? decodeURIComponent(startTime) : undefined,
               endTime: endTime ? decodeURIComponent(endTime) : undefined,
             },
-          }
+          },
         );
 
         // Chuyển đổi dữ liệu API sang định dạng TableDetails
@@ -304,7 +304,7 @@ const TableDetailsPage = () => {
                     className="flex-1 py-3 text-lg"
                     onClick={() =>
                       router.push(
-                        `/${locale}/chess_appointment/chess_appointment_order`
+                        `/${locale}/chess_appointment/chess_appointment_order`,
                       )
                     }
                   >

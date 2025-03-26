@@ -98,7 +98,7 @@ export default function ChessCategoryPage() {
             indexes: null, // Ngăn Axios thêm [] vào key
             encode: (param) => param, // Tắt auto-encode
           },
-        }
+        },
       );
       console.log("API Response:", response.data);
 
@@ -401,7 +401,7 @@ export default function ChessCategoryPage() {
                         <span className="font-medium text-black text-sm ml-1">
                           (
                           {Number(chessBooking.gameTypePrice).toLocaleString(
-                            "vi-VN"
+                            "vi-VN",
                           )}{" "}
                           ₫/giờ)
                         </span>
@@ -421,7 +421,7 @@ export default function ChessCategoryPage() {
                         <span className="font-medium text-black text-sm ml-1">
                           (
                           {Number(chessBooking.roomTypePrice).toLocaleString(
-                            "vi-VN"
+                            "vi-VN",
                           )}{" "}
                           ₫/giờ)
                         </span>
@@ -434,7 +434,7 @@ export default function ChessCategoryPage() {
                       <p className="text-gray-600 text-sm mt-2">
                         <span className="font-medium text-black">Ngày: </span>{" "}
                         {new Date(chessBooking.startDate).toLocaleDateString(
-                          "vi-VN"
+                          "vi-VN",
                         )}
                       </p>
                       <p className="text-gray-600 text-sm mt-2">
@@ -446,7 +446,7 @@ export default function ChessCategoryPage() {
                             minute: "2-digit",
                             hour12: false,
                             timeZone: "Asia/Ho_Chi_Minh",
-                          }
+                          },
                         )}
                         {" giờ"}
                         <span className="font-medium text-black">
@@ -460,7 +460,7 @@ export default function ChessCategoryPage() {
                             minute: "2-digit",
                             hour12: false,
                             timeZone: "Asia/Ho_Chi_Minh",
-                          }
+                          },
                         )}{" "}
                         {" giờ"}
                       </p>
@@ -495,8 +495,8 @@ export default function ChessCategoryPage() {
                             } else {
                               router.push(
                                 `/${locale}/chess_appointment/${chessBooking.tableId}?startTime=${encodeURIComponent(
-                                  chessBooking.startDate
-                                )}&endTime=${encodeURIComponent(chessBooking.endDate)}`
+                                  chessBooking.startDate,
+                                )}&endTime=${encodeURIComponent(chessBooking.endDate)}`,
                               );
                             }
                           }}

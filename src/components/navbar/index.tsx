@@ -87,7 +87,7 @@ export function Navbar() {
   useEffect(() => {
     window.addEventListener(
       "resize",
-      () => window.innerWidth >= 960 && setOpen(false)
+      () => window.innerWidth >= 960 && setOpen(false),
     );
   }, []);
   const handleLogout = () => {
@@ -190,7 +190,7 @@ export function Navbar() {
             <Crown
               onClick={() =>
                 router.push(
-                  `/${locale}/chess_appointment/chess_appointment_order`
+                  `/${locale}/chess_appointment/chess_appointment_order`,
                 )
               }
               className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
