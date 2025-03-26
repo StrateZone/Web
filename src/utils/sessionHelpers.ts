@@ -2,7 +2,7 @@
 export const saveSearchSession = (
   key: string,
   data: any,
-  setTimeoutId?: (id: NodeJS.Timeout) => void,
+  setTimeoutId?: (id: NodeJS.Timeout) => void
 ) => {
   const sessionData = {
     ...data,
@@ -16,7 +16,7 @@ export const saveSearchSession = (
     () => {
       sessionStorage.removeItem(key);
     },
-    30 * 60 * 1000,
+    30 * 60 * 1000
   );
 
   if (setTimeoutId) {

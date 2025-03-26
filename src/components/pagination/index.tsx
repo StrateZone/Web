@@ -77,6 +77,7 @@ export function DefaultPagination({
   const [inputPage, setInputPage] = React.useState("");
   const [isInvalid, setIsInvalid] = React.useState(false);
 
+<<<<<<< HEAD
   // Xử lý khi không có trang nào
   if (totalPages <= 0) return null;
 
@@ -85,6 +86,15 @@ export function DefaultPagination({
     color: (currentPage === index ? "blue" : "gray") as "blue" | "gray",
     onClick: () => onPageChange(index),
     className: "rounded-full",
+=======
+  const getItemProps = (index: number) => ({
+    variant: currentPage === index ? "filled" : "text",
+    color: currentPage === index ? "" : "blue-gray",
+    onClick: () => {
+      console.log("Người dùng chọn trang:", index);
+      onPageChange(index);
+    },
+>>>>>>> dc47781 (add appoinment flow)
   });
 
   const next = () => {
@@ -93,6 +103,7 @@ export function DefaultPagination({
 
   const prev = () => {
     if (currentPage > 1) onPageChange(currentPage - 1);
+<<<<<<< HEAD
   };
 
   const handleGoClick = () => {
@@ -211,6 +222,42 @@ export function DefaultPagination({
           Go
         </Button>
       </div>
+=======
+  };
+
+  return (
+    <div className="flex items-center gap-4">
+      {/* Nút Previous */}
+      <Button
+        variant="text"
+        className="flex items-center gap-2"
+        onClick={prev}
+        disabled={currentPage === 1}
+      >
+        <ArrowLeftIcon strokeWidth={2} className="h-4 w-4" />{" "}
+        {t("pagination.previous")}
+      </Button>
+
+      {/* Danh sách số trang */}
+      <div className="flex items-center gap-2">
+        {[...Array(totalPages)].map((_, index) => (
+          <IconButton key={index + 1} {...getItemProps(index + 1)}>
+            {index + 1}
+          </IconButton>
+        ))}
+      </div>
+
+      {/* Nút Next */}
+      <Button
+        variant="text"
+        className="flex items-center gap-2"
+        onClick={next}
+        disabled={currentPage === totalPages}
+      >
+        {t("pagination.next")}
+        <ArrowRightIcon strokeWidth={2} className="h-4 w-4" />
+      </Button>
+>>>>>>> dc47781 (add appoinment flow)
     </div>
   );
 }

@@ -12,12 +12,16 @@ const suggestedPlayers = [
   { id: 6, name: "Đặng Thị F", level: "Mới chơi" },
 ];
 
+<<<<<<< HEAD
 interface InviteFriendModalProps {
   onClose: () => void;
   onInvite: (friendName: string) => void;
 }
 
 const InviteFriendModal = ({ onClose, onInvite }: InviteFriendModalProps) => {
+=======
+const InviteFriendModal = ({ onClose, onInvite }) => {
+>>>>>>> dc47781 (add appoinment flow)
   return (
     <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center text-black">
       <div className="bg-white p-6 rounded-lg w-[600px] shadow-lg relative">
@@ -54,7 +58,11 @@ const InviteFriendModal = ({ onClose, onInvite }: InviteFriendModalProps) => {
 const TableBookingPage = () => {
   const [showInviteModal, setShowInviteModal] = useState(false);
 
+<<<<<<< HEAD
   const handleInvite = (friendName: string) => {
+=======
+  const handleInvite = (friendName) => {
+>>>>>>> dc47781 (add appoinment flow)
     alert(`Bạn đã mời ${friendName} vào bàn!`);
     setShowInviteModal(false);
   };

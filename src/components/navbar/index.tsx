@@ -28,10 +28,15 @@ import { Crown } from "lucide-react";
 import { User } from "lucide-react";
 import { Menu } from "@headlessui/react";
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { FaWallet } from "react-icons/fa";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 =======
 >>>>>>> e11fdd8 (Improve UI components: navbar & banner hero)
+=======
+import { FaWallet } from "react-icons/fa";
+import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
+>>>>>>> dc47781 (add appoinment flow)
 
 import ProfileMenu from "../profile_menu";
 
@@ -90,7 +95,7 @@ export function Navbar() {
   useEffect(() => {
     window.addEventListener(
       "resize",
-      () => window.innerWidth >= 960 && setOpen(false),
+      () => window.innerWidth >= 960 && setOpen(false)
     );
   }, []);
   const handleLogout = () => {
@@ -127,10 +132,14 @@ export function Navbar() {
     },
     {
 <<<<<<< HEAD
+<<<<<<< HEAD
       name: "Giải đấu",
 =======
       name: "Khóa Học",
 >>>>>>> e11fdd8 (Improve UI components: navbar & banner hero)
+=======
+      name: "Giải đấu",
+>>>>>>> dc47781 (add appoinment flow)
       icon: FaBookOpen,
       href: `/${localActive}/tournament`,
     },
@@ -176,6 +185,9 @@ export function Navbar() {
         {isLoggedIn ? (
           <div className="hidden items-center gap-6 lg:flex">
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> dc47781 (add appoinment flow)
             <div className="flex items-center gap-4">
               <div className="flex items-center bg-gray-100 px-3 py-1 rounded-md">
                 <FaWallet className="text-blue-500 mr-2" size={16} />
@@ -198,11 +210,16 @@ export function Navbar() {
             <Crown
               onClick={() =>
                 router.push(
+<<<<<<< HEAD
                   `/${locale}/chess_appointment/chess_appointment_order`,
+=======
+                  `/${locale}/chess_appointment/chess_appointment_order`
+>>>>>>> dc47781 (add appoinment flow)
                 )
               }
               className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
             />
+<<<<<<< HEAD
             <ShoppingCart className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2" />
 
             <ProfileMenu />
@@ -243,6 +260,11 @@ export function Navbar() {
               </Menu.Items>
             </Menu>
 >>>>>>> e11fdd8 (Improve UI components: navbar & banner hero)
+=======
+            <ShoppingCart className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2" />
+
+            <ProfileMenu />
+>>>>>>> dc47781 (add appoinment flow)
           </div>
         ) : (
           <>

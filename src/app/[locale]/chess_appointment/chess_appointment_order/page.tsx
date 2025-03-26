@@ -5,7 +5,11 @@ import { Input } from "@material-tailwind/react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { UserPlus, X } from "lucide-react"; // Import icons
+<<<<<<< HEAD
 import CouponsPage from "../coupon_modal/CouponsPage";
+=======
+import CouponsPage from "../coupon_modal/page";
+>>>>>>> dc47781 (add appoinment flow)
 
 interface TableBooking {
   id: number;
