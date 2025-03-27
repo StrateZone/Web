@@ -215,7 +215,7 @@ function Page() {
               ))}
             </Swiper>
             <div className="flex justify-center mt-8 mb-8">
-              <DefaultPagination />
+              {/* <DefaultPagination /> */}
             </div>
           </div>
 
