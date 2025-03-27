@@ -6,10 +6,14 @@ import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { UserPlus, X } from "lucide-react"; // Import icons
 <<<<<<< HEAD
+<<<<<<< HEAD
 import CouponsPage from "../coupon_modal/CouponsPage";
 =======
 import CouponsPage from "../coupon_modal/page";
 >>>>>>> dc47781 (add appoinment flow)
+=======
+import CouponsPage from "../coupon_modal/CouponsPage";
+>>>>>>> 33c7c96 (fix coupon eslint)
 
 interface TableBooking {
   id: number;
