@@ -12,7 +12,12 @@ const suggestedPlayers = [
   { id: 6, name: "Đặng Thị F", level: "Mới chơi" },
 ];
 
-const InviteFriendModal = ({ onClose, onInvite }) => {
+interface InviteFriendModalProps {
+  onClose: () => void;
+  onInvite: (friendName: string) => void;
+}
+
+const InviteFriendModal = ({ onClose, onInvite }: InviteFriendModalProps) => {
   return (
     <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center text-black">
       <div className="bg-white p-6 rounded-lg w-[600px] shadow-lg relative">
@@ -49,7 +54,7 @@ const InviteFriendModal = ({ onClose, onInvite }) => {
 const TableBookingPage = () => {
   const [showInviteModal, setShowInviteModal] = useState(false);
 
-  const handleInvite = (friendName) => {
+  const handleInvite = (friendName: string) => {
     alert(`Bạn đã mời ${friendName} vào bàn!`);
     setShowInviteModal(false);
   };
