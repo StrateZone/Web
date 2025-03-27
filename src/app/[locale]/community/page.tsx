@@ -104,7 +104,7 @@ export default function ComunityPage() {
               />
             ))}
             <div className="flex justify-center pt-2">
-              <DefaultPagination />
+              {/* <DefaultPagination /> */}
             </div>
           </div>
 
