@@ -5,7 +5,7 @@ import { Input } from "@material-tailwind/react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { UserPlus, X } from "lucide-react"; // Import icons
-import CouponsPage from "../coupon_modal/page";
+import CouponsPage from "../coupon_modal/CouponsPage";
 
 interface TableBooking {
   id: number;
