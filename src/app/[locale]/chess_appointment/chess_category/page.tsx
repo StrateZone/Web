@@ -262,7 +262,7 @@ export default function ChessCategoryPage() {
                 SelectProps={{ native: true }}
                 sx={{ width: 80, bgcolor: "#e0e0e0", borderRadius: 1 }}
               >
-                {Array.from({ length: 14 }, (_, i) => {
+                {Array.from({ length: 15 }, (_, i) => {
                   const hour = i + 8;
                   return (
                     <option key={hour} value={`${hour}:00`}>
@@ -287,7 +287,7 @@ export default function ChessCategoryPage() {
                 SelectProps={{ native: true }}
                 sx={{ width: 80, bgcolor: "#e0e0e0", borderRadius: 1 }}
               >
-                {Array.from({ length: 14 }, (_, i) => {
+                {Array.from({ length: 15 }, (_, i) => {
                   const hour = i + 8;
                   return (
                     <option key={hour} value={`${hour}:00`}>
@@ -350,7 +350,7 @@ export default function ChessCategoryPage() {
               </h3>
               <p className="text-gray-600 mt-2">
                 Chọn loại cờ, loại phòng, thời gian và nhấn "Tìm kiếm" để xem
-                các bàn cờ có sẵn
+                các bàn cờ có sẵn trong khung thời gian bạn mong muốn
               </p>
             </div>
           </div>
@@ -432,7 +432,7 @@ export default function ChessCategoryPage() {
                       </p>
 
                       <p className="text-gray-600 text-sm mt-2">
-                        <span className="font-medium text-black">Số Bàn: </span>{" "}
+                        <span className="font-medium text-black">Mã Bàn: </span>{" "}
                         {chessBooking.tableId}
                       </p>
                       <p className="text-gray-600 text-sm mt-2">
