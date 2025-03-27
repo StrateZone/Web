@@ -20,12 +20,8 @@ const BusinessHoursNotice: React.FC<BusinessHoursNoticeProps> = ({
         <span className="font-bold">{closeHour}:00</span>
       </p>
       <p>
-<<<<<<< HEAD
         Nếu giờ đặt bàn đã qua vui lòng chọn giờ gần nhất. Hoặc chọn ngày tiếp
-=======
-        Nếu giờ đặt bàn đã qua vui lòng chọn giờ khác. Hoặc chọn ngày tiếp
->>>>>>> dc47781 (add appoinment flow)
-        theo{" "}
+        theo theo{" "}
       </p>
     </div>
   );
