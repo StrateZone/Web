@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+
 import { Star, StarHalf } from "lucide-react";
 import { Select, Option, Button } from "@material-tailwind/react";
 import { FaShoppingCart } from "react-icons/fa";
@@ -14,10 +15,14 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 import { useTranslations } from "next-intl";
+import { useParams } from "next/navigation";
 import { DefaultPagination } from "@/components/pagination";
+import { useRouter } from "next/navigation"; // Dùng next/navigation thay vì next/router
 
 export default function Store() {
   const t = useTranslations("communityPage"); //Will update for store translation
+  const { locale } = useParams(); // Lấy locale từ URL
+  const router = useRouter(); // Khởi tạo router
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -85,6 +90,7 @@ export default function Store() {
       <Navbar />
 
       {/* Banner */}
+
       <div className="relative font-sans">
         <div className="absolute inset-0 w-full h-full bg-gray-900/60 opacity-60 z-20"></div>
 
@@ -138,7 +144,7 @@ export default function Store() {
           {products.map((product) => (
             <SwiperSlide key={product.id}>
               <div className="bg-white shadow-md hover:shadow-xl transition rounded-lg p-5 transform hover:scale-[1.03]">
-                <a href={`/products/${product.id}`} className="block">
+                <a href={`/${locale}/store/${product.id}`} className="block">
                   <img
                     src={product.url}
                     alt={product.name}
@@ -167,12 +173,22 @@ export default function Store() {
                   <Button className="flex items-center gap-3">
                     <FaShoppingCart /> Thêm vào giỏ hàng
                   </Button>
-                  <Button color="green">Mua ngay</Button>
+                  <Button
+                    onClick={() =>
+                      router.push(`/${locale}/store/product_order`)
+                    }
+                    color="green"
+                  >
+                    Mua ngay
+                  </Button>
                 </div>
               </div>
             </SwiperSlide>
           ))}
         </Swiper>
+        <div className="flex justify-center mt-8 mb-8">
+          {/* <DefaultPagination /> */}
+        </div>
       </div>
 
       <Footer />

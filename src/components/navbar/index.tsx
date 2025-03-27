@@ -20,9 +20,15 @@ import {
 import { useSession } from "next-auth/react";
 import { FaChessBoard } from "react-icons/fa";
 import { FaBookOpen } from "react-icons/fa";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import Link from "next/link";
+import { ShoppingCart } from "lucide-react";
+import { Crown } from "lucide-react";
+import { User } from "lucide-react";
+import { Menu } from "@headlessui/react";
+import { FaWallet } from "react-icons/fa";
+import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 
 import ProfileMenu from "../profile_menu";
 
@@ -37,7 +43,7 @@ function NavItem({ children, href }: NavItemProps) {
       <Link href={href || "#"}>
         <Typography
           variant="paragraph"
-          className="flex items-center gap-2 font-medium"
+          className="flex items-center gap-2 font-medium transition-colors duration-300 hover:text-gray-500"
         >
           {children}
         </Typography>
@@ -52,9 +58,12 @@ export function Navbar() {
   const { data: session } = useSession();
   const router = useRouter();
   const localActive = useLocale();
+  const [showBalance, setShowBalance] = useState(true);
+  const { locale } = useParams(); // Lấy locale từ URL
 
   const [open, setOpen] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const onSelectChange = (value: string | undefined) => {
     const currentPath = window.location.pathname.split("/")[2];
@@ -68,7 +77,11 @@ export function Navbar() {
       });
     }
   };
-
+  useEffect(() => {
+    // Kiểm tra nếu có accessToken thì user đã đăng nhập
+    const token = localStorage.getItem("accessToken");
+    setIsLoggedIn(!!token);
+  }, []);
   const handleOpen = () => setOpen((cur) => !cur);
 
   useEffect(() => {
@@ -77,6 +90,12 @@ export function Navbar() {
       () => window.innerWidth >= 960 && setOpen(false),
     );
   }, []);
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    setIsLoggedIn(false);
+    router.push("/"); // Điều hướng về trang chủ sau khi logout
+  };
 
   useEffect(() => {
     function handleScroll() {
@@ -94,27 +113,27 @@ export function Navbar() {
 
   const NAV_MENU = [
     {
-      name: t("home"),
+      name: "Trang chủ",
       icon: HomeIcon,
       href: "/",
     },
     {
-      name: t("chessAppointment"),
+      name: "Hẹn cờ",
       icon: FaChessBoard,
-      href: `/${localActive}/chess_appointment`,
+      href: `/${localActive}/chess_appointment/chess_category`,
     },
     {
-      name: t("courses"),
+      name: "Giải đấu",
       icon: FaBookOpen,
-      href: `/${localActive}/courses`,
+      href: `/${localActive}/tournament`,
     },
     {
-      name: t("store"),
+      name: "Cửa Hàng",
       icon: BuildingStorefrontIcon,
       href: `/${localActive}/store`,
     },
     {
-      name: t("community"),
+      name: "Cộng đồng",
       icon: UserCircleIcon,
       href: `/${localActive}/community`,
     },
@@ -147,56 +166,60 @@ export function Navbar() {
             </NavItem>
           ))}
         </ul>
-        <div className="hidden items-center gap-4 lg:flex">
-          <Select
-            value={localActive}
-            onChange={onSelectChange}
-            disabled={isPending}
-            label={t("chooseLanguage")}
-            color="amber"
-          >
-            <Option value="en">
-              <div className="flex gap-2 justify-start">
-                <img
-                  src="https://flagcdn.com/w40/gb.png"
-                  alt="English"
-                  className="h-5 w-6 rounded"
-                />
-                <div>{t("english")}</div>
+        {isLoggedIn ? (
+          <div className="hidden items-center gap-6 lg:flex">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center bg-gray-100 px-3 py-1 rounded-md">
+                <FaWallet className="text-blue-500 mr-2" size={16} />
+                <span className="text-gray-800 font-semibold">
+                  {showBalance ? "100.000 VNĐ" : "******"}
+                </span>
+                <button
+                  onClick={() => setShowBalance(!showBalance)}
+                  className="ml-2 text-gray-600 hover:text-gray-800"
+                >
+                  {showBalance ? (
+                    <AiFillEyeInvisible size={18} />
+                  ) : (
+                    <AiFillEye size={18} />
+                  )}
+                </button>
               </div>
-            </Option>
-            <Option value="vi">
-              <div className="flex gap-2 justify-start">
-                <img
-                  src="https://flagcdn.com/w40/vn.png"
-                  alt="Vietnamese"
-                  className="h-5 w-6 rounded"
-                />
-                <div> {t("vietnamese")}</div>
-              </div>
-            </Option>
-          </Select>
-          {session ? (
+            </div>
+
+            <Crown
+              onClick={() =>
+                router.push(
+                  `/${locale}/chess_appointment/chess_appointment_order`,
+                )
+              }
+              className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
+            />
+            <ShoppingCart className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2" />
+
             <ProfileMenu />
-          ) : (
-            <>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-x-2">
               <Button
                 onClick={() => router.push(`/${localActive}/login`)}
                 color={isScrolling ? "gray" : "white"}
                 variant="text"
               >
-                {t("login")}
+                Đăng nhập
               </Button>
               <Button
                 onClick={() => router.push(`/${localActive}/register`)}
                 color={isScrolling ? "gray" : "white"}
                 variant="text"
               >
-                {t("register")}
+                Đăng kí
               </Button>
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
+
         <IconButton
           variant="text"
           color={isScrolling ? "gray" : "white"}
@@ -221,7 +244,7 @@ export function Navbar() {
             ))}
           </ul>
           <div className="mt-6 flex items-center gap-4">
-            {session ? (
+            {isLoggedIn ? (
               <ProfileMenu />
             ) : (
               <>
@@ -239,36 +262,6 @@ export function Navbar() {
                 </Button>
               </>
             )}
-
-            <Select
-              value={localActive}
-              onChange={onSelectChange}
-              disabled={isPending}
-              label={t("chooseLanguage")}
-              className="text-black"
-              color="amber"
-            >
-              <Option value="en">
-                <div className="flex gap-2 justify-start">
-                  <img
-                    src="https://flagcdn.com/w40/gb.png"
-                    alt="English"
-                    className="h-5 w-6 rounded"
-                  />
-                  <div>{t("english")}</div>
-                </div>
-              </Option>
-              <Option value="vi">
-                <div className="flex gap-2 justify-start">
-                  <img
-                    src="https://flagcdn.com/w40/vn.png"
-                    alt="Vietnamese"
-                    className="h-5 w-6 rounded"
-                  />
-                  <div> {t("vietnamese")}</div>
-                </div>
-              </Option>
-            </Select>
           </div>
         </div>
       </Collapse>

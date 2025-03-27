@@ -1,20 +1,65 @@
 "use client";
 import React, { useState } from "react";
-import { User, Eye, EyeOff } from "lucide-react";
+import { User } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Input, Checkbox, Button, Typography } from "@material-tailwind/react";
+import axios from "axios"; // Import axios
 
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
+import { useRouter } from "next/navigation";
+import { toast } from "react-toastify"; // Import toast
 
 export default function LoginPage() {
-  const [showPassword, setShowPassword] = useState(false); // Quản lý trạng thái hiển thị mật khẩu
   const localActive = useLocale();
-  const t = useTranslations("loginPage");
 
-  const togglePasswordVisibility = () => {
-    setShowPassword((prev) => !prev);
+  const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
+
+  const router = useRouter();
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+    validateEmail(e.target.value);
+  };
+
+  const validateEmail = (email: string) => {
+    if (!email) {
+      setEmailError("Email không được bỏ trống");
+    } else if (!emailRegex.test(email)) {
+      setEmailError("Email không hợp lệ");
+    } else {
+      setEmailError("");
+    }
+  };
+
+  const handleLogin = async () => {
+    if (!emailError && email) {
+      //xu ly ben trong luon ko ca`n tach ra
+      try {
+        const response = await axios.post(
+          `https://backend-production-5bc5.up.railway.app/api/auth/send-otp?email=${encodeURIComponent(email)}`,
+        );
+
+        console.log("API Response:", response.data); // Kiểm tra dữ liệu trả về
+
+        // Kiểm tra nếu API trả về lỗi dù HTTP status vẫn là 200
+        if (
+          response.data?.success === false ||
+          response.data?.statusCode === 404
+        ) {
+          toast.error("Tài khoản không tồn tại. Vui lòng kiểm tra lại email.");
+          return; // Dừng lại nếu tài khoản không tồn tại
+        }
+
+        router.push(
+          `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`,
+        );
+      } catch (error) {}
+    }
   };
 
   return (
@@ -30,13 +75,15 @@ export default function LoginPage() {
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <h3 className="text-4xl font-extrabold text-white">
-                  {t("title")}
+                  Đăng nhập
                 </h3>
-                <p className="text-sm text-gray-300">{t("welcomeMessage")}</p>
+                <p className="text-sm text-gray-300">
+                  Chào mừng trở lại! Vui lòng nhập thông tin tài khoản của bạn.
+                </p>
               </div>
               <div className="relative w-full">
                 <Input
-                  label={t("emailLabel")}
+                  label={"Email"}
                   color="white"
                   variant="standard"
                   size="lg"
@@ -44,89 +91,38 @@ export default function LoginPage() {
                   icon={<User size={20} />}
                   maxLength={50}
                   crossOrigin="anonymous"
+                  value={email}
+                  onChange={handleEmailChange}
+                  onBlur={() => validateEmail(email)}
+                  error={!!emailError}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleLogin();
+                    }
+                  }}
                 />
-              </div>
-
-              <div className="relative w-full mt-4">
-                <Input
-                  label={t("passwordLabel")}
-                  type={showPassword ? "text" : "password"}
-                  color="white"
-                  variant="standard"
-                  size="lg"
-                  className="text-white"
-                  maxLength={50}
-                  crossOrigin="anonymous"
-                />
-                <button
-                  type="button"
-                  onClick={togglePasswordVisibility}
-                  className="absolute right-2 top-2.5 text-white"
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
+                {emailError && (
+                  <p className="text-red-500 text-sm mt-1">{emailError}</p>
+                )}
               </div>
             </div>
-            <div className="w-full flex items-center justify-between">
-              <div className="w-full flex items-center">
-                <Checkbox
-                  id="remember-me"
-                  label={
-                    <Typography className="flex font-medium text-white">
-                      {t("rememberMe")}
-                    </Typography>
-                  }
-                  color="blue"
-                  crossOrigin="anonymous"
-                  ripple
-                />
-              </div>
-              <Link
-                href={`/${localActive}/forgot_password`}
-                className="text-sm font-medium whitespace-nowrap cursor-pointer underline underline-offset-2 hover:text-gray-400"
+            <div className="flex flex-col gap-3 mt-4">
+              <Button
+                className="w-full font-bold bg-black text-white py-3 rounded border-[0.5px]"
+                onClick={handleLogin}
+                disabled={loading}
               >
-                {t("forgotPassword")}
-              </Link>
-            </div>
-            <div className="flex flex-col gap-3 mt-4">
-              <Button className="w-full font-bold bg-black text-white py-3 rounded border-[0.5px]">
-                {t("loginButton")}
+                {loading ? "Đang gửi OTP..." : "Đăng nhập"}
               </Button>
             </div>
-            <div className="w-full flex items-center justify-center relative">
-              <div className="flex w-full items-center">
-                <div className="flex-grow h-[1px] bg-white"></div>
-                <p className="px-2 text-white">{t("orText")}</p>
-                <div className="flex-grow h-[1px] bg-white"></div>
-              </div>
-            </div>
-            <div className="flex flex-col gap-3 mt-4">
-              <Button className="w-full font-bold bg-gray-300 text-black py-3 rounded flex items-center justify-center hover:bg-gray-400 transition duration-150 ease-in-out">
-                <img
-                  src="https://www.svgrepo.com/show/303108/google-icon-logo.svg"
-                  alt="Google Icon"
-                  className="h-6 w-6 mr-2"
-                />
-                {t("googleSignIn")}
-              </Button>
-              <Button className="w-full font-bold bg-gray-300 text-black py-3 rounded flex items-center justify-center hover:bg-gray-400 transition duration-150 ease-in-out">
-                <img
-                  src="https://www.svgrepo.com/show/303113/facebook-icon-logo.svg"
-                  alt="Facebook Icon"
-                  className="h-6 w-6 mr-2"
-                />
-                {t("facebookSignIn")}
-              </Button>
-            </div>
-
             <div className="text-center text-sm mt-4">
               <p>
-                {t("noAccountMessage")}{" "}
+                Bạn chưa có tài khoản?{" "}
                 <Link
                   href={`/${localActive}/register`}
                   className="font-semibold text-gray-200 cursor-pointer hover:text-gray-400"
                 >
-                  {t("signUpLink")}
+                  Đăng ký miễn phí
                 </Link>
               </p>
             </div>

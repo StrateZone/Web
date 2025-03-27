@@ -7,12 +7,15 @@ export default function SearchInput() {
   const t = useTranslations("ChessApointment");
 
   return (
-    <div className="w-72">
+    <div className="relative w-72">
       <Input
         label={t("searchPlaceholder")}
-        icon={<FaSearch />}
         crossOrigin={undefined}
+        className="pr-10"
       />
+      <button className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-gray-100 hover:bg-gray-300 active:scale-90 rounded-full transition-all">
+        <FaSearch className="text-gray-500" />
+      </button>
     </div>
   );
 }
