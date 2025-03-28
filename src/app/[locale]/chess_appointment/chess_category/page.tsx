@@ -5,12 +5,9 @@ import Navbar from "@/components/navbar";
 import { DefaultPagination } from "@/components/pagination";
 import { TextField, Stack, Typography, Box } from "@mui/material";
 import { Button } from "@material-tailwind/react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import dayjs from "dayjs";
-import { InputAdornment } from "@mui/material";
-import { Calendar } from "lucide-react";
 import { FaShoppingCart } from "react-icons/fa";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -34,6 +31,54 @@ interface ChessBooking {
   tableId: number;
   totalPrice: number;
 }
+interface SearchParams {
+  startDate: Date;
+  startTime: string;
+  endTime: string;
+  roomType: string;
+  gameType: string;
+}
+
+const saveSearchParams = (params: SearchParams) => {
+  // Chuyển đổi ngày thành chuỗi định dạng YYYY-MM-DD theo local time
+  const localDateStr = params.startDate.toLocaleDateString("en-CA"); // "en-CA" sẽ tạo ra định dạng YYYY-MM-DD
+
+  sessionStorage.setItem(
+    "chessSearchParams",
+    JSON.stringify({
+      ...params,
+      startDate: localDateStr, // Lưu dạng YYYY-MM-DD
+    }),
+  );
+};
+
+const getSavedSearchParams = (): SearchParams | null => {
+  const saved = sessionStorage.getItem("chessSearchParams");
+  if (!saved) return null;
+
+  try {
+    const parsed = JSON.parse(saved);
+
+    // Tạo Date object mới từ chuỗi YYYY-MM-DD
+    const dateParts = parsed.startDate.split("-");
+    const localDate = new Date(
+      parseInt(dateParts[0]), // năm
+      parseInt(dateParts[1]) - 1, // tháng (0-based)
+      parseInt(dateParts[2]), // ngày
+    );
+
+    // Đặt giờ về 12:00:00 trưa để tránh vấn đề múi giờ
+    localDate.setHours(12, 0, 0, 0);
+
+    return {
+      ...parsed,
+      startDate: localDate,
+    };
+  } catch (e) {
+    console.error("Lỗi khi parse search params:", e);
+    return null;
+  }
+};
 
 export default function ChessCategoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -49,66 +94,89 @@ export default function ChessCategoryPage() {
   const searchParams = useSearchParams();
   const { locale } = useParams();
   const [selectedGameType, setSelectedGameType] = useState("all"); // Mặc định là "Tất cả loại cờ"
-
+  const [initialLoad, setInitialLoad] = useState(true);
+  const [addedItems, setAddedItems] = useState<number[]>([]); // Lưu trữ các tableId đã được thêm
   function toLocalISOString(date: Date) {
     const tzOffset = date.getTimezoneOffset() * 60000;
     const localDate = new Date(date.getTime() - tzOffset);
     localDate.setMinutes(0, 0, 0);
     return localDate.toISOString().slice(0, -1);
   }
+  useEffect(() => {
+    const savedParams = getSavedSearchParams();
+    if (savedParams) {
+      setStartDate(savedParams.startDate);
+      setStartTime(savedParams.startTime);
+      setEndTime(savedParams.endTime);
+      setRoomType(savedParams.roomType);
+      setGameType(savedParams.gameType);
+      setSelectedGameType(savedParams.gameType);
 
+      // Tự động chạy search nếu dữ liệu hợp lệ
+      setHasSearched(true);
+      fetchChessBookings(1);
+    }
+  }, []);
   const fetchChessBookings = async (pageNum: number) => {
     try {
-      const selectedStartTime = new Date(startDate);
-      const selectedEndTime = new Date(startDate);
+      // Lấy dữ liệu từ sessionStorage nếu có
+      const savedParams = getSavedSearchParams();
+      console.log("Ngày chọn trên UI buoc 4:", startDate); // Kiểm tra giá trị Date object
+      // Sử dụng dữ liệu từ session nếu tồn tại, ngược lại dùng state hiện tại
+      const effectiveStartDate = savedParams?.startDate || startDate;
+      console.log("Ngày chọn trên UI buoc 5:", effectiveStartDate); // Kiểm tra giá trị Date object
+      const effectiveStartTime = savedParams?.startTime || startTime;
+      const effectiveEndTime = savedParams?.endTime || endTime;
+      const effectiveGameType = savedParams?.gameType || gameType;
+      const effectiveRoomType = savedParams?.roomType || roomType;
 
-      selectedStartTime.setHours(parseInt(startTime.split(":")[0]), 0, 0, 0);
-      selectedEndTime.setHours(parseInt(endTime.split(":")[0]), 0, 0, 0);
+      const selectedStartTime = new Date(effectiveStartDate);
+      const selectedEndTime = new Date(effectiveStartDate);
+
+      selectedStartTime.setHours(
+        parseInt(effectiveStartTime.split(":")[0]),
+        0,
+        0,
+        0,
+      );
+      selectedEndTime.setHours(
+        parseInt(effectiveEndTime.split(":")[0]),
+        0,
+        0,
+        0,
+      );
 
       const params = {
         StartTime: toLocalISOString(selectedStartTime),
         EndTime: toLocalISOString(selectedEndTime),
-        gameTypes: [gameType], // Luôn là mảng
+        gameTypes: [effectiveGameType],
         roomTypes:
-          roomType === ""
-            ? ["basic", "premium", "openspaced"] // Khi chọn "Tất cả"
-            : [roomType], // Khi chọn 1 loại phòng
+          effectiveRoomType === ""
+            ? ["basic", "premium", "openspaced"]
+            : [effectiveRoomType],
         "page-number": pageNum,
         "page-size": 8,
       };
 
-      const baseUrl =
-        "https://backend-production-5bc5.up.railway.app/api/tables/available/filter";
-      const queryString = new URLSearchParams();
+      console.log("Request params:", params); // Log để kiểm tra
 
-      // Object.entries(params).forEach(([key, value]) => {
-      //   if (Array.isArray(value)) {
-      //     value.forEach((v) => queryString.append(key, v));
-      //   } else {
-      //     queryString.append(key, value);
-      //   }
-      // });
-
-      // console.log("Full request URL:", `${baseUrl}?${queryString.toString()}`);
       const response = await axios.get(
         "https://backend-production-5bc5.up.railway.app/api/tables/available/filter",
         {
           params,
           paramsSerializer: {
-            indexes: null, // Ngăn Axios thêm [] vào key
-            encode: (param) => param, // Tắt auto-encode
+            indexes: null,
+            encode: (param) => param,
           },
-        }
+        },
       );
-      console.log("API Response:", response.data);
 
+      // Xử lý response...
       if (
         response.data ===
         "No available table was found for this gametype and roomtype."
       ) {
         toast.error("Không tìm thấy bàn chơi phù hợp!");
-        console.log(response.data);
-
         setChessBookings([]);
         return;
       }
@@ -158,8 +226,16 @@ export default function ChessCategoryPage() {
   const handleSearch = async () => {
     setSelectedGameType(gameType);
 
+    console.log("Ngày chọn trên UI buoc1:", startDate); // Kiểm tra giá trị Date object
+    // Tạo Date object mới với giờ local
     const selectedStartTime = new Date(startDate);
-    selectedStartTime.setHours(parseInt(startTime.split(":")[0]), 0, 0, 0);
+
+    console.log("Ngày chọn trên UI buoc2:", selectedStartTime); // Kiểm tra giá trị Date object
+
+    const [hours] = startTime.split(":").map(Number);
+    selectedStartTime.setHours(hours, 0, 0, 0);
+
+    console.log("Ngày chọn trên UI buoc3:", selectedStartTime); // Kiểm tra giá trị Date object
 
     const now = new Date();
     if (selectedStartTime < now) {
@@ -167,6 +243,15 @@ export default function ChessCategoryPage() {
       return;
     }
 
+    saveSearchParams({
+      startDate,
+      startTime,
+      endTime,
+      roomType,
+      gameType,
+    });
+
+    setSelectedGameType(gameType);
     setHasSearched(true);
     setCurrentPage(1);
     await fetchChessBookings(1);
@@ -377,8 +462,17 @@ export default function ChessCategoryPage() {
                       className="bg-white shadow-md hover:shadow-lg transition rounded-md p-3 transform hover:scale-105"
                     >
                       <a
-                        href={`/${locale}/chess_appointment/${chessBooking.tableId}`}
+                        href={`/${locale}/chess_appointment/${chessBooking.tableId}?startTime=${encodeURIComponent(chessBooking.startDate)}&endTime=${encodeURIComponent(chessBooking.endDate)}`}
                         className="block"
+                        onClick={(e) => {
+                          const accessToken =
+                            localStorage.getItem("accessToken");
+                          if (!accessToken) {
+                            e.preventDefault(); // Prevent the default href navigation
+                            router.push(`/${locale}/login`);
+                          }
+                          // If there is an accessToken, let the default href navigation proceed
+                        }}
                       >
                         <img
                           src={
@@ -405,7 +499,7 @@ export default function ChessCategoryPage() {
                         <span className="font-medium text-black text-sm ml-1">
                           (
                           {Number(chessBooking.gameTypePrice).toLocaleString(
-                            "vi-VN"
+                            "vi-VN",
                           )}{" "}
                           ₫/giờ)
                         </span>
@@ -425,7 +519,7 @@ export default function ChessCategoryPage() {
                         <span className="font-medium text-black text-sm ml-1">
                           (
                           {Number(chessBooking.roomTypePrice).toLocaleString(
-                            "vi-VN"
+                            "vi-VN",
                           )}{" "}
                           ₫/giờ)
                         </span>
@@ -438,39 +532,44 @@ export default function ChessCategoryPage() {
                       <p className="text-gray-600 text-sm mt-2">
                         <span className="font-medium text-black">Ngày: </span>{" "}
                         {new Date(chessBooking.startDate).toLocaleDateString(
-                          "vi-VN"
+                          "vi-VN",
                         )}
                       </p>
+                      <div className="text-gray-600 text-sm mt-2">
+                        <p>
+                          <span className="font-medium text-black">
+                            Giờ Bắt Đầu:{" "}
+                          </span>
+                          {new Date(chessBooking.startDate).toLocaleTimeString(
+                            "vi-VN",
+                            {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: false,
+                              timeZone: "Asia/Ho_Chi_Minh",
+                            },
+                          )}
+                          {" giờ"}
+                        </p>
+                        <p className="mt-2">
+                          <span className="font-medium text-black">
+                            Giờ Kết Thúc:{" "}
+                          </span>
+                          {new Date(chessBooking.endDate).toLocaleTimeString(
+                            "vi-VN",
+                            {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: false,
+                              timeZone: "Asia/Ho_Chi_Minh",
+                            },
+                          )}
+                          {" giờ"}
+                        </p>
+                      </div>
                       <p className="text-gray-600 text-sm mt-2">
-                        <span className="font-medium text-black">Từ: </span>{" "}
-                        {new Date(chessBooking.startDate).toLocaleTimeString(
-                          "vi-VN",
-                          {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: false,
-                            timeZone: "Asia/Ho_Chi_Minh",
-                          }
-                        )}
-                        {" giờ"}
                         <span className="font-medium text-black">
-                          {" "}
-                          Đến:{" "}
-                        </span>{" "}
-                        {new Date(chessBooking.endDate).toLocaleTimeString(
-                          "vi-VN",
-                          {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: false,
-                            timeZone: "Asia/Ho_Chi_Minh",
-                          }
-                        )}{" "}
-                        {" giờ"}
-                      </p>
-                      <p className="text-gray-600 text-sm mt-2">
-                        <span className="font-medium text-black">
-                          Tổng Thời Gian:{" "}
+                          Tổng Thời Gian Đặt Bàn:{" "}
                         </span>{" "}
                         {chessBooking.durationInHours} {" giờ"}
                       </p>
@@ -487,10 +586,63 @@ export default function ChessCategoryPage() {
                       </p>
 
                       <div className="flex gap-2 mt-3">
-                        <Button className="flex items-center gap-2 text-xs px-2 py-1">
-                          <FaShoppingCart size={14} /> Thêm Vào Danh Sách
+                        <Button
+                          variant="gradient"
+                          color="amber"
+                          className="flex-1 py-2 text-sm"
+                          onClick={() => {
+                            try {
+                              // 1. Lấy danh sách hiện tại từ LocalStorage
+                              const currentBookings: ChessBooking[] =
+                                JSON.parse(
+                                  localStorage.getItem("chessBookings") || "[]",
+                                );
+
+                              // 2. Kiểm tra trùng lặp theo id và khung thời gian
+                              const isExisting = currentBookings.some(
+                                (item) =>
+                                  item.tableId === chessBooking.tableId &&
+                                  item.startDate === chessBooking.startDate &&
+                                  item.endDate === chessBooking.endDate,
+                              );
+
+                              if (isExisting) {
+                                // 3a. Nếu đã tồn tại
+                                toast.warning(
+                                  "Bàn này đã có trong danh sách đặt của bạn!",
+                                );
+                                return;
+                              }
+
+                              // 3b. Nếu chưa tồn tại - thêm vào danh sách
+                              const updatedBookings = [
+                                ...currentBookings,
+                                chessBooking,
+                              ];
+                              localStorage.setItem(
+                                "chessBookings",
+                                JSON.stringify(updatedBookings),
+                              );
+
+                              // 4. Thông báo thành công
+                              toast.success("Đã thêm bàn vào danh sách đặt!");
+
+                              // 5. Chuyển hướng sau 1 giây
+                              // setTimeout(() => {
+                              //   router.push(
+                              //     `/${locale}/chess_appointment/chess_appointment_order`
+                              //   );
+                              // }, 1000);
+                            } catch (error) {
+                              console.error("Lỗi khi xử lý đặt bàn:", error);
+                              toast.error("Có lỗi xảy ra khi đặt bàn!");
+                            }
+                          }}
+                        >
+                          Thêm Vào Danh Sách
                         </Button>
                         <Button
+                          color="green"
                           onClick={() => {
                             const accessToken =
                               localStorage.getItem("accessToken");
@@ -499,8 +651,8 @@ export default function ChessCategoryPage() {
                             } else {
                               router.push(
                                 `/${locale}/chess_appointment/${chessBooking.tableId}?startTime=${encodeURIComponent(
-                                  chessBooking.startDate
-                                )}&endTime=${encodeURIComponent(chessBooking.endDate)}`
+                                  chessBooking.startDate,
+                                )}&endTime=${encodeURIComponent(chessBooking.endDate)}`,
                               );
                             }
                           }}

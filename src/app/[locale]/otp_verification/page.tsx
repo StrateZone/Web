@@ -76,21 +76,19 @@ export default function OTPVerificationPage() {
 
       console.log("Phản hồi từ API:", response.data);
 
-      // Kiểm tra nếu response có chứa "data"
       if (response.data.success && response.data.data) {
-        const { accessToken, refreshToken } = response.data.data;
+        // Chỉ lưu phần data vào localStorage
+        localStorage.setItem("authData", JSON.stringify(response.data.data));
 
-        if (accessToken) {
-          localStorage.setItem("accessToken", accessToken);
-          if (refreshToken) {
-            localStorage.setItem("refreshToken", refreshToken);
-          }
-          router.push("/chess_apponitment");
-        } else {
-          setError("OTP không hợp lệ, vui lòng thử lại!");
-        }
+        // Lưu các token riêng nếu cần
+        localStorage.setItem("accessToken", response.data.data.accessToken);
+        localStorage.setItem("refreshToken", response.data.data.refreshToken);
+
+        router.push("/chess_appointment");
       } else {
-        setError("OTP không hợp lệ, vui lòng thử lại!");
+        setError(
+          response.data.message || "OTP không hợp lệ, vui lòng thử lại!",
+        );
       }
     } catch (error) {
       console.error("Lỗi khi gọi API:", error);

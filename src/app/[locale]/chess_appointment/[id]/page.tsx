@@ -6,6 +6,7 @@ import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { FaShoppingCart } from "react-icons/fa";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 interface ChessBooking {
   durationInHours: number;
@@ -53,7 +54,7 @@ const TableDetailsPage = () => {
               startTime: startTime ? decodeURIComponent(startTime) : undefined,
               endTime: endTime ? decodeURIComponent(endTime) : undefined,
             },
-          }
+          },
         );
 
         const data = response.data;
@@ -340,11 +341,53 @@ const TableDetailsPage = () => {
                     variant="gradient"
                     color="amber"
                     className="flex-1 py-2 text-sm"
-                    onClick={() =>
-                      router.push(
-                        `/${locale}/chess_appointment/chess_appointment_order`
-                      )
-                    }
+                    onClick={() => {
+                      try {
+                        // 1. Lấy danh sách hiện tại từ LocalStorage
+                        const currentBookings: ChessBooking[] = JSON.parse(
+                          localStorage.getItem("chessBookings") || "[]",
+                        );
+
+                        // 2. Kiểm tra trùng lặp theo id và khung thời gian
+                        const isExisting = currentBookings.some(
+                          (item) =>
+                            item.tableId === chessBooking.tableId &&
+                            item.startDate === chessBooking.startDate &&
+                            item.endDate === chessBooking.endDate,
+                        );
+
+                        if (isExisting) {
+                          // 3a. Nếu đã tồn tại
+                          toast.warning(
+                            "Bàn này đã có trong danh sách đặt của bạn!",
+                          );
+                          return;
+                        }
+
+                        // 3b. Nếu chưa tồn tại - thêm vào danh sách
+                        const updatedBookings = [
+                          ...currentBookings,
+                          chessBooking,
+                        ];
+                        localStorage.setItem(
+                          "chessBookings",
+                          JSON.stringify(updatedBookings),
+                        );
+
+                        // 4. Thông báo thành công
+                        toast.success("Đã thêm bàn vào danh sách đặt!");
+
+                        // 5. Chuyển hướng sau 1 giây
+                        setTimeout(() => {
+                          router.push(
+                            `/${locale}/chess_appointment/chess_appointment_order`,
+                          );
+                        }, 1000);
+                      } catch (error) {
+                        console.error("Lỗi khi xử lý đặt bàn:", error);
+                        toast.error("Có lỗi xảy ra khi đặt bàn!");
+                      }
+                    }}
                   >
                     Thêm Vào Danh Sách
                   </Button>
