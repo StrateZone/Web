@@ -19,7 +19,7 @@ interface ChessBooking {
   gameType: {
     typeId: number;
     typeName: string;
-    gameExtensions: any[];
+    // gameExtensions: any[];
   };
   gameTypeId: number;
   gameTypePrice: number;
@@ -33,8 +33,8 @@ const TableBookingPage = () => {
   const router = useRouter();
   const [coupon, setCoupon] = useState("");
   const [discount, setDiscount] = useState(0);
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [currentTable, setCurrentTable] = useState<number | null>(null);
+  // const [showInviteModal, setShowInviteModal] = useState(false);
+  // const [currentTable, setCurrentTable] = useState<number | null>(null);
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [chessBookings, setChessBookings] = useState<ChessBooking[]>([]);
   const { locale } = useParams();
@@ -69,8 +69,8 @@ const TableBookingPage = () => {
   }) => {
     router.push(
       `/${locale}/chess_appointment/${bookingInfo.id}?startTime=${encodeURIComponent(
-        bookingInfo.startDate
-      )}&endTime=${encodeURIComponent(bookingInfo.endDate)}`
+        bookingInfo.startDate,
+      )}&endTime=${encodeURIComponent(bookingInfo.endDate)}`,
     );
   };
 
@@ -81,7 +81,7 @@ const TableBookingPage = () => {
           booking.tableId === tableId &&
           booking.startDate === startDate &&
           booking.endDate === endDate
-        )
+        ),
     );
     setChessBookings(updatedBookings);
     localStorage.setItem("chessBookings", JSON.stringify(updatedBookings));
@@ -98,7 +98,7 @@ const TableBookingPage = () => {
 
   const totalPrice = chessBookings.reduce(
     (sum, booking) => sum + booking.totalPrice,
-    0
+    0,
   );
   const finalPrice = totalPrice - discount;
 
@@ -106,10 +106,10 @@ const TableBookingPage = () => {
     // Áp dụng giảm giá dựa trên coupon
   };
 
-  const inviteFriend = (tableNumber: number) => {
-    setCurrentTable(tableNumber);
-    setShowInviteModal(true);
-  };
+  // const inviteFriend = (tableNumber: number) => {
+  //   setCurrentTable(tableNumber);
+  //   setShowInviteModal(true);
+  // };
 
   const GAME_TYPE_TRANSLATIONS: Record<string, string> = {
     chess: "Cờ Vua",
@@ -346,7 +346,7 @@ const TableBookingPage = () => {
                     {/* Nhóm nút bên phải */}
                     <div className="flex items-center ml-4 space-x-3">
                       <button
-                        onClick={() => inviteFriend(booking.tableId)}
+                        // onClick={() => inviteFriend(booking.tableId)}
                         className="text-blue-500 hover:text-blue-700 p-2"
                         title="Mời bạn vào bàn này"
                       >
@@ -357,7 +357,7 @@ const TableBookingPage = () => {
                           removeTable(
                             booking.tableId,
                             booking.startDate,
-                            booking.endDate
+                            booking.endDate,
                           )
                         }
                         className="text-red-500 hover:text-red-700 p-2"

@@ -20,11 +20,10 @@ import { FaChessBoard, FaBookOpen, FaWallet } from "react-icons/fa";
 import { useParams, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import Link from "next/link";
-import { Calendar, ShoppingCart, User } from "lucide-react";
-import { Crown } from "lucide-react";
-import { Menu } from "@headlessui/react";
+import { Calendar, ShoppingCart } from "lucide-react";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 import ProfileMenu from "../profile_menu";
+import { FaChess } from "react-icons/fa";
 
 interface NavItemProps {
   children: React.ReactNode;
@@ -82,7 +81,7 @@ export function Navbar() {
   useEffect(() => {
     window.addEventListener(
       "resize",
-      () => window.innerWidth >= 960 && setOpen(false)
+      () => window.innerWidth >= 960 && setOpen(false),
     );
   }, []);
 
@@ -182,10 +181,10 @@ export function Navbar() {
               </div>
             </div>
 
-            <Calendar
+            <FaChess
               onClick={() =>
                 router.push(
-                  `/${locale}/chess_appointment/chess_appointment_order`
+                  `/${locale}/chess_appointment/chess_appointment_order`,
                 )
               }
               className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
@@ -193,48 +192,14 @@ export function Navbar() {
 
             <ShoppingCart className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2" />
 
-            <Menu as="div" className="relative inline-block text-left">
-              <Menu.Button className="flex items-center">
-                <User className="h-6 w-6 cursor-pointer hover:text-green-200 text-green-700" />
-              </Menu.Button>
-              <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                <div className="py-1">
-                  <Menu.Item>
-                    {({ active }) => (
-                      <button
-                        onClick={() => router.push("/profile")}
-                        className={`${
-                          active ? "bg-gray-100 text-gray-900" : "text-gray-700"
-                        } block w-full px-4 py-2 text-left text-sm`}
-                      >
-                        Hồ sơ
-                      </button>
-                    )}
-                  </Menu.Item>
-                  <Menu.Item>
-                    {({ active }) => (
-                      <button
-                        onClick={handleLogout}
-                        className={`${
-                          active ? "bg-gray-100 text-red-600" : "text-red-500"
-                        } block w-full px-4 py-2 text-left text-sm`}
-                      >
-                        Đăng xuất
-                      </button>
-                    )}
-                  </Menu.Item>
-                </div>
-              </Menu.Items>
-            </Menu>
-
             <ProfileMenu />
           </div>
         ) : (
           <div className="flex items-center gap-x-2">
-            <Calendar
+            <FaChess
               onClick={() =>
                 router.push(
-                  `/${locale}/chess_appointment/chess_appointment_order`
+                  `/${locale}/chess_appointment/chess_appointment_order`,
                 )
               }
               className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"

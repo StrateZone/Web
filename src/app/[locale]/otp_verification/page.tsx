@@ -60,7 +60,7 @@ export default function OTPVerificationPage() {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       console.log("Phản hồi từ API:", response.data);
@@ -74,7 +74,7 @@ export default function OTPVerificationPage() {
         router.push("/chess_appointment");
       } else {
         setError(
-          response.data.message || "OTP không hợp lệ, vui lòng thử lại!"
+          response.data.message || "OTP không hợp lệ, vui lòng thử lại!",
         );
       }
     } catch (error) {
@@ -97,7 +97,7 @@ export default function OTPVerificationPage() {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
       console.log("Gửi lại OTP thành công!", response.data);
     } catch (error) {

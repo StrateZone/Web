@@ -14,7 +14,7 @@ interface ChessBooking {
   gameType: {
     typeId: number;
     typeName: string;
-    gameExtensions: any[];
+    // gameExtensions: any[];
   };
   gameTypeId: number;
   gameTypePrice: number;
@@ -31,7 +31,7 @@ interface ChessBooking {
 const TableDetailsPage = () => {
   const router = useRouter();
   const { id } = useParams();
-  const { locale } = useParams();
+  // const { locale } = useParams();
   const searchParams = useSearchParams();
   const [chessBooking, setChessBooking] = useState<ChessBooking | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,7 +62,7 @@ const TableDetailsPage = () => {
               startTime: startTime ? decodeURIComponent(startTime) : undefined,
               endTime: endTime ? decodeURIComponent(endTime) : undefined,
             },
-          }
+          },
         );
 
         const data = response.data;
@@ -332,19 +332,19 @@ const TableDetailsPage = () => {
                     onClick={() => {
                       try {
                         const currentBookings: ChessBooking[] = JSON.parse(
-                          localStorage.getItem("chessBookings") || "[]"
+                          localStorage.getItem("chessBookings") || "[]",
                         );
 
                         const isExactDuplicate = currentBookings.some(
                           (item) =>
                             item.tableId === chessBooking.tableId &&
                             item.startDate === chessBooking.startDate &&
-                            item.endDate === chessBooking.endDate
+                            item.endDate === chessBooking.endDate,
                         );
 
                         if (isExactDuplicate) {
                           toast.warning(
-                            "Bàn này đã có trong danh sách đặt của bạn!"
+                            "Bàn này đã có trong danh sách đặt của bạn!",
                           );
                           return;
                         }
@@ -362,12 +362,12 @@ const TableDetailsPage = () => {
                                 new Date(item.startDate)) ||
                               Math.abs(
                                 new Date(chessBooking.startDate).getTime() -
-                                  new Date(item.endDate).getTime()
+                                  new Date(item.endDate).getTime(),
                               ) <= 3600000 ||
                               Math.abs(
                                 new Date(chessBooking.endDate).getTime() -
-                                  new Date(item.startDate).getTime()
-                              ) <= 3600000)
+                                  new Date(item.startDate).getTime(),
+                              ) <= 3600000),
                         );
 
                         if (mergeableBookings.length > 0) {
@@ -386,7 +386,7 @@ const TableDetailsPage = () => {
 
                           const durationInHours = Math.ceil(
                             (maxEndDate.getTime() - minStartDate.getTime()) /
-                              (1000 * 60 * 60)
+                              (1000 * 60 * 60),
                           );
 
                           const mergedBooking = {
@@ -406,15 +406,15 @@ const TableDetailsPage = () => {
                                 (m) =>
                                   m.tableId === booking.tableId &&
                                   m.startDate === booking.startDate &&
-                                  m.endDate === booking.endDate
-                              )
+                                  m.endDate === booking.endDate,
+                              ),
                           );
 
                           updatedBookings.push(mergedBooking);
 
                           localStorage.setItem(
                             "chessBookings",
-                            JSON.stringify(updatedBookings)
+                            JSON.stringify(updatedBookings),
                           );
                           toast.success(`Đã gộp bàn ${durationInHours} giờ`);
                         } else {
@@ -424,7 +424,7 @@ const TableDetailsPage = () => {
                           ];
                           localStorage.setItem(
                             "chessBookings",
-                            JSON.stringify(updatedBookings)
+                            JSON.stringify(updatedBookings),
                           );
                           toast.success("Đã thêm bàn vào danh sách đặt!");
                         }
