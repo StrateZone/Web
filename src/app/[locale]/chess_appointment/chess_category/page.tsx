@@ -5,12 +5,9 @@ import Navbar from "@/components/navbar";
 import { DefaultPagination } from "@/components/pagination";
 import { TextField, Stack, Typography, Box } from "@mui/material";
 import { Button } from "@material-tailwind/react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import dayjs from "dayjs";
-import { InputAdornment } from "@mui/material";
-import { Calendar } from "lucide-react";
 import { FaShoppingCart } from "react-icons/fa";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -34,81 +31,188 @@ interface ChessBooking {
   tableId: number;
   totalPrice: number;
 }
+interface SearchParams {
+  startDate: Date;
+  startTime: string;
+  endTime: string;
+  roomType: string;
+  gameType: string;
+}
+
+const saveSearchParams = (params: SearchParams) => {
+  const localDateStr = params.startDate.toLocaleDateString("en-CA");
+  sessionStorage.setItem(
+    "chessSearchParams",
+    JSON.stringify({
+      ...params,
+      startDate: localDateStr,
+    }),
+  );
+};
+
+const getSavedSearchParams = (): SearchParams | null => {
+  const saved = sessionStorage.getItem("chessSearchParams");
+  if (!saved) return null;
+
+  try {
+    const parsed = JSON.parse(saved);
+    const dateParts = parsed.startDate.split("-");
+    const localDate = new Date(
+      parseInt(dateParts[0]),
+      parseInt(dateParts[1]) - 1,
+      parseInt(dateParts[2]),
+    );
+    localDate.setHours(12, 0, 0, 0);
+
+    return {
+      ...parsed,
+      startDate: localDate,
+    };
+  } catch (e) {
+    console.error("Lỗi khi parse search params:", e);
+    return null;
+  }
+};
+const isToday = (date: any) => {
+  const today = new Date();
+  return (
+    date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear()
+  );
+};
 
 export default function ChessCategoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [chessBookings, setChessBookings] = useState<ChessBooking[]>([]);
   const [startDate, setStartDate] = useState(new Date());
-  const [startTime, setStartTime] = useState("8:00");
-  const [endTime, setEndTime] = useState("9:00");
+  const [startTime, setStartTime] = useState<string>(""); // Khởi tạo rỗng
+  const [endTime, setEndTime] = useState<string>(""); // Khởi tạo rỗng
   const [roomType, setRoomType] = useState("");
-  const [gameType, setGameType] = useState("chess"); // Khởi tạo với giá trị mặc định
+  const [gameType, setGameType] = useState("chess");
   const [hasSearched, setHasSearched] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { locale } = useParams();
-  const [selectedGameType, setSelectedGameType] = useState("all"); // Mặc định là "Tất cả loại cờ"
+  const [selectedGameType, setSelectedGameType] = useState("all");
+
+  const generateTimeOptions = () => {
+    const now = new Date();
+    const isSelectedToday = isToday(startDate);
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    const options = [];
+
+    for (let hour = 8; hour < 23; hour++) {
+      for (const minute of [0, 30]) {
+        // Skip times after 22:30
+        if (hour === 22 && minute === 30) continue;
+
+        const timeString = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+
+        // Disable if time is in the past for today
+        const disabled =
+          isSelectedToday &&
+          (hour < currentHour ||
+            (hour === currentHour && minute < currentMinute));
+
+        options.push(
+          <option
+            key={timeString}
+            value={timeString}
+            disabled={disabled}
+            style={{ color: disabled ? "#ccc" : "#000" }}
+          >
+            {timeString}
+          </option>,
+        );
+      }
+    }
+
+    return options;
+  };
 
   function toLocalISOString(date: Date) {
     const tzOffset = date.getTimezoneOffset() * 60000;
     const localDate = new Date(date.getTime() - tzOffset);
-    localDate.setMinutes(0, 0, 0);
     return localDate.toISOString().slice(0, -1);
   }
+  function formatDuration(hours: number): string {
+    const fullHours = Math.floor(hours); // Lấy phần nguyên (giờ)
+    const minutes = Math.round((hours - fullHours) * 60); // Tính phần dư (phút)
+
+    if (fullHours === 0) {
+      return `${minutes} phút`; // Trường hợp dưới 1 giờ
+    } else if (minutes === 0) {
+      return `${fullHours} tiếng`; // Trường hợp chẵn giờ
+    } else {
+      return `${fullHours} tiếng ${minutes} phút`; // Trường hợp có giờ và phút
+    }
+  }
+  useEffect(() => {
+    const savedParams = getSavedSearchParams();
+    if (savedParams) {
+      setStartDate(savedParams.startDate);
+      setStartTime(savedParams.startTime);
+      setEndTime(savedParams.endTime);
+      setRoomType(savedParams.roomType);
+      setGameType(savedParams.gameType);
+      setSelectedGameType(savedParams.gameType);
+      setHasSearched(true);
+      fetchChessBookings(1);
+    }
+  }, []);
 
   const fetchChessBookings = async (pageNum: number) => {
     try {
-      const selectedStartTime = new Date(startDate);
-      const selectedEndTime = new Date(startDate);
+      const savedParams = getSavedSearchParams();
+      const effectiveStartDate = savedParams?.startDate || startDate;
+      const effectiveStartTime = savedParams?.startTime || startTime;
+      const effectiveEndTime = savedParams?.endTime || endTime;
+      const effectiveGameType = savedParams?.gameType || gameType;
+      const effectiveRoomType = savedParams?.roomType || roomType;
 
-      selectedStartTime.setHours(parseInt(startTime.split(":")[0]), 0, 0, 0);
-      selectedEndTime.setHours(parseInt(endTime.split(":")[0]), 0, 0, 0);
+      const [startHour, startMinute] = effectiveStartTime
+        .split(":")
+        .map(Number);
+      const [endHour, endMinute] = effectiveEndTime.split(":").map(Number);
+
+      const selectedStartTime = new Date(effectiveStartDate);
+      selectedStartTime.setHours(startHour, startMinute, 0, 0);
+
+      const selectedEndTime = new Date(effectiveStartDate);
+      selectedEndTime.setHours(endHour, endMinute, 0, 0);
 
       const params = {
         StartTime: toLocalISOString(selectedStartTime),
         EndTime: toLocalISOString(selectedEndTime),
-        gameTypes: [gameType], // Luôn là mảng
+        gameTypes: [effectiveGameType],
         roomTypes:
-          roomType === ""
-            ? ["basic", "premium", "openspaced"] // Khi chọn "Tất cả"
-            : [roomType], // Khi chọn 1 loại phòng
+          effectiveRoomType === ""
+            ? ["basic", "premium", "openspaced"]
+            : [effectiveRoomType],
         "page-number": pageNum,
         "page-size": 8,
       };
 
-      const baseUrl =
-        "https://backend-production-5bc5.up.railway.app/api/tables/available/filter";
-      const queryString = new URLSearchParams();
-
-      // Object.entries(params).forEach(([key, value]) => {
-      //   if (Array.isArray(value)) {
-      //     value.forEach((v) => queryString.append(key, v));
-      //   } else {
-      //     queryString.append(key, value);
-      //   }
-      // });
-
-      // console.log("Full request URL:", `${baseUrl}?${queryString.toString()}`);
       const response = await axios.get(
         "https://backend-production-5bc5.up.railway.app/api/tables/available/filter",
         {
           params,
           paramsSerializer: {
-            indexes: null, // Ngăn Axios thêm [] vào key
-            encode: (param) => param, // Tắt auto-encode
+            indexes: null,
+            encode: (param) => param,
           },
-        }
+        },
       );
-      console.log("API Response:", response.data);
 
       if (
         response.data ===
         "No available table was found for this gametype and roomtype."
       ) {
         toast.error("Không tìm thấy bàn chơi phù hợp!");
-        console.log(response.data);
-
         setChessBookings([]);
         return;
       }
@@ -135,11 +239,9 @@ export default function ChessCategoryPage() {
             message ===
             "The minimum duration between start and end time is 30 minutes."
           ) {
-            message = "Vui lòng chọn thời gian cách nhau 1 giờ!";
+            message = "Vui lòng chọn thời gian cách nhau ít nhất 30 phút!";
           } else if (message === "Can not select time in the past.") {
-            // message = "Không thể chọn thời gian đã qua trong ngày!";
-            message =
-              "Giờ Bắt Đầu phải sớm hơn giờ kết thúc và Giờ Kết Thúc đã qua trong ngày hôm nay !";
+            message = "Không thể chọn thời gian đã qua!";
           }
           toast.error(message);
         } else if (errorData?.errors) {
@@ -149,17 +251,33 @@ export default function ChessCategoryPage() {
           toast.error("Lỗi khi lấy dữ liệu, vui lòng thử lại sau!");
         }
       } else {
-        toast.error("Đã có lỗi không xác định xảy ra!");
+        toast.error("Vui lòng chọn ngày và giờ phù hợp!");
       }
       setChessBookings([]);
     }
   };
 
+  const translateRoomType = (roomType: string): string => {
+    const type = roomType.toLowerCase();
+    if (type.includes("basic")) return "Phòng thường";
+    if (type.includes("premium")) return "Phòng cao cấp";
+    if (type.includes("openspace") || type.includes("open space"))
+      return "Không gian mở";
+    return roomType;
+  };
+
   const handleSearch = async () => {
     setSelectedGameType(gameType);
 
+    // Validate time selection
+    const [startHour, startMinute] = startTime.split(":").map(Number);
+    const [endHour, endMinute] = endTime.split(":").map(Number);
+
     const selectedStartTime = new Date(startDate);
-    selectedStartTime.setHours(parseInt(startTime.split(":")[0]), 0, 0, 0);
+    selectedStartTime.setHours(startHour, startMinute, 0, 0);
+
+    const selectedEndTime = new Date(startDate);
+    selectedEndTime.setHours(endHour, endMinute, 0, 0);
 
     const now = new Date();
     if (selectedStartTime < now) {
@@ -167,6 +285,20 @@ export default function ChessCategoryPage() {
       return;
     }
 
+    if (selectedStartTime >= selectedEndTime) {
+      toast.error("Giờ bắt đầu phải sớm hơn giờ kết thúc!");
+      return;
+    }
+
+    saveSearchParams({
+      startDate,
+      startTime,
+      endTime,
+      roomType,
+      gameType,
+    });
+
+    setSelectedGameType(gameType);
     setHasSearched(true);
     setCurrentPage(1);
     await fetchChessBookings(1);
@@ -202,7 +334,7 @@ export default function ChessCategoryPage() {
           <BusinessHoursNotice openHour={8} closeHour={22} />
         </div>
         <div className="flex flex-row items-center space-x-2 mt-8 mb-1 justify-center">
-          {/* Dropdown chọn loại cờ */}
+          {/* Game type dropdown */}
           <div className="w-44">
             <label
               htmlFor="gameType"
@@ -225,10 +357,10 @@ export default function ChessCategoryPage() {
             </select>
           </div>
 
-          {/* Dropdown chọn loại phòng */}
+          {/* Room type dropdown */}
           <div className="w-44">
             <label
-              htmlFor="gameType"
+              htmlFor="roomType"
               className="block text-gray-500 text-xs font-medium leading-tight mb-0.5"
             >
               Chọn Loại Phòng
@@ -248,11 +380,14 @@ export default function ChessCategoryPage() {
           </div>
 
           <Stack direction="row" alignItems="flex-end" spacing={2}>
-            {/* Giờ Bắt Đầu */}
+            {/* Start Time */}
             <Stack direction="column" spacing={0.5}>
-              <label className="text-gray-500 text-xs font-medium leading-tight">
+              <Typography
+                variant="body2"
+                className="text-gray-500 text-xs font-medium leading-tight"
+              >
                 Giờ Bắt Đầu
-              </label>
+              </Typography>
               <TextField
                 className="w-24"
                 size="small"
@@ -260,24 +395,21 @@ export default function ChessCategoryPage() {
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
                 SelectProps={{ native: true }}
-                sx={{ width: 80, bgcolor: "#e0e0e0", borderRadius: 1 }}
+                sx={{ width: 100, bgcolor: "#e0e0e0", borderRadius: 1 }}
               >
-                {Array.from({ length: 15 }, (_, i) => {
-                  const hour = i + 8;
-                  return (
-                    <option key={hour} value={`${hour}:00`}>
-                      {hour.toString().padStart(2, "0")}:00
-                    </option>
-                  );
-                })}
+                <option value="">--</option>
+                {generateTimeOptions()}
               </TextField>
             </Stack>
 
-            {/* Giờ Kết Thúc */}
+            {/* End Time */}
             <Stack direction="column" spacing={0.5}>
-              <label className="text-gray-500 text-xs font-medium leading-tight">
+              <Typography
+                variant="body2"
+                className="text-gray-500 text-xs font-medium leading-tight"
+              >
                 Giờ Kết Thúc
-              </label>
+              </Typography>
               <TextField
                 className="w-24"
                 size="small"
@@ -285,20 +417,14 @@ export default function ChessCategoryPage() {
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
                 SelectProps={{ native: true }}
-                sx={{ width: 80, bgcolor: "#e0e0e0", borderRadius: 1 }}
+                sx={{ width: 100, bgcolor: "#e0e0e0", borderRadius: 1 }}
               >
-                {Array.from({ length: 15 }, (_, i) => {
-                  const hour = i + 8;
-                  return (
-                    <option key={hour} value={`${hour}:00`}>
-                      {hour.toString().padStart(2, "0")}:00
-                    </option>
-                  );
-                })}
+                <option value="">--</option>
+                {generateTimeOptions()}
               </TextField>
             </Stack>
 
-            {/* Chọn Ngày */}
+            {/* Date Picker */}
             <Box sx={{ overflow: "hidden", minHeight: "60px" }}>
               <Stack direction="column" spacing={0.5}>
                 <Typography
@@ -311,7 +437,12 @@ export default function ChessCategoryPage() {
                   minDate={new Date()}
                   selected={startDate}
                   onChange={(date) => {
-                    if (date) setStartDate(date);
+                    if (date) {
+                      setStartDate(date);
+                      // Reset time when date changes
+                      setStartTime("");
+                      setEndTime("");
+                    }
                   }}
                   dateFormat="dd/MM/yyyy"
                   popperPlacement="bottom-start"
@@ -327,7 +458,7 @@ export default function ChessCategoryPage() {
                         cursor: "pointer",
                       }}
                       InputProps={{
-                        readOnly: true, // Không cho nhập thủ công
+                        readOnly: true,
                       }}
                     />
                   }
@@ -335,7 +466,7 @@ export default function ChessCategoryPage() {
               </Stack>
             </Box>
 
-            {/* Nút tìm kiếm */}
+            {/* Search Button */}
             <Box marginTop="auto">
               <Button onClick={handleSearch}>Tìm kiếm</Button>
             </Box>
@@ -377,7 +508,7 @@ export default function ChessCategoryPage() {
                       className="bg-white shadow-md hover:shadow-lg transition rounded-md p-3 transform hover:scale-105"
                     >
                       <a
-                        href={`/${locale}/chess_appointment/${chessBooking.tableId}`}
+                        href={`/${locale}/chess_appointment/${chessBooking.tableId}?startTime=${encodeURIComponent(chessBooking.startDate)}&endTime=${encodeURIComponent(chessBooking.endDate)}`}
                         className="block"
                       >
                         <img
@@ -405,7 +536,7 @@ export default function ChessCategoryPage() {
                         <span className="font-medium text-black text-sm ml-1">
                           (
                           {Number(chessBooking.gameTypePrice).toLocaleString(
-                            "vi-VN"
+                            "vi-VN",
                           )}{" "}
                           ₫/giờ)
                         </span>
@@ -425,7 +556,7 @@ export default function ChessCategoryPage() {
                         <span className="font-medium text-black text-sm ml-1">
                           (
                           {Number(chessBooking.roomTypePrice).toLocaleString(
-                            "vi-VN"
+                            "vi-VN",
                           )}{" "}
                           ₫/giờ)
                         </span>
@@ -438,41 +569,54 @@ export default function ChessCategoryPage() {
                       <p className="text-gray-600 text-sm mt-2">
                         <span className="font-medium text-black">Ngày: </span>{" "}
                         {new Date(chessBooking.startDate).toLocaleDateString(
-                          "vi-VN"
+                          "vi-VN",
                         )}
                       </p>
+                      <div className="text-gray-600 text-sm mt-2">
+                        <p>
+                          <span className="font-medium text-black">
+                            Giờ Bắt Đầu:{" "}
+                          </span>
+                          {new Date(chessBooking.startDate).toLocaleTimeString(
+                            "vi-VN",
+                            {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: false,
+                              timeZone: "Asia/Ho_Chi_Minh",
+                            },
+                          )}
+                        </p>
+                        <p className="mt-2">
+                          <span className="font-medium text-black">
+                            Giờ Kết Thúc:{" "}
+                          </span>
+                          {new Date(chessBooking.endDate).toLocaleTimeString(
+                            "vi-VN",
+                            {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: false,
+                              timeZone: "Asia/Ho_Chi_Minh",
+                            },
+                          )}
+                        </p>
+                      </div>
                       <p className="text-gray-600 text-sm mt-2">
-                        <span className="font-medium text-black">Từ: </span>{" "}
-                        {new Date(chessBooking.startDate).toLocaleTimeString(
-                          "vi-VN",
-                          {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: false,
-                            timeZone: "Asia/Ho_Chi_Minh",
-                          }
-                        )}
-                        {" giờ"}
                         <span className="font-medium text-black">
-                          {" "}
-                          Đến:{" "}
+                          Giá Thuê Theo Giờ:{" "}
                         </span>{" "}
-                        {new Date(chessBooking.endDate).toLocaleTimeString(
-                          "vi-VN",
-                          {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: false,
-                            timeZone: "Asia/Ho_Chi_Minh",
-                          }
-                        )}{" "}
-                        {" giờ"}
+                        {(
+                          chessBooking.roomTypePrice +
+                          chessBooking.gameTypePrice
+                        ).toLocaleString("vi-VN")}
+                        đ
                       </p>
                       <p className="text-gray-600 text-sm mt-2">
                         <span className="font-medium text-black">
-                          Tổng Thời Gian:{" "}
-                        </span>{" "}
-                        {chessBooking.durationInHours} {" giờ"}
+                          Tổng Thời Gian Đặt Bàn:{" "}
+                        </span>
+                        {formatDuration(chessBooking.durationInHours)}
                       </p>
                       <p className="text-gray-600 text-sm mt-2">
                         <span className="font-medium text-black">
@@ -487,25 +631,137 @@ export default function ChessCategoryPage() {
                       </p>
 
                       <div className="flex gap-2 mt-3">
-                        <Button className="flex items-center gap-2 text-xs px-2 py-1">
-                          <FaShoppingCart size={14} /> Thêm Vào Danh Sách
+                        <Button
+                          variant="gradient"
+                          color="amber"
+                          className="flex-1 py-2 text-sm"
+                          onClick={() => {
+                            try {
+                              const currentBookings: ChessBooking[] =
+                                JSON.parse(
+                                  localStorage.getItem("chessBookings") || "[]",
+                                );
+
+                              const isExactDuplicate = currentBookings.some(
+                                (item) =>
+                                  item.tableId === chessBooking.tableId &&
+                                  item.startDate === chessBooking.startDate &&
+                                  item.endDate === chessBooking.endDate,
+                              );
+
+                              if (isExactDuplicate) {
+                                toast.warning(
+                                  "Bàn này đã có trong danh sách đặt của bạn!",
+                                );
+                                return;
+                              }
+
+                              const mergeableBookings = currentBookings.filter(
+                                (item) =>
+                                  item.tableId === chessBooking.tableId &&
+                                  item.gameTypeId === chessBooking.gameTypeId &&
+                                  item.roomId === chessBooking.roomId &&
+                                  new Date(item.startDate).toDateString() ===
+                                    new Date(
+                                      chessBooking.startDate,
+                                    ).toDateString() &&
+                                  ((new Date(chessBooking.startDate) <=
+                                    new Date(item.endDate) &&
+                                    new Date(chessBooking.endDate) >=
+                                      new Date(item.startDate)) ||
+                                    Math.abs(
+                                      new Date(
+                                        chessBooking.startDate,
+                                      ).getTime() -
+                                        new Date(item.endDate).getTime(),
+                                    ) <= 3600000 ||
+                                    Math.abs(
+                                      new Date(chessBooking.endDate).getTime() -
+                                        new Date(item.startDate).getTime(),
+                                    ) <= 3600000),
+                              );
+
+                              if (mergeableBookings.length > 0) {
+                                let minStartDate = new Date(
+                                  chessBooking.startDate,
+                                );
+                                let maxEndDate = new Date(chessBooking.endDate);
+
+                                mergeableBookings.forEach((booking) => {
+                                  const bookingStart = new Date(
+                                    booking.startDate,
+                                  );
+                                  const bookingEnd = new Date(booking.endDate);
+
+                                  if (bookingStart < minStartDate)
+                                    minStartDate = bookingStart;
+                                  if (bookingEnd > maxEndDate)
+                                    maxEndDate = bookingEnd;
+                                });
+
+                                const durationInHours =
+                                  (maxEndDate.getTime() -
+                                    minStartDate.getTime()) /
+                                  (1000 * 60 * 60);
+
+                                const mergedBooking = {
+                                  ...chessBooking,
+                                  startDate: minStartDate.toISOString(),
+                                  endDate: maxEndDate.toISOString(),
+                                  durationInHours,
+                                  totalPrice:
+                                    (chessBooking.gameTypePrice +
+                                      chessBooking.roomTypePrice) *
+                                    durationInHours,
+                                };
+
+                                const updatedBookings = currentBookings.filter(
+                                  (booking) =>
+                                    !mergeableBookings.some(
+                                      (m) =>
+                                        m.tableId === booking.tableId &&
+                                        m.startDate === booking.startDate &&
+                                        m.endDate === booking.endDate,
+                                    ),
+                                );
+
+                                updatedBookings.push(mergedBooking);
+
+                                localStorage.setItem(
+                                  "chessBookings",
+                                  JSON.stringify(updatedBookings),
+                                );
+                                toast.success(
+                                  `Đã gộp bàn bạn vừa đặt thành ${formatDuration(chessBooking.durationInHours)} `,
+                                );
+                              } else {
+                                const updatedBookings = [
+                                  ...currentBookings,
+                                  chessBooking,
+                                ];
+                                localStorage.setItem(
+                                  "chessBookings",
+                                  JSON.stringify(updatedBookings),
+                                );
+                                toast.success("Đã thêm bàn vào danh sách đặt!");
+                              }
+                            } catch (error) {
+                              console.error("Lỗi khi xử lý đặt bàn:", error);
+                              toast.error("Có lỗi xảy ra khi đặt bàn!");
+                            }
+                          }}
+                        >
+                          Thêm Vào Danh Sách
                         </Button>
                         <Button
                           onClick={() => {
-                            const accessToken =
-                              localStorage.getItem("accessToken");
-                            if (!accessToken) {
-                              router.push(`/${locale}/login`);
-                            } else {
-                              router.push(
-                                `/${locale}/chess_appointment/${chessBooking.tableId}?startTime=${encodeURIComponent(
-                                  chessBooking.startDate
-                                )}&endTime=${encodeURIComponent(chessBooking.endDate)}`
-                              );
-                            }
+                            router.push(
+                              `/${locale}/chess_appointment/${chessBooking.tableId}?startTime=${encodeURIComponent(
+                                chessBooking.startDate,
+                              )}&endTime=${encodeURIComponent(chessBooking.endDate)}`,
+                            );
                           }}
-                          color="green"
-                          className="text-xs px-2 py-1"
+                          className="text-xs px-2 py-1 bg-green-600"
                         >
                           Xem Chi Tiết
                         </Button>
@@ -526,7 +782,7 @@ export default function ChessCategoryPage() {
               </>
             ) : (
               <div className="text-center py-12">
-                {/* <p className="text-gray-600">Không tìm thấy bàn cờ phù hợp</p> */}
+                <p className="text-gray-600">Không tìm thấy bàn cờ phù hợp</p>
               </div>
             )}
           </div>

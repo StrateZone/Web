@@ -6,11 +6,13 @@ import { Select, Option, Button } from "@material-tailwind/react";
 import { FaShoppingCart } from "react-icons/fa";
 
 import Footer from "@/components/footer";
-import Navbar from "@/components/navbar";
 import SearchInput from "@/components/input/search_input";
+
+import Navbar from "@/components/navbar";
 
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination } from "swiper/modules";
+
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";

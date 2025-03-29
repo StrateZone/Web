@@ -6,8 +6,6 @@ import {
   Button,
   IconButton,
   Typography,
-  Select,
-  Option,
 } from "@material-tailwind/react";
 import { useTranslations } from "next-intl";
 import {
@@ -18,19 +16,14 @@ import {
   BuildingStorefrontIcon,
 } from "@heroicons/react/24/solid";
 import { useSession } from "next-auth/react";
-import { FaChessBoard } from "react-icons/fa";
-import { FaBookOpen } from "react-icons/fa";
+import { FaChessBoard, FaBookOpen, FaWallet } from "react-icons/fa";
 import { useParams, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import Link from "next/link";
-import { ShoppingCart } from "lucide-react";
-import { Crown } from "lucide-react";
-import { User } from "lucide-react";
-import { Menu } from "@headlessui/react";
-import { FaWallet } from "react-icons/fa";
+import { Calendar, ShoppingCart } from "lucide-react";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
-
 import ProfileMenu from "../profile_menu";
+import { FaChess } from "react-icons/fa";
 
 interface NavItemProps {
   children: React.ReactNode;
@@ -59,7 +52,7 @@ export function Navbar() {
   const router = useRouter();
   const localActive = useLocale();
   const [showBalance, setShowBalance] = useState(true);
-  const { locale } = useParams(); // Lấy locale từ URL
+  const { locale } = useParams();
 
   const [open, setOpen] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
@@ -77,11 +70,12 @@ export function Navbar() {
       });
     }
   };
+
   useEffect(() => {
-    // Kiểm tra nếu có accessToken thì user đã đăng nhập
     const token = localStorage.getItem("accessToken");
     setIsLoggedIn(!!token);
   }, []);
+
   const handleOpen = () => setOpen((cur) => !cur);
 
   useEffect(() => {
@@ -90,11 +84,12 @@ export function Navbar() {
       () => window.innerWidth >= 960 && setOpen(false),
     );
   }, []);
+
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     setIsLoggedIn(false);
-    router.push("/"); // Điều hướng về trang chủ sau khi logout
+    router.push("/");
   };
 
   useEffect(() => {
@@ -107,7 +102,6 @@ export function Navbar() {
     }
 
     window.addEventListener("scroll", handleScroll);
-
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -187,7 +181,7 @@ export function Navbar() {
               </div>
             </div>
 
-            <Crown
+            <FaChess
               onClick={() =>
                 router.push(
                   `/${locale}/chess_appointment/chess_appointment_order`,
@@ -195,29 +189,36 @@ export function Navbar() {
               }
               className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
             />
+
             <ShoppingCart className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2" />
 
             <ProfileMenu />
           </div>
         ) : (
-          <>
-            <div className="flex items-center gap-x-2">
-              <Button
-                onClick={() => router.push(`/${localActive}/login`)}
-                color={isScrolling ? "gray" : "white"}
-                variant="text"
-              >
-                Đăng nhập
-              </Button>
-              <Button
-                onClick={() => router.push(`/${localActive}/register`)}
-                color={isScrolling ? "gray" : "white"}
-                variant="text"
-              >
-                Đăng kí
-              </Button>
-            </div>
-          </>
+          <div className="flex items-center gap-x-2">
+            <FaChess
+              onClick={() =>
+                router.push(
+                  `/${locale}/chess_appointment/chess_appointment_order`,
+                )
+              }
+              className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
+            />
+            <Button
+              onClick={() => router.push(`/${localActive}/login`)}
+              color={isScrolling ? "gray" : "white"}
+              variant="text"
+            >
+              Đăng nhập
+            </Button>
+            <Button
+              onClick={() => router.push(`/${localActive}/register`)}
+              color={isScrolling ? "gray" : "white"}
+              variant="text"
+            >
+              Đăng kí
+            </Button>
+          </div>
         )}
 
         <IconButton
