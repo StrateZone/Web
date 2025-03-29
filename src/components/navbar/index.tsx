@@ -6,8 +6,6 @@ import {
   Button,
   IconButton,
   Typography,
-  Select,
-  Option,
 } from "@material-tailwind/react";
 import { useTranslations } from "next-intl";
 import {
@@ -18,18 +16,14 @@ import {
   BuildingStorefrontIcon,
 } from "@heroicons/react/24/solid";
 import { useSession } from "next-auth/react";
-import { FaChessBoard } from "react-icons/fa";
-import { FaBookOpen } from "react-icons/fa";
+import { FaChessBoard, FaBookOpen, FaWallet } from "react-icons/fa";
 import { useParams, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import Link from "next/link";
-import { ShoppingCart } from "lucide-react";
+import { Calendar, ShoppingCart, User } from "lucide-react";
 import { Crown } from "lucide-react";
-import { User } from "lucide-react";
 import { Menu } from "@headlessui/react";
-import { FaWallet } from "react-icons/fa";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
-
 import ProfileMenu from "../profile_menu";
 
 interface NavItemProps {
@@ -59,7 +53,7 @@ export function Navbar() {
   const router = useRouter();
   const localActive = useLocale();
   const [showBalance, setShowBalance] = useState(true);
-  const { locale } = useParams(); // Lấy locale từ URL
+  const { locale } = useParams();
 
   const [open, setOpen] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
@@ -77,24 +71,26 @@ export function Navbar() {
       });
     }
   };
+
   useEffect(() => {
-    // Kiểm tra nếu có accessToken thì user đã đăng nhập
     const token = localStorage.getItem("accessToken");
     setIsLoggedIn(!!token);
   }, []);
+
   const handleOpen = () => setOpen((cur) => !cur);
 
   useEffect(() => {
     window.addEventListener(
       "resize",
-      () => window.innerWidth >= 960 && setOpen(false),
+      () => window.innerWidth >= 960 && setOpen(false)
     );
   }, []);
+
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     setIsLoggedIn(false);
-    router.push("/"); // Điều hướng về trang chủ sau khi logout
+    router.push("/");
   };
 
   useEffect(() => {
@@ -107,7 +103,6 @@ export function Navbar() {
     }
 
     window.addEventListener("scroll", handleScroll);
-
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -187,37 +182,78 @@ export function Navbar() {
               </div>
             </div>
 
-            <Crown
+            <Calendar
               onClick={() =>
                 router.push(
-                  `/${locale}/chess_appointment/chess_appointment_order`,
+                  `/${locale}/chess_appointment/chess_appointment_order`
                 )
               }
               className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
             />
+
             <ShoppingCart className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2" />
+
+            <Menu as="div" className="relative inline-block text-left">
+              <Menu.Button className="flex items-center">
+                <User className="h-6 w-6 cursor-pointer hover:text-green-200 text-green-700" />
+              </Menu.Button>
+              <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                <div className="py-1">
+                  <Menu.Item>
+                    {({ active }) => (
+                      <button
+                        onClick={() => router.push("/profile")}
+                        className={`${
+                          active ? "bg-gray-100 text-gray-900" : "text-gray-700"
+                        } block w-full px-4 py-2 text-left text-sm`}
+                      >
+                        Hồ sơ
+                      </button>
+                    )}
+                  </Menu.Item>
+                  <Menu.Item>
+                    {({ active }) => (
+                      <button
+                        onClick={handleLogout}
+                        className={`${
+                          active ? "bg-gray-100 text-red-600" : "text-red-500"
+                        } block w-full px-4 py-2 text-left text-sm`}
+                      >
+                        Đăng xuất
+                      </button>
+                    )}
+                  </Menu.Item>
+                </div>
+              </Menu.Items>
+            </Menu>
 
             <ProfileMenu />
           </div>
         ) : (
-          <>
-            <div className="flex items-center gap-x-2">
-              <Button
-                onClick={() => router.push(`/${localActive}/login`)}
-                color={isScrolling ? "gray" : "white"}
-                variant="text"
-              >
-                Đăng nhập
-              </Button>
-              <Button
-                onClick={() => router.push(`/${localActive}/register`)}
-                color={isScrolling ? "gray" : "white"}
-                variant="text"
-              >
-                Đăng kí
-              </Button>
-            </div>
-          </>
+          <div className="flex items-center gap-x-2">
+            <Calendar
+              onClick={() =>
+                router.push(
+                  `/${locale}/chess_appointment/chess_appointment_order`
+                )
+              }
+              className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
+            />
+            <Button
+              onClick={() => router.push(`/${localActive}/login`)}
+              color={isScrolling ? "gray" : "white"}
+              variant="text"
+            >
+              Đăng nhập
+            </Button>
+            <Button
+              onClick={() => router.push(`/${localActive}/register`)}
+              color={isScrolling ? "gray" : "white"}
+              variant="text"
+            >
+              Đăng kí
+            </Button>
+          </div>
         )}
 
         <IconButton
