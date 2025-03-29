@@ -1,16 +1,17 @@
 import React from "react";
 
-const OrderAttention = ({}) => {
+const OrderAttention = () => {
   return (
-    <div className="text-center mb-4 text-sm text-gray-600">
+    <div className="text-center mb-4 text-lg text-gray-600">
       <div>
-        {" "}
-        <h2 className="text-lg text-black font-bold">
+        <h2 className="text-xl text-black font-bold">
           Các lưu ý quan trọng khi đặt bàn
         </h2>
       </div>
-      <p> 🔴 Vui Lòng Kiếm Tra Đơn Đặt Bàn Kĩ Càng Trước Khi Thanh Toán !!!!</p>
-      <p>☝️ Click Vào Mỗi Bàn Để Xem Lại Chi Tiết</p>
+      <p className="text-base">
+        🔴 Vui lòng kiểm tra đơn đặt bàn kỹ càng trước khi thanh toán!
+      </p>
+      <p className="text-base">☝️ Click vào mỗi bàn để xem lại chi tiết</p>
     </div>
   );
 };

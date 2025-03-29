@@ -13,30 +13,23 @@ const BusinessHoursNotice: React.FC<BusinessHoursNoticeProps> = ({
   minDuration = 1,
 }) => {
   return (
-    <div className="text-center mb-4 text-sm text-gray-600">
+    <div className="text-center mb-4 text-lg text-gray-600">
       <div>
-        {" "}
-        <h2 className="text-lg text-black font-bold">
+        <h2 className="text-xl text-black font-bold">
           Các lưu ý quan trọng khi đặt bàn
         </h2>
       </div>
-      <p>
+      <p className="text-base">
         ⏰ Hệ thống chỉ nhận đặt bàn từ{" "}
         <span className="font-bold">{openHour}:00</span> đến{" "}
         <span className="font-bold">{closeHour}:00</span>
       </p>
-      <p>
-<<<<<<< HEAD
-        Nếu giờ đặt bàn đã qua vui lòng chọn giờ gần nhất. Hoặc chọn ngày tiếp
-        theo theo{" "}
-=======
+      <p className="text-base">
         ✅ Hệ thống sẽ hiển thị những bàn có sẵn trong khoảng thời gian bạn chọn
       </p>
-
-      <p>
+      <p className="text-base">
         ⏳ Nếu giờ đặt bàn đã qua, vui lòng chọn giờ gần nhất hoặc chọn ngày
-        tiếp theo{" "}
->>>>>>> 65552bf (add appoinment booking)
+        tiếp theo
       </p>
     </div>
   );

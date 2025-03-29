@@ -4,23 +4,10 @@ import { Button } from "@material-tailwind/react";
 import { Input } from "@material-tailwind/react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
-<<<<<<< HEAD
-import { UserPlus, X } from "lucide-react"; // Import icons
-<<<<<<< HEAD
-<<<<<<< HEAD
-import CouponsPage from "../coupon_modal/CouponsPage";
-=======
-import CouponsPage from "../coupon_modal/page";
->>>>>>> dc47781 (add appoinment flow)
-=======
-import CouponsPage from "../coupon_modal/CouponsPage";
->>>>>>> 33c7c96 (fix coupon eslint)
-=======
-import { Star, UserPlus, X } from "lucide-react";
+import { UserPlus, X } from "lucide-react";
 import CouponsPage from "../coupon_modal/CouponsPage";
 import { useParams, useRouter } from "next/navigation";
 import OrderAttention from "@/components/OrderAttention/page";
->>>>>>> 65552bf (add appoinment booking)
 
 interface ChessBooking {
   tableId: number;
@@ -44,7 +31,6 @@ interface ChessBooking {
 
 const TableBookingPage = () => {
   const router = useRouter();
-
   const [coupon, setCoupon] = useState("");
   const [discount, setDiscount] = useState(0);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -52,7 +38,18 @@ const TableBookingPage = () => {
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [chessBookings, setChessBookings] = useState<ChessBooking[]>([]);
   const { locale } = useParams();
+  function formatDuration(hours: number): string {
+    const fullHours = Math.floor(hours); // Lấy phần nguyên (giờ)
+    const minutes = Math.round((hours - fullHours) * 60); // Tính phần dư (phút)
 
+    if (fullHours === 0) {
+      return `${minutes} phút`; // Trường hợp dưới 1 giờ
+    } else if (minutes === 0) {
+      return `${fullHours} tiếng`; // Trường hợp chẵn giờ
+    } else {
+      return `${fullHours} tiếng ${minutes} phút`; // Trường hợp có giờ và phút
+    }
+  }
   useEffect(() => {
     const savedBookings = localStorage.getItem("chessBookings");
     if (savedBookings) {
@@ -64,18 +61,19 @@ const TableBookingPage = () => {
       }
     }
   }, []);
+
   const viewBookingDetail = (bookingInfo: {
     id: number;
     startDate: string;
     endDate: string;
   }) => {
-    // Chuyển hướng với query parameters
     router.push(
       `/${locale}/chess_appointment/${bookingInfo.id}?startTime=${encodeURIComponent(
-        bookingInfo.startDate,
-      )}&endTime=${encodeURIComponent(bookingInfo.endDate)}`,
+        bookingInfo.startDate
+      )}&endTime=${encodeURIComponent(bookingInfo.endDate)}`
     );
   };
+
   const removeTable = (tableId: number, startDate: string, endDate: string) => {
     const updatedBookings = chessBookings.filter(
       (booking) =>
@@ -83,9 +81,8 @@ const TableBookingPage = () => {
           booking.tableId === tableId &&
           booking.startDate === startDate &&
           booking.endDate === endDate
-        ),
+        )
     );
-
     setChessBookings(updatedBookings);
     localStorage.setItem("chessBookings", JSON.stringify(updatedBookings));
   };
@@ -101,7 +98,7 @@ const TableBookingPage = () => {
 
   const totalPrice = chessBookings.reduce(
     (sum, booking) => sum + booking.totalPrice,
-    0,
+    0
   );
   const finalPrice = totalPrice - discount;
 
@@ -113,25 +110,26 @@ const TableBookingPage = () => {
     setCurrentTable(tableNumber);
     setShowInviteModal(true);
   };
+
   const GAME_TYPE_TRANSLATIONS: Record<string, string> = {
     chess: "Cờ Vua",
     xiangqi: "Cờ Tướng",
     go: "Cờ Vây",
-    // Thêm các loại cờ khác nếu cần
   };
+
   const translateRoomType = (roomType: string): string => {
     const type = roomType.toLowerCase();
-
     if (type.includes("basic")) return "Phòng thường";
     if (type.includes("premium")) return "Phòng cao cấp";
     if (type.includes("openspace") || type.includes("open space"))
       return "Không gian mở";
-
     return roomType;
   };
+
   return (
-    <div>
+    <div className="text-base">
       <Navbar />
+
       {/* Background Banner */}
       <div className="relative font-sans">
         <div className="absolute inset-0 w-full h-full bg-gray-900/60 opacity-60 z-20"></div>
@@ -140,34 +138,33 @@ const TableBookingPage = () => {
           alt="Banner Image"
           className="absolute inset-0 w-full h-full object-cover z-10"
         />
-        <div className="min-h-[350px] relative z-30 h-full max-w-6xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
-          <h2 className="sm:text-4xl text-2xl font-bold mb-6">
+        <div className="min-h-[400px] relative z-30 h-full max-w-7xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
+          <h2 className="sm:text-5xl text-3xl font-bold mb-6">
             Cửa hàng cờ StrateZone
           </h2>
-          <p className="sm:text-lg text-base text-center text-gray-200">
+          <p className="sm:text-xl text-lg text-center text-gray-200">
             Nâng tầm chiến thuật - Trang bị như một kiện tướng!
           </p>
         </div>
       </div>
 
-      {/* Booking Details */}
-      <div className="mt-8">
+      <div className="mt-10">
         <OrderAttention></OrderAttention>
       </div>
-      <div className="min-h-[calc(100vh-200px)] bg-gray-100 p-4 text-black">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-xl font-bold mb-4 text-center">
+
+      <div className="min-h-[calc(100vh-200px)] bg-gray-100 p-6 text-black">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-2xl font-bold mb-6 text-center">
             Đơn đặt bàn của bạn
           </h1>
-
-          <div className="bg-white rounded-lg shadow-md p-4">
+          <div className="bg-white rounded-lg shadow-md p-6">
             {/* Danh sách card bàn */}
-            <div className="max-h-64 overflow-y-auto mb-4 space-y-3">
+            <div className="max-h-[400px] overflow-y-auto mb-6 space-y-4">
               {chessBookings.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-gray-500 border rounded-lg">
+                <div className="flex flex-col items-center justify-center py-12 text-gray-500 border rounded-lg">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-12 w-12 mb-2"
+                    className="h-16 w-16 mb-4"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -179,19 +176,21 @@ const TableBookingPage = () => {
                       d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  <p className="text-lg font-medium">
+                  <p className="text-xl font-medium">
                     Không có bàn nào được chọn
                   </p>
-                  <p className="text-sm mt-1">Vui lòng chọn bàn để tiếp tục</p>
+                  <p className="text-base mt-2">
+                    Vui lòng chọn bàn để tiếp tục
+                  </p>
                 </div>
               ) : (
                 chessBookings.map((booking) => (
                   <div
                     key={`${booking.tableId}-${booking.startDate}-${booking.endDate}`}
-                    className="border p-3 rounded-lg flex items-center relative "
+                    className="border-2 p-4 rounded-lg flex items-center relative"
                   >
                     {/* Nội dung bàn */}
-                    <div className="flex-1 grid grid-cols-2 gap-2 text-sm text-black">
+                    <div className="flex-1 grid grid-cols-2 gap-4 text-base">
                       {/* Cột trái */}
                       <div>
                         <p
@@ -203,7 +202,7 @@ const TableBookingPage = () => {
                             });
                           }}
                         >
-                          <span className="font-bold cursor-pointer">
+                          <span className="font-bold text-lg cursor-pointer">
                             Loại Cờ:{" "}
                           </span>
                           {GAME_TYPE_TRANSLATIONS[
@@ -219,7 +218,7 @@ const TableBookingPage = () => {
                                 endDate: booking.endDate,
                               });
                             }}
-                            className="font-bold cursor-pointer"
+                            className="font-bold text-lg cursor-pointer"
                           >
                             Loại Phòng:{" "}
                           </span>
@@ -234,7 +233,7 @@ const TableBookingPage = () => {
                                 endDate: booking.endDate,
                               });
                             }}
-                            className="font-bold cursor-pointer"
+                            className="font-bold text-lg cursor-pointer"
                           >
                             Mã Bàn:{" "}
                           </span>
@@ -249,7 +248,7 @@ const TableBookingPage = () => {
                                 endDate: booking.endDate,
                               });
                             }}
-                            className="font-bold cursor-pointer"
+                            className="font-bold text-lg cursor-pointer"
                           >
                             Phòng Số:{" "}
                           </span>
@@ -264,27 +263,17 @@ const TableBookingPage = () => {
                             });
                           }}
                         >
-                          <span
-                            onClick={() => {
-                              viewBookingDetail({
-                                id: booking.tableId,
-                                startDate: booking.startDate,
-                                endDate: booking.endDate,
-                              });
-                            }}
-                            className="font-bold cursor-pointer"
-                          >
+                          <span className="font-bold text-lg cursor-pointer">
                             Tổng Thời Gian Thuê Bàn:{" "}
                           </span>
-                          {booking.durationInHours} giờ
+                          {formatDuration(booking.durationInHours)}
                         </p>
                       </div>
-
                       {/* Cột phải */}
                       <div className="text-right">
                         <p>
                           <span
-                            className="font-bold cursor-pointer"
+                            className="font-bold text-lg cursor-pointer"
                             onClick={() => {
                               viewBookingDetail({
                                 id: booking.tableId,
@@ -299,7 +288,7 @@ const TableBookingPage = () => {
                         </p>
                         <p>
                           <span
-                            className="font-bold cursor-pointer"
+                            className="font-bold text-lg cursor-pointer"
                             onClick={() => {
                               viewBookingDetail({
                                 id: booking.tableId,
@@ -313,9 +302,8 @@ const TableBookingPage = () => {
                           {formatTime(booking.startDate)}
                         </p>
                         <p>
-                          {" "}
                           <span
-                            className="font-bold cursor-pointer"
+                            className="font-bold text-lg cursor-pointer"
                             onClick={() => {
                               viewBookingDetail({
                                 id: booking.tableId,
@@ -329,9 +317,9 @@ const TableBookingPage = () => {
                           {formatTime(booking.endDate)}
                         </p>
                         <div>
-                          <p className="font-medium text-sm">
+                          <p className="font-medium text-base">
                             <span
-                              className="font-bold cursor-pointer"
+                              className="font-bold text-lg cursor-pointer"
                               onClick={() => {
                                 viewBookingDetail({
                                   id: booking.tableId,
@@ -340,7 +328,6 @@ const TableBookingPage = () => {
                                 });
                               }}
                             >
-                              {" "}
                               Giá Thuê Theo Giờ:{" "}
                             </span>
                             {(
@@ -350,33 +337,33 @@ const TableBookingPage = () => {
                           </p>
                         </div>
                         <p className="mt-2">
-                          <span className="font-bold">Tổng: </span>
+                          <span className="font-bold text-lg">Tổng: </span>
                           {booking.totalPrice.toLocaleString()}đ
                         </p>
                       </div>
                     </div>
 
                     {/* Nhóm nút bên phải */}
-                    <div className="flex items-center ml-2 space-x-2">
+                    <div className="flex items-center ml-4 space-x-3">
                       <button
                         onClick={() => inviteFriend(booking.tableId)}
-                        className="text-blue-500 hover:text-blue-700 p-1"
+                        className="text-blue-500 hover:text-blue-700 p-2"
                         title="Mời bạn vào bàn này"
                       >
-                        <UserPlus size={18} />
+                        <UserPlus size={24} />
                       </button>
                       <button
                         onClick={() =>
                           removeTable(
                             booking.tableId,
                             booking.startDate,
-                            booking.endDate,
+                            booking.endDate
                           )
                         }
-                        className="text-red-500 hover:text-red-700 p-1"
+                        className="text-red-500 hover:text-red-700 p-2"
                         title="Xóa bàn này"
                       >
-                        <X size={18} />
+                        <X size={24} />
                       </button>
                     </div>
                   </div>
@@ -384,59 +371,46 @@ const TableBookingPage = () => {
               )}
             </div>
 
-            {/* Các phần còn lại giữ nguyên */}
-            {/* <div className="border-t border-gray-200 pt-3 mb-4">
-              <h3 className="font-medium mb-2">Giá từng bàn:</h3>
-              <ul className="space-y-1 text-sm">
-                {chessBookings.map((booking) => (
-                  <li key={booking.tableId} className="flex justify-between">
-                    <span>Bàn {booking.tableId}:</span>
-                    <span>{booking.totalPrice.toLocaleString()}đ</span>
-                  </li>
-                ))}
-              </ul>
-            </div> */}
-
-            <div className="mb-4 flex justify-between items-center">
-              <p className="font-bold text-lg">Nhập Mã Giảm Giá</p>
-              <p className="font-bold text-lg">
+            <div className="mb-6 flex justify-between items-center">
+              <p className="font-bold text-xl">Nhập Mã Giảm Giá</p>
+              <p className="font-bold text-xl">
                 Thành tiền: {finalPrice.toLocaleString()}đ
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 mb-4">
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <Input
                 type="text"
                 placeholder="Nhập coupon..."
                 value={coupon}
                 onChange={(e) => setCoupon(e.target.value)}
-                className="flex-1 text-sm"
+                className="flex-1 text-base h-12"
                 crossOrigin="anonymous"
               />
               <Button
                 onClick={applyCoupon}
                 color="amber"
-                className="  py-2 px-3 text-sm"
+                className="py-3 px-6 text-base"
               >
                 Áp dụng
               </Button>
               <Button
-                color="green"
                 onClick={() => setShowCouponModal(true)}
-                className="py-2 px-3 text-sm"
+                className="py-3 px-6 text-base bg-green-600"
               >
                 Mã giảm giá
               </Button>
             </div>
 
             <div className="flex justify-end">
-              <Button className=" hover:bg-gray-900 text-white px-4 py-2 text-sm">
+              <Button className="hover:bg-gray-900 text-white px-6 py-3 text-base">
                 Xác nhận đặt bàn
               </Button>
             </div>
           </div>
         </div>
       </div>
+
       {/* Modal hiển thị mã giảm giá */}
       {showCouponModal && (
         <CouponsPage
@@ -445,7 +419,6 @@ const TableBookingPage = () => {
           setDiscount={setDiscount}
         />
       )}
-
       <Footer />
     </div>
   );

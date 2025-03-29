@@ -6,8 +6,6 @@ import {
   Button,
   IconButton,
   Typography,
-  Select,
-  Option,
 } from "@material-tailwind/react";
 import { useTranslations } from "next-intl";
 import {
@@ -18,26 +16,14 @@ import {
   BuildingStorefrontIcon,
 } from "@heroicons/react/24/solid";
 import { useSession } from "next-auth/react";
-import { FaChessBoard } from "react-icons/fa";
-import { FaBookOpen } from "react-icons/fa";
+import { FaChessBoard, FaBookOpen, FaWallet } from "react-icons/fa";
 import { useParams, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import Link from "next/link";
-import { ShoppingCart } from "lucide-react";
+import { Calendar, ShoppingCart, User } from "lucide-react";
 import { Crown } from "lucide-react";
-import { User } from "lucide-react";
 import { Menu } from "@headlessui/react";
-<<<<<<< HEAD
-<<<<<<< HEAD
-import { FaWallet } from "react-icons/fa";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
-=======
->>>>>>> e11fdd8 (Improve UI components: navbar & banner hero)
-=======
-import { FaWallet } from "react-icons/fa";
-import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
->>>>>>> dc47781 (add appoinment flow)
-
 import ProfileMenu from "../profile_menu";
 
 interface NavItemProps {
@@ -67,7 +53,7 @@ export function Navbar() {
   const router = useRouter();
   const localActive = useLocale();
   const [showBalance, setShowBalance] = useState(true);
-  const { locale } = useParams(); // Lấy locale từ URL
+  const { locale } = useParams();
 
   const [open, setOpen] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
@@ -85,24 +71,26 @@ export function Navbar() {
       });
     }
   };
+
   useEffect(() => {
-    // Kiểm tra nếu có accessToken thì user đã đăng nhập
     const token = localStorage.getItem("accessToken");
     setIsLoggedIn(!!token);
   }, []);
+
   const handleOpen = () => setOpen((cur) => !cur);
 
   useEffect(() => {
     window.addEventListener(
       "resize",
-      () => window.innerWidth >= 960 && setOpen(false),
+      () => window.innerWidth >= 960 && setOpen(false)
     );
   }, []);
+
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     setIsLoggedIn(false);
-    router.push("/"); // Điều hướng về trang chủ sau khi logout
+    router.push("/");
   };
 
   useEffect(() => {
@@ -115,7 +103,6 @@ export function Navbar() {
     }
 
     window.addEventListener("scroll", handleScroll);
-
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -131,15 +118,7 @@ export function Navbar() {
       href: `/${localActive}/chess_appointment/chess_category`,
     },
     {
-<<<<<<< HEAD
-<<<<<<< HEAD
       name: "Giải đấu",
-=======
-      name: "Khóa Học",
->>>>>>> e11fdd8 (Improve UI components: navbar & banner hero)
-=======
-      name: "Giải đấu",
->>>>>>> dc47781 (add appoinment flow)
       icon: FaBookOpen,
       href: `/${localActive}/tournament`,
     },
@@ -184,10 +163,6 @@ export function Navbar() {
         </ul>
         {isLoggedIn ? (
           <div className="hidden items-center gap-6 lg:flex">
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> dc47781 (add appoinment flow)
             <div className="flex items-center gap-4">
               <div className="flex items-center bg-gray-100 px-3 py-1 rounded-md">
                 <FaWallet className="text-blue-500 mr-2" size={16} />
@@ -207,29 +182,17 @@ export function Navbar() {
               </div>
             </div>
 
-            <Crown
+            <Calendar
               onClick={() =>
                 router.push(
-<<<<<<< HEAD
-<<<<<<< HEAD
-                  `/${locale}/chess_appointment/chess_appointment_order`,
-=======
                   `/${locale}/chess_appointment/chess_appointment_order`
->>>>>>> dc47781 (add appoinment flow)
-=======
-                  `/${locale}/chess_appointment/chess_appointment_order`,
->>>>>>> 400f95d (fix ci/cd)
                 )
               }
               className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
             />
-<<<<<<< HEAD
+
             <ShoppingCart className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2" />
 
-            <ProfileMenu />
-=======
-            <Crown className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2" />
-            <ShoppingCart className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2" />
             <Menu as="div" className="relative inline-block text-left">
               <Menu.Button className="flex items-center">
                 <User className="h-6 w-6 cursor-pointer hover:text-green-200 text-green-700" />
@@ -263,32 +226,34 @@ export function Navbar() {
                 </div>
               </Menu.Items>
             </Menu>
->>>>>>> e11fdd8 (Improve UI components: navbar & banner hero)
-=======
-            <ShoppingCart className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2" />
 
             <ProfileMenu />
->>>>>>> dc47781 (add appoinment flow)
           </div>
         ) : (
-          <>
-            <div className="flex items-center gap-x-2">
-              <Button
-                onClick={() => router.push(`/${localActive}/login`)}
-                color={isScrolling ? "gray" : "white"}
-                variant="text"
-              >
-                Đăng nhập
-              </Button>
-              <Button
-                onClick={() => router.push(`/${localActive}/register`)}
-                color={isScrolling ? "gray" : "white"}
-                variant="text"
-              >
-                Đăng kí
-              </Button>
-            </div>
-          </>
+          <div className="flex items-center gap-x-2">
+            <Calendar
+              onClick={() =>
+                router.push(
+                  `/${locale}/chess_appointment/chess_appointment_order`
+                )
+              }
+              className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
+            />
+            <Button
+              onClick={() => router.push(`/${localActive}/login`)}
+              color={isScrolling ? "gray" : "white"}
+              variant="text"
+            >
+              Đăng nhập
+            </Button>
+            <Button
+              onClick={() => router.push(`/${localActive}/register`)}
+              color={isScrolling ? "gray" : "white"}
+              variant="text"
+            >
+              Đăng kí
+            </Button>
+          </div>
         )}
 
         <IconButton
