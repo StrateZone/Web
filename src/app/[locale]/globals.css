@@ -19,3 +19,13 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Nút Xác nhận */
+.btn-confirm {
+  @apply bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-6 rounded-lg ml-5 transition-all duration-200 ease-in-out shadow hover:shadow-md active:scale-95;
+}
+
+/* Nút Hủy */
+.btn-cancel {
+  @apply bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg transition-all duration-200 ease-in-out shadow hover:shadow-md active:scale-95;
+}

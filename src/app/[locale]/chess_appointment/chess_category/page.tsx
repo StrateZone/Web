@@ -1,5 +1,5 @@
 "use client";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
 import { DefaultPagination } from "@/components/pagination";
@@ -8,7 +8,6 @@ import { Button } from "@material-tailwind/react";
 import React, { useEffect, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { FaShoppingCart } from "react-icons/fa";
 import axios from "axios";
 import { toast } from "react-toastify";
 import BusinessHoursNotice from "@/components/BusinessHoursNotice/page";
@@ -46,7 +45,7 @@ const saveSearchParams = (params: SearchParams) => {
     JSON.stringify({
       ...params,
       startDate: localDateStr,
-    }),
+    })
   );
 };
 
@@ -60,7 +59,7 @@ const getSavedSearchParams = (): SearchParams | null => {
     const localDate = new Date(
       parseInt(dateParts[0]),
       parseInt(dateParts[1]) - 1,
-      parseInt(dateParts[2]),
+      parseInt(dateParts[2])
     );
     localDate.setHours(12, 0, 0, 0);
 
@@ -93,7 +92,6 @@ export default function ChessCategoryPage() {
   const [gameType, setGameType] = useState("chess");
   const [hasSearched, setHasSearched] = useState(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { locale } = useParams();
   const [selectedGameType, setSelectedGameType] = useState("all");
 
@@ -126,7 +124,7 @@ export default function ChessCategoryPage() {
             style={{ color: disabled ? "#ccc" : "#000" }}
           >
             {timeString}
-          </option>,
+          </option>
         );
       }
     }
@@ -205,7 +203,7 @@ export default function ChessCategoryPage() {
             indexes: null,
             encode: (param) => param,
           },
-        },
+        }
       );
 
       if (
@@ -257,14 +255,14 @@ export default function ChessCategoryPage() {
     }
   };
 
-  const translateRoomType = (roomType: string): string => {
-    const type = roomType.toLowerCase();
-    if (type.includes("basic")) return "Phòng thường";
-    if (type.includes("premium")) return "Phòng cao cấp";
-    if (type.includes("openspace") || type.includes("open space"))
-      return "Không gian mở";
-    return roomType;
-  };
+  // const translateRoomType = (roomType: string): string => {
+  //   const type = roomType.toLowerCase();
+  //   if (type.includes("basic")) return "Phòng thường";
+  //   if (type.includes("premium")) return "Phòng cao cấp";
+  //   if (type.includes("openspace") || type.includes("open space"))
+  //     return "Không gian mở";
+  //   return roomType;
+  // };
 
   const handleSearch = async () => {
     setSelectedGameType(gameType);
@@ -536,7 +534,7 @@ export default function ChessCategoryPage() {
                         <span className="font-medium text-black text-sm ml-1">
                           (
                           {Number(chessBooking.gameTypePrice).toLocaleString(
-                            "vi-VN",
+                            "vi-VN"
                           )}{" "}
                           ₫/giờ)
                         </span>
@@ -556,7 +554,7 @@ export default function ChessCategoryPage() {
                         <span className="font-medium text-black text-sm ml-1">
                           (
                           {Number(chessBooking.roomTypePrice).toLocaleString(
-                            "vi-VN",
+                            "vi-VN"
                           )}{" "}
                           ₫/giờ)
                         </span>
@@ -569,7 +567,7 @@ export default function ChessCategoryPage() {
                       <p className="text-gray-600 text-sm mt-2">
                         <span className="font-medium text-black">Ngày: </span>{" "}
                         {new Date(chessBooking.startDate).toLocaleDateString(
-                          "vi-VN",
+                          "vi-VN"
                         )}
                       </p>
                       <div className="text-gray-600 text-sm mt-2">
@@ -584,7 +582,7 @@ export default function ChessCategoryPage() {
                               minute: "2-digit",
                               hour12: false,
                               timeZone: "Asia/Ho_Chi_Minh",
-                            },
+                            }
                           )}
                         </p>
                         <p className="mt-2">
@@ -598,7 +596,7 @@ export default function ChessCategoryPage() {
                               minute: "2-digit",
                               hour12: false,
                               timeZone: "Asia/Ho_Chi_Minh",
-                            },
+                            }
                           )}
                         </p>
                       </div>
@@ -639,57 +637,103 @@ export default function ChessCategoryPage() {
                             try {
                               const currentBookings: ChessBooking[] =
                                 JSON.parse(
-                                  localStorage.getItem("chessBookings") || "[]",
+                                  localStorage.getItem("chessBookings") || "[]"
                                 );
 
-                              const isExactDuplicate = currentBookings.some(
-                                (item) =>
-                                  item.tableId === chessBooking.tableId &&
-                                  item.startDate === chessBooking.startDate &&
-                                  item.endDate === chessBooking.endDate,
+                              const newStart = new Date(chessBooking.startDate);
+                              const newEnd = new Date(chessBooking.endDate);
+
+                              // 1. Check for existing bookings
+                              const existingBookings = currentBookings.filter(
+                                (item) => {
+                                  const itemStart = new Date(item.startDate);
+                                  const itemEnd = new Date(item.endDate);
+
+                                  // Same table and same day
+                                  return (
+                                    item.tableId === chessBooking.tableId &&
+                                    itemStart.toDateString() ===
+                                      newStart.toDateString() &&
+                                    // Exact match
+                                    ((newStart.getTime() ===
+                                      itemStart.getTime() &&
+                                      newEnd.getTime() === itemEnd.getTime()) ||
+                                      // New booking is within existing
+                                      (newStart >= itemStart &&
+                                        newEnd <= itemEnd) ||
+                                      // New booking contains existing
+                                      (newStart <= itemStart &&
+                                        newEnd >= itemEnd) ||
+                                      // Overlapping
+                                      (newStart < itemEnd &&
+                                        newEnd > itemStart))
+                                  );
+                                }
                               );
 
-                              if (isExactDuplicate) {
+                              if (existingBookings.length > 0) {
+                                // Format all existing time slots for this table
+                                const bookingDetails = existingBookings
+                                  .map((booking) => {
+                                    const start = new Date(
+                                      booking.startDate
+                                    ).toLocaleTimeString("vi-VN", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      hour12: false,
+                                    });
+                                    const end = new Date(
+                                      booking.endDate
+                                    ).toLocaleTimeString("vi-VN", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      hour12: false,
+                                    });
+                                    return `${start} - ${end}`;
+                                  })
+                                  .join(", ");
+
                                 toast.warning(
-                                  "Bàn này đã có trong danh sách đặt của bạn!",
+                                  `Bàn số ${chessBooking.tableId} đã được bạn đặt trong khung giờ: ${bookingDetails}`
                                 );
                                 return;
                               }
 
+                              // 2. Check for mergeable bookings
                               const mergeableBookings = currentBookings.filter(
-                                (item) =>
-                                  item.tableId === chessBooking.tableId &&
-                                  item.gameTypeId === chessBooking.gameTypeId &&
-                                  item.roomId === chessBooking.roomId &&
-                                  new Date(item.startDate).toDateString() ===
-                                    new Date(
-                                      chessBooking.startDate,
-                                    ).toDateString() &&
-                                  ((new Date(chessBooking.startDate) <=
-                                    new Date(item.endDate) &&
-                                    new Date(chessBooking.endDate) >=
-                                      new Date(item.startDate)) ||
+                                (item) => {
+                                  if (item.tableId !== chessBooking.tableId)
+                                    return false;
+                                  if (
+                                    new Date(item.startDate).toDateString() !==
+                                    newStart.toDateString()
+                                  )
+                                    return false;
+
+                                  const itemStart = new Date(item.startDate);
+                                  const itemEnd = new Date(item.endDate);
+
+                                  return (
+                                    (newStart <= itemEnd &&
+                                      newEnd >= itemStart) || // Overlapping
                                     Math.abs(
-                                      new Date(
-                                        chessBooking.startDate,
-                                      ).getTime() -
-                                        new Date(item.endDate).getTime(),
-                                    ) <= 3600000 ||
+                                      newStart.getTime() - itemEnd.getTime()
+                                    ) <= 3600000 || // Within 1 hour before
                                     Math.abs(
-                                      new Date(chessBooking.endDate).getTime() -
-                                        new Date(item.startDate).getTime(),
-                                    ) <= 3600000),
+                                      newEnd.getTime() - itemStart.getTime()
+                                    ) <= 3600000 // Within 1 hour after
+                                  );
+                                }
                               );
 
                               if (mergeableBookings.length > 0) {
-                                let minStartDate = new Date(
-                                  chessBooking.startDate,
-                                );
-                                let maxEndDate = new Date(chessBooking.endDate);
+                                // Calculate merged time range
+                                let minStartDate = newStart;
+                                let maxEndDate = newEnd;
 
                                 mergeableBookings.forEach((booking) => {
                                   const bookingStart = new Date(
-                                    booking.startDate,
+                                    booking.startDate
                                   );
                                   const bookingEnd = new Date(booking.endDate);
 
@@ -704,6 +748,7 @@ export default function ChessCategoryPage() {
                                     minStartDate.getTime()) /
                                   (1000 * 60 * 60);
 
+                                // Create merged booking
                                 const mergedBooking = {
                                   ...chessBooking,
                                   startDate: minStartDate.toISOString(),
@@ -715,35 +760,71 @@ export default function ChessCategoryPage() {
                                     durationInHours,
                                 };
 
-                                const updatedBookings = currentBookings.filter(
-                                  (booking) =>
-                                    !mergeableBookings.some(
-                                      (m) =>
-                                        m.tableId === booking.tableId &&
-                                        m.startDate === booking.startDate &&
-                                        m.endDate === booking.endDate,
-                                    ),
-                                );
-
-                                updatedBookings.push(mergedBooking);
+                                // Update bookings list
+                                const updatedBookings = [
+                                  ...currentBookings.filter(
+                                    (booking) =>
+                                      !mergeableBookings.some(
+                                        (m) =>
+                                          m.tableId === booking.tableId &&
+                                          m.startDate === booking.startDate &&
+                                          m.endDate === booking.endDate
+                                      )
+                                  ),
+                                  mergedBooking,
+                                ];
 
                                 localStorage.setItem(
                                   "chessBookings",
-                                  JSON.stringify(updatedBookings),
+                                  JSON.stringify(updatedBookings)
                                 );
+
+                                // Format time display
+                                const startTimeStr =
+                                  minStartDate.toLocaleTimeString("vi-VN", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: false,
+                                  });
+                                const endTimeStr =
+                                  maxEndDate.toLocaleTimeString("vi-VN", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: false,
+                                  });
+
                                 toast.success(
-                                  `Đã gộp bàn bạn vừa đặt thành ${formatDuration(chessBooking.durationInHours)} `,
+                                  `Đã gộp bàn số ${chessBooking.tableId} từ ${startTimeStr} đến ${endTimeStr} (${formatDuration(durationInHours)})`
                                 );
                               } else {
+                                // Add new booking
                                 const updatedBookings = [
                                   ...currentBookings,
                                   chessBooking,
                                 ];
                                 localStorage.setItem(
                                   "chessBookings",
-                                  JSON.stringify(updatedBookings),
+                                  JSON.stringify(updatedBookings)
                                 );
-                                toast.success("Đã thêm bàn vào danh sách đặt!");
+
+                                const startTimeStr =
+                                  newStart.toLocaleTimeString("vi-VN", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: false,
+                                  });
+                                const endTimeStr = newEnd.toLocaleTimeString(
+                                  "vi-VN",
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: false,
+                                  }
+                                );
+
+                                toast.success(
+                                  `Đã thêm bàn số ${chessBooking.tableId} từ ${startTimeStr} đến ${endTimeStr} vào danh sách đặt!`
+                                );
                               }
                             } catch (error) {
                               console.error("Lỗi khi xử lý đặt bàn:", error);
@@ -757,8 +838,8 @@ export default function ChessCategoryPage() {
                           onClick={() => {
                             router.push(
                               `/${locale}/chess_appointment/${chessBooking.tableId}?startTime=${encodeURIComponent(
-                                chessBooking.startDate,
-                              )}&endTime=${encodeURIComponent(chessBooking.endDate)}`,
+                                chessBooking.startDate
+                              )}&endTime=${encodeURIComponent(chessBooking.endDate)}`
                             );
                           }}
                           className="text-xs px-2 py-1 bg-green-600"
@@ -782,7 +863,7 @@ export default function ChessCategoryPage() {
               </>
             ) : (
               <div className="text-center py-12">
-                <p className="text-gray-600">Không tìm thấy bàn cờ phù hợp</p>
+                <p className="text-gray-600">Đang tìm kiếm bàn cờ phù hợp</p>
               </div>
             )}
           </div>

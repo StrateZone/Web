@@ -20,7 +20,7 @@ import { FaChessBoard, FaBookOpen, FaWallet } from "react-icons/fa";
 import { useParams, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import Link from "next/link";
-import { Calendar, ShoppingCart } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 import ProfileMenu from "../profile_menu";
 import { FaChess } from "react-icons/fa";
@@ -81,16 +81,9 @@ export function Navbar() {
   useEffect(() => {
     window.addEventListener(
       "resize",
-      () => window.innerWidth >= 960 && setOpen(false),
+      () => window.innerWidth >= 960 && setOpen(false)
     );
   }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    setIsLoggedIn(false);
-    router.push("/");
-  };
 
   useEffect(() => {
     function handleScroll() {
@@ -184,7 +177,7 @@ export function Navbar() {
             <FaChess
               onClick={() =>
                 router.push(
-                  `/${locale}/chess_appointment/chess_appointment_order`,
+                  `/${locale}/chess_appointment/chess_appointment_order`
                 )
               }
               className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
@@ -199,7 +192,7 @@ export function Navbar() {
             <FaChess
               onClick={() =>
                 router.push(
-                  `/${locale}/chess_appointment/chess_appointment_order`,
+                  `/${locale}/chess_appointment/chess_appointment_order`
                 )
               }
               className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
