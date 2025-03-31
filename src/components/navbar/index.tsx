@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useTransition } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Navbar as MTNavbar,
   Collapse,
@@ -15,7 +15,6 @@ import {
   Bars3Icon,
   BuildingStorefrontIcon,
 } from "@heroicons/react/24/solid";
-import { useSession } from "next-auth/react";
 import { FaChessBoard, FaBookOpen, FaWallet } from "react-icons/fa";
 import { useParams, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
@@ -24,6 +23,9 @@ import { ShoppingCart } from "lucide-react";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 import ProfileMenu from "../profile_menu";
 import { FaChess } from "react-icons/fa";
+import { fetchWallet } from "@/app/[locale]/wallet/walletSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState, AppDispatch } from "@/app/store";
 
 interface NavItemProps {
   children: React.ReactNode;
@@ -47,8 +49,6 @@ function NavItem({ children, href }: NavItemProps) {
 
 export function Navbar() {
   const t = useTranslations("NavBar");
-  const [isPending, startTransition] = useTransition();
-  const { data: session } = useSession();
   const router = useRouter();
   const localActive = useLocale();
   const [showBalance, setShowBalance] = useState(true);
@@ -56,25 +56,54 @@ export function Navbar() {
 
   const [open, setOpen] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false); // Thêm trạng thái kiểm tra auth
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const dispatch = useDispatch<AppDispatch>();
+  const { balance, loading: walletLoading } = useSelector(
+    (state: RootState) => state.wallet
+  );
 
-  const onSelectChange = (value: string | undefined) => {
-    const currentPath = window.location.pathname.split("/")[2];
-    if (value && currentPath) {
-      startTransition(() => {
-        router.replace(`/${value}/${currentPath}`);
-      });
-    } else {
-      startTransition(() => {
-        router.replace(`/${value}`);
-      });
-    }
-  };
-
+  // Sử dụng useEffect để đồng bộ hóa trạng thái đăng nhập
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    setIsLoggedIn(!!token);
-  }, []);
+    const checkAuth = () => {
+      try {
+        const token = localStorage.getItem("accessToken");
+        const storedAuthData = localStorage.getItem("authData");
+        const isAuthenticated = !!token && !!storedAuthData;
+        setIsLoggedIn(isAuthenticated);
+
+        if (isAuthenticated && storedAuthData) {
+          const parsedData = JSON.parse(storedAuthData);
+          const userId = parsedData.userId || 11;
+          dispatch(fetchWallet(userId));
+        }
+      } catch (error) {
+        console.error("Error checking auth:", error);
+        setIsLoggedIn(false);
+      } finally {
+        setAuthChecked(true); // Đánh dấu đã kiểm tra xong
+      }
+    };
+
+    // Thêm listener để theo dõi thay đổi localStorage
+    const handleStorageChange = () => {
+      checkAuth();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    checkAuth(); // Kiểm tra ngay khi component mount
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, [dispatch]);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(amount);
+  };
 
   const handleOpen = () => setOpen((cur) => !cur);
 
@@ -126,6 +155,26 @@ export function Navbar() {
     },
   ];
 
+  // Hiển thị loading nếu chưa kiểm tra xong trạng thái auth
+  if (!authChecked) {
+    return (
+      <MTNavbar
+        shadow={false}
+        fullWidth
+        blurred={false}
+        color="white"
+        className="fixed top-0 z-50 border-0"
+      >
+        <div className="container mx-auto flex items-center justify-between h-16">
+          <Typography color="blue-gray" className="text-lg font-bold">
+            {t("siteTitle")}
+          </Typography>
+          <div className="animate-pulse h-8 w-8 rounded-full bg-gray-200"></div>
+        </div>
+      </MTNavbar>
+    );
+  }
+
   return (
     <MTNavbar
       shadow={false}
@@ -158,12 +207,17 @@ export function Navbar() {
             <div className="flex items-center gap-4">
               <div className="flex items-center bg-gray-100 px-3 py-1 rounded-md">
                 <FaWallet className="text-blue-500 mr-2" size={16} />
-                <span className="text-gray-800 font-semibold">
-                  {showBalance ? "100.000 VNĐ" : "******"}
-                </span>
+                {walletLoading ? (
+                  <div className="animate-pulse h-4 w-20 bg-gray-300 rounded"></div>
+                ) : (
+                  <span className="text-gray-800 font-semibold">
+                    {showBalance ? formatCurrency(balance) : "******"}
+                  </span>
+                )}
                 <button
                   onClick={() => setShowBalance(!showBalance)}
                   className="ml-2 text-gray-600 hover:text-gray-800"
+                  disabled={walletLoading}
                 >
                   {showBalance ? (
                     <AiFillEyeInvisible size={18} />

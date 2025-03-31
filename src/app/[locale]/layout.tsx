@@ -7,8 +7,9 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
-
+import { ReduxProvider } from "./providers/ReduxProvider";
 import Layout from "@/components/layout";
+import { store } from "../store";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,11 +42,14 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} bg-white antialiased`}
       >
-        <Layout>
-          <NextIntlClientProvider messages={messages}>
-            <SessionProvider>{children} </SessionProvider>
-          </NextIntlClientProvider>
-        </Layout>
+        <ReduxProvider>
+          <Layout>
+            <NextIntlClientProvider messages={messages}>
+              <SessionProvider>{children} </SessionProvider>
+            </NextIntlClientProvider>
+          </Layout>
+        </ReduxProvider>
+
         <ToastContainer
           position="top-right"
           autoClose={5000}

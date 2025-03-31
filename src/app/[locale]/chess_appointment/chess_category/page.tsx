@@ -94,7 +94,41 @@ export default function ChessCategoryPage() {
   const router = useRouter();
   const { locale } = useParams();
   const [selectedGameType, setSelectedGameType] = useState("all");
+  const [localBookings, setLocalBookings] = useState<ChessBooking[]>([]);
 
+  useEffect(() => {
+    // Sửa lại phần đọc từ localStorage
+    const storedBookings = localStorage.getItem("chessBookings");
+    if (storedBookings && storedBookings !== "undefined") {
+      try {
+        const parsed = JSON.parse(storedBookings);
+        if (Array.isArray(parsed)) {
+          setLocalBookings(parsed);
+        }
+      } catch (error) {
+        console.error("Lỗi khi parse dữ liệu từ localStorage:", error);
+        localStorage.removeItem("chessBookings"); // Xóa dữ liệu không hợp lệ
+      }
+    }
+  }, []);
+  const isBooked = (tableId: number, startDate: string, endDate: string) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    return localBookings.some((booking) => {
+      if (booking.tableId !== tableId) return false;
+
+      const bookingStart = new Date(booking.startDate);
+      const bookingEnd = new Date(booking.endDate);
+
+      // Kiểm tra overlap thời gian
+      return (
+        (start >= bookingStart && start < bookingEnd) ||
+        (end > bookingStart && end <= bookingEnd) ||
+        (start <= bookingStart && end >= bookingEnd)
+      );
+    });
+  };
   const generateTimeOptions = () => {
     const now = new Date();
     const isSelectedToday = isToday(startDate);
@@ -162,7 +196,16 @@ export default function ChessCategoryPage() {
       fetchChessBookings(1);
     }
   }, []);
-
+  const getLocalBooking = (tableId: number, searchDate: Date) => {
+    const bookings = JSON.parse(localStorage.getItem("chessBookings") || "[]");
+    return bookings.find((booking: ChessBooking) => {
+      const bookingDate = new Date(booking.startDate);
+      return (
+        booking.tableId === tableId &&
+        bookingDate.toDateString() === searchDate.toDateString()
+      );
+    });
+  };
   const fetchChessBookings = async (pageNum: number) => {
     try {
       const savedParams = getSavedSearchParams();
@@ -307,7 +350,10 @@ export default function ChessCategoryPage() {
     setCurrentPage(newPage);
     fetchChessBookings(newPage);
   };
-
+  const formatShortTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return `${date.getHours()}h${date.getMinutes().toString().padStart(2, "0")}`;
+  };
   return (
     <div>
       <Navbar />
@@ -505,6 +551,30 @@ export default function ChessCategoryPage() {
                       key={chessBooking.tableId}
                       className="bg-white shadow-md hover:shadow-lg transition rounded-md p-3 transform hover:scale-105"
                     >
+                      {isBooked(
+                        chessBooking.tableId,
+                        chessBooking.startDate,
+                        chessBooking.endDate
+                      ) && (
+                        <div className="mt-2 text-sm text-green-600">
+                          {(() => {
+                            const localBooking = getLocalBooking(
+                              chessBooking.tableId,
+                              new Date(startDate)
+                            );
+                            if (localBooking) {
+                              return (
+                                <p>
+                                  Bạn đã đặt bàn này từ{" "}
+                                  {formatShortTime(localBooking.startDate)} đến{" "}
+                                  {formatShortTime(localBooking.endDate)}
+                                </p>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
+                      )}
                       <a
                         href={`/${locale}/chess_appointment/${chessBooking.tableId}?startTime=${encodeURIComponent(chessBooking.startDate)}&endTime=${encodeURIComponent(chessBooking.endDate)}`}
                         className="block"
@@ -629,7 +699,7 @@ export default function ChessCategoryPage() {
                       </p>
 
                       <div className="flex gap-2 mt-3">
-                        <Button
+                        {/* <Button
                           variant="gradient"
                           color="amber"
                           className="flex-1 py-2 text-sm"
@@ -833,6 +903,217 @@ export default function ChessCategoryPage() {
                           }}
                         >
                           Thêm Vào Danh Sách
+                        </Button> */}
+                        <Button
+                          variant="gradient"
+                          color="amber"
+                          className={`flex-1 py-2 text-sm ${
+                            isBooked(
+                              chessBooking.tableId,
+                              chessBooking.startDate,
+                              chessBooking.endDate
+                            )
+                              ? "opacity-70 cursor-not-allowed"
+                              : "hover:shadow-md transition-shadow"
+                          }`}
+                          disabled={isBooked(
+                            chessBooking.tableId,
+                            chessBooking.startDate,
+                            chessBooking.endDate
+                          )}
+                          onClick={() => {
+                            try {
+                              const newStart = new Date(chessBooking.startDate);
+                              const newEnd = new Date(chessBooking.endDate);
+
+                              // 1. Kiểm tra xem bàn đã được đặt chưa (bao gồm cả các bàn đã gộp)
+                              const isAlreadyBooked = localBookings.some(
+                                (booking) => {
+                                  if (booking.tableId !== chessBooking.tableId)
+                                    return false;
+
+                                  const bookingStart = new Date(
+                                    booking.startDate
+                                  );
+                                  const bookingEnd = new Date(booking.endDate);
+
+                                  // Kiểm tra overlap thời gian
+                                  return (
+                                    (newStart >= bookingStart &&
+                                      newStart < bookingEnd) ||
+                                    (newEnd > bookingStart &&
+                                      newEnd <= bookingEnd) ||
+                                    (newStart <= bookingStart &&
+                                      newEnd >= bookingEnd)
+                                  );
+                                }
+                              );
+
+                              if (isAlreadyBooked) {
+                                const existingBookings = localBookings.filter(
+                                  (b) => b.tableId === chessBooking.tableId
+                                );
+
+                                const bookingDetails = existingBookings
+                                  .map((b) => {
+                                    const start = new Date(
+                                      b.startDate
+                                    ).toLocaleTimeString("vi-VN", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      hour12: false,
+                                    });
+                                    const end = new Date(
+                                      b.endDate
+                                    ).toLocaleTimeString("vi-VN", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      hour12: false,
+                                    });
+                                    return `${start} - ${end}`;
+                                  })
+                                  .join(", ");
+
+                                toast.warning(
+                                  `Bàn số ${chessBooking.tableId} đã được đặt trong khung giờ: ${bookingDetails}`
+                                );
+                                return;
+                              }
+
+                              // 2. Kiểm tra các booking có thể gộp (cách nhau <= 1 tiếng)
+                              const mergeableBookings = localBookings.filter(
+                                (item) => {
+                                  if (item.tableId !== chessBooking.tableId)
+                                    return false;
+                                  if (
+                                    new Date(item.startDate).toDateString() !==
+                                    newStart.toDateString()
+                                  )
+                                    return false;
+
+                                  const itemStart = new Date(item.startDate);
+                                  const itemEnd = new Date(item.endDate);
+
+                                  return (
+                                    (newStart <= itemEnd &&
+                                      newEnd >= itemStart) ||
+                                    Math.abs(
+                                      newStart.getTime() - itemEnd.getTime()
+                                    ) <= 3600000 ||
+                                    Math.abs(
+                                      newEnd.getTime() - itemStart.getTime()
+                                    ) <= 3600000
+                                  );
+                                }
+                              );
+
+                              let updatedBookings: ChessBooking[];
+                              let message = "";
+
+                              if (mergeableBookings.length > 0) {
+                                // Tính toán khung giờ sau khi gộp
+                                let minStartDate = newStart;
+                                let maxEndDate = newEnd;
+
+                                mergeableBookings.forEach((booking) => {
+                                  const bookingStart = new Date(
+                                    booking.startDate
+                                  );
+                                  const bookingEnd = new Date(booking.endDate);
+                                  if (bookingStart < minStartDate)
+                                    minStartDate = bookingStart;
+                                  if (bookingEnd > maxEndDate)
+                                    maxEndDate = bookingEnd;
+                                });
+
+                                const durationInHours =
+                                  (maxEndDate.getTime() -
+                                    minStartDate.getTime()) /
+                                  (1000 * 60 * 60);
+
+                                // Tạo booking mới đã gộp
+                                const mergedBooking: ChessBooking = {
+                                  ...chessBooking,
+                                  startDate: minStartDate.toISOString(),
+                                  endDate: maxEndDate.toISOString(),
+                                  durationInHours,
+                                  totalPrice:
+                                    (chessBooking.gameTypePrice +
+                                      chessBooking.roomTypePrice) *
+                                    durationInHours,
+                                };
+
+                                // Lọc ra các booking cũ và thêm booking mới
+                                updatedBookings = [
+                                  ...localBookings.filter(
+                                    (booking) =>
+                                      !mergeableBookings.some(
+                                        (m) =>
+                                          m.tableId === booking.tableId &&
+                                          m.startDate === booking.startDate &&
+                                          m.endDate === booking.endDate
+                                      )
+                                  ),
+                                  mergedBooking,
+                                ];
+
+                                const startTimeStr =
+                                  minStartDate.toLocaleTimeString("vi-VN", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: false,
+                                  });
+                                const endTimeStr =
+                                  maxEndDate.toLocaleTimeString("vi-VN", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: false,
+                                  });
+
+                                message = `Đã gộp bàn số ${chessBooking.tableId} từ ${startTimeStr} đến ${endTimeStr} (${formatDuration(durationInHours)})`;
+                              } else {
+                                // Thêm booking mới nếu không gộp được
+                                updatedBookings = [
+                                  ...localBookings,
+                                  chessBooking,
+                                ];
+                                const startTimeStr =
+                                  newStart.toLocaleTimeString("vi-VN", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: false,
+                                  });
+                                const endTimeStr = newEnd.toLocaleTimeString(
+                                  "vi-VN",
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: false,
+                                  }
+                                );
+                                message = `Đã thêm bàn số ${chessBooking.tableId} từ ${startTimeStr} đến ${endTimeStr} vào danh sách đặt!`;
+                              }
+
+                              // Cập nhật state và localStorage
+                              localStorage.setItem(
+                                "chessBookings",
+                                JSON.stringify(updatedBookings)
+                              );
+                              setLocalBookings(updatedBookings);
+                              toast.success(message);
+                            } catch (error) {
+                              console.error("Lỗi khi xử lý đặt bàn:", error);
+                              toast.error("Có lỗi xảy ra khi đặt bàn!");
+                            }
+                          }}
+                        >
+                          {isBooked(
+                            chessBooking.tableId,
+                            chessBooking.startDate,
+                            chessBooking.endDate
+                          )
+                            ? "Đã thêm vào danh sách"
+                            : "Thêm vào danh sách"}
                         </Button>
                         <Button
                           onClick={() => {

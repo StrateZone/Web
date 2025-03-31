@@ -11,7 +11,6 @@ import {
 import {
   UserCircleIcon,
   ChevronDownIcon,
-  InboxArrowDownIcon,
   LifebuoyIcon,
   PowerIcon,
 } from "@heroicons/react/24/solid";

@@ -1,16 +1,16 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
 // import { DefaultPagination } from "@/components/pagination";
-import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchWallet } from "./walletSlice";
+import { RootState, AppDispatch } from "@/app/store";
 import { FaWallet } from "react-icons/fa";
-
+import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
+import { Button } from "@material-tailwind/react";
 function WalletPage() {
-  // Dữ liệu mẫu
-  const [showBalance, setShowBalance] = useState(true);
-
   const transactions = [
     {
       id: 1,
@@ -34,6 +34,91 @@ function WalletPage() {
       type: "out",
     },
   ];
+  const [showBalance, setShowBalance] = useState(true);
+  const [depositAmount, setDepositAmount] = useState("");
+  const dispatch = useDispatch<AppDispatch>();
+  const { balance, loading, error } = useSelector(
+    (state: RootState) => state.wallet
+  );
+
+  // 1. Khai báo biến userId với giá trị mặc định
+  let userId = 11; // Giá trị fallback mặc định
+
+  try {
+    // 2. Lấy dữ liệu từ LocalStorage
+    const storedAuthData = localStorage.getItem("authData");
+
+    if (storedAuthData) {
+      // 3. Parse dữ liệu an toàn với try-catch
+      const parsedData = JSON.parse(storedAuthData);
+
+      // 4. Ưu tiên lấy userId từ authData trước
+      if (parsedData.userId) {
+        userId = parsedData.userId;
+      }
+    } else {
+      console.log("Không tìm thấy dữ liệu trong LocalStorage");
+    }
+  } catch (error) {
+    console.error("Lỗi khi xử lý dữ liệu từ LocalStorage:", error);
+    // Có thể thêm xử lý fallback ở đây
+  }
+
+  useEffect(() => {
+    dispatch(fetchWallet(userId));
+  }, [dispatch, userId]);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(amount);
+  };
+
+  if (error) return <div>Error: {error}</div>;
+  const handleZaloPayDeposit = async () => {
+    const amount = parseFloat(depositAmount);
+    if (amount <= 0) return;
+
+    try {
+      // Gọi API ZaloPay
+      const response = await fetch(
+        "https://backend-production-5bc5.up.railway.app/api/zalo-pay/create-payment",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: userId,
+            amount: amount,
+            description: `Nạp tiền vào ví ${amount} VND`,
+            returnUrl: `${window.location.origin}/wallet?success=true`,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.order_url) {
+        // Chuyển hướng đến trang thanh toán ZaloPay
+        window.location.href = data.order_url;
+      } else {
+        throw new Error(data.message || "Không thể tạo giao dịch");
+      }
+    } catch (error) {
+      console.error("Lỗi khi tạo giao dịch ZaloPay:", error);
+      alert("Có lỗi xảy ra khi tạo giao dịch. Vui lòng thử lại sau.");
+    } finally {
+    }
+  };
+  const handleDeposit = () => {
+    const amount = parseFloat(depositAmount);
+    if (amount > 0) {
+      handleZaloPayDeposit(); // Thay vì dispatch depositFunds
+      setDepositAmount("");
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -57,14 +142,8 @@ function WalletPage() {
 
       {/* Main Content */}
       <div className="flex-grow flex text-black">
-        {/* Left-aligned Wallet Content */}
         <div className="w-full max-w-2xl p-6 bg-white shadow-sm rounded-lg mt-6 mb-10 ml-6">
-          {" "}
-          {/* Thêm ml-6 để căn trái */}
-          {/* Số dư */}
           <div className="text-left mb-8">
-            {" "}
-            {/* Đổi từ text-center sang text-left */}
             <h3 className="text-black text-lg uppercase font-bold">
               Số dư khả dụng
             </h3>
@@ -72,7 +151,7 @@ function WalletPage() {
               <div className="flex items-center bg-gray-100 px-3 py-1 rounded-md">
                 <FaWallet className="text-blue-500 mr-2" size={16} />
                 <span className="text-gray-800 font-semibold">
-                  {showBalance ? "100.000 VNĐ" : "******"}
+                  {showBalance ? formatCurrency(balance) : "******"}
                 </span>
                 <button
                   onClick={() => setShowBalance(!showBalance)}
@@ -85,46 +164,68 @@ function WalletPage() {
                   )}
                 </button>
               </div>
+              <div className="mb-8"></div>
             </div>
           </div>
           {/* Các nút chức năng - Chỉ giữ lại nạp tiền và rút tiền */}
           <div className="flex space-x-4 mb-8">
-            {" "}
-            {/* Bỏ justify-center */}
-            <button className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-full flex items-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 mr-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={depositAmount}
+                onChange={(e) => {
+                  // Chỉ cho phép nhập số và giá trị dương
+                  const value = e.target.value.replace(/[^0-9]/g, "");
+                  setDepositAmount(value);
+                }}
+                placeholder="Nhập số tiền (VNĐ)"
+                className="border p-2 rounded w-40"
+                min="10000"
+                step="1000"
+              />
+              <Button
+                onClick={handleDeposit}
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded"
+                disabled={
+                  loading || !depositAmount || parseFloat(depositAmount) < 10000
+                }
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                />
-              </svg>
-              Nạp tiền
-            </button>
-            {/* <button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-full flex items-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 mr-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 7l4-4m0 0l4 4m-4-4v18"
-                />
-              </svg>
-              Rút tiền
-            </button> */}
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className="animate-spin h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Đang xử lý...
+                  </div>
+                ) : (
+                  "Nạp tiền qua ZaloPay"
+                )}
+              </Button>
+            </div>
+
+            {/* Thông báo lỗi */}
+            {depositAmount && parseFloat(depositAmount) < 10000 && (
+              <p className="text-red-500 text-sm mt-1">
+                Số tiền tối thiểu là 10,000 VNĐ
+              </p>
+            )}
           </div>
           {/* Lịch sử giao dịch */}
           <div>
@@ -168,5 +269,4 @@ function WalletPage() {
     </div>
   );
 }
-
 export default WalletPage;

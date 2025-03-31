@@ -28,10 +28,8 @@ export const InsufficientBalancePopup = async ({
     cancelButtonText: "Ở lại",
     buttonsStyling: false,
     customClass: {
-      confirmButton:
-        "bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md mr-2",
-      cancelButton:
-        "bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md ml-2",
+      confirmButton: "btn-confirm mr-2",
+      cancelButton: "btn-cancel ml-2",
     },
     reverseButtons: true,
     focusCancel: true,

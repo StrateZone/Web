@@ -9,6 +9,8 @@ import CouponsPage from "../coupon_modal/CouponsPage";
 import { useParams, useRouter } from "next/navigation";
 import OrderAttention from "@/components/OrderAttention/page";
 import { ConfirmBookingPopup } from "./ConfirmBookingPopup";
+import { InsufficientBalancePopup } from "./InsufficientBalancePopup";
+import { useLocale } from "next-intl";
 
 interface ChessBooking {
   tableId: number;
@@ -35,6 +37,7 @@ const TableBookingPage = () => {
   const [coupon, setCoupon] = useState("");
   const [discount, setDiscount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const localActive = useLocale();
 
   // const [showInviteModal, setShowInviteModal] = useState(false);
   // const [currentTable, setCurrentTable] = useState<number | null>(null);
@@ -201,6 +204,19 @@ const TableBookingPage = () => {
       alert("Đặt bàn thành công!");
       router.push(`/${locale}/chess_appointment/chess_category`);
     } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes("Balance is not enough")) {
+          const isConfirmed = await InsufficientBalancePopup({
+            finalPrice,
+          });
+          if (!isConfirmed) {
+            return;
+          } else {
+            router.push(`/${localActive}/wallet`);
+          }
+        } else {
+        }
+      }
       console.error("❌ Lỗi:", error);
       alert(`Lỗi: ${error instanceof Error ? error.message : "Hệ thống"}`);
     } finally {
@@ -409,14 +425,14 @@ const TableBookingPage = () => {
               <Button
                 onClick={applyCoupon}
                 color="amber"
-                className="py-3 px-6 text-small
+                className="py-2 px-8 text-small
                 "
               >
                 Áp dụng
               </Button>
               <Button
                 onClick={() => setShowCouponModal(true)}
-                className="py-3 px-6 text-small bg-green-600"
+                className="py-0 px-10 text-small bg-green-600"
               >
                 Mã giảm giá
               </Button>
@@ -425,7 +441,7 @@ const TableBookingPage = () => {
             <div className="flex justify-end">
               <Button
                 onClick={handleConfirmBooking}
-                className="hover:bg-gray-900 text-white px-6 py-3 text-base"
+                className="hover:bg-gray-900 text-white px-12 py-3 text-base"
                 disabled={chessBookings.length === 0 || isLoading}
               >
                 {isLoading ? (
