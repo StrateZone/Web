@@ -170,7 +170,9 @@ const TableBookingPage = () => {
       const requestData = {
         userId: authData.userId, // Sửa thành ID thực
         tablesAppointmentRequests: chessBookings.map((booking) => ({
-          price: booking.roomTypePrice + booking.gameTypePrice,
+          price:
+            (booking.roomTypePrice + booking.gameTypePrice) *
+            booking.durationInHours,
           tableId: booking.tableId,
           scheduleTime: booking.startDate,
           endTime: booking.endDate,

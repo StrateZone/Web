@@ -51,7 +51,10 @@ export function Navbar() {
   const t = useTranslations("NavBar");
   const router = useRouter();
   const localActive = useLocale();
-  const [showBalance, setShowBalance] = useState(true);
+  const [showBalance, setShowBalance] = useState<boolean>(() => {
+    const saved = localStorage.getItem("showBalance");
+    return saved !== null ? JSON.parse(saved) : true;
+  });
   const { locale } = useParams();
 
   const [open, setOpen] = useState(false);
@@ -62,7 +65,13 @@ export function Navbar() {
   const { balance, loading: walletLoading } = useSelector(
     (state: RootState) => state.wallet
   );
-
+  const toggleShowBalance = () => {
+    setShowBalance((prev) => {
+      const newValue = !prev;
+      localStorage.setItem("showBalance", JSON.stringify(newValue));
+      return newValue;
+    });
+  };
   // Sử dụng useEffect để đồng bộ hóa trạng thái đăng nhập
   useEffect(() => {
     const checkAuth = () => {
@@ -215,7 +224,7 @@ export function Navbar() {
                   </span>
                 )}
                 <button
-                  onClick={() => setShowBalance(!showBalance)}
+                  onClick={toggleShowBalance}
                   className="ml-2 text-gray-600 hover:text-gray-800"
                   disabled={walletLoading}
                 >

@@ -13,10 +13,17 @@ interface GameType {
 interface Table {
   tableId: number;
   roomId: number;
-  fee: number | null;
+  roomName: string;
+  roomType: string;
+  roomDescription: string;
   gameTypeId: number;
-  status: number;
   gameType: GameType;
+  startDate: string | null;
+  endDate: string | null;
+  gameTypePrice: number | null;
+  roomTypePrice: number | null;
+  durationInHours: number | null;
+  totalPrice: number | null;
 }
 
 interface TablesAppointment {
@@ -26,13 +33,10 @@ interface TablesAppointment {
   status: string;
   scheduleTime: string;
   endTime: string;
+  durationInHours: number;
   price: number;
   createdAt: string;
   table: Table;
-}
-
-interface AppointmentRequest {
-  // Define the structure if needed
 }
 
 interface Appointment {
@@ -41,8 +45,15 @@ interface Appointment {
   totalPrice: number;
   status: string;
   createdAt: string;
+  user: null | {
+    // Thêm các trường thông tin user nếu có
+    userId: number;
+    name: string;
+    email: string;
+    // ...
+  };
   tablesAppointments: TablesAppointment[];
-  appointmentrequests: AppointmentRequest[];
+  appointmentrequests: any[]; // Có thể định nghĩa cụ thể hơn nếu biết cấu trúc
 }
 
 interface ApiResponse {
@@ -58,7 +69,7 @@ interface ApiResponse {
 function Page() {
   const [selectedAppointment, setSelectedAppointment] =
     useState<Appointment | null>(null);
-  const [orderBy, setOrderBy] = useState("createdAt_desc");
+  const [orderBy, setOrderBy] = useState("created-at-desc");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ApiResponse>({
@@ -282,10 +293,10 @@ function Page() {
                   onChange={handleOrderByChange}
                   className="border rounded px-2 py-1"
                 >
-                  <option value="createdAt_desc">Mới nhất</option>
-                  <option value="createdAt_asc">Cũ nhất</option>
-                  <option value="totalPrice_desc">Giá cao nhất</option>
-                  <option value="totalPrice_asc">Giá thấp nhất</option>
+                  <option value="created-at-desc">Mới nhất</option>
+                  <option value="created-at">Cũ nhất</option>
+                  <option value="total-price-desc">Giá cao nhất</option>
+                  <option value="total-price">Giá thấp nhất</option>
                 </select>
               </div>
             </div>
@@ -349,16 +360,6 @@ function Page() {
                       {formatDate(selectedAppointment.createdAt)}
                     </p>
                   </div>
-
-                  {/* <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="font-medium text-lg mb-2">
-                      Thông tin người dùng
-                    </h3>
-                    <p>
-                      <span className="font-medium">User ID:</span>{" "}
-                      {selectedAppointment.userId}
-                    </p>
-                  </div> */}
                 </div>
 
                 <h3 className="font-medium text-lg mb-2">
@@ -375,7 +376,7 @@ function Page() {
                           Giờ Bắt Đầu Và Kết Thúc
                         </th>
                         <th className="py-2 px-4 border">Ngày</th>
-                        <th className="py-2 px-4 border">Giá</th>
+                        <th className="py-2 px-4 border">Tổng Giá</th>
                         <th className="py-2 px-4 border">Trạng thái</th>
                         <th className="py-2 px-4 border">Hành động</th>
                       </tr>
@@ -400,10 +401,19 @@ function Page() {
                                     : tableAppointment.table.gameType.typeName}
                             </td>
                             <td className="py-2 px-4 border text-center">
-                              Phòng {tableAppointment.table.tableId}
+                              {" "}
+                              {tableAppointment.table.roomType === "basic"
+                                ? "Phòng thường"
+                                : tableAppointment.table.roomType === "premium"
+                                  ? "Phòng cao cấp"
+                                  : tableAppointment.table.roomType ===
+                                      "openspaced"
+                                    ? "không gian mở"
+                                    : tableAppointment.table.roomType}
                             </td>
                             <td className="py-2 px-4 border text-center">
-                              {formatTime(tableAppointment.scheduleTime)} -{" "}
+                              {formatTime(tableAppointment.scheduleTime)}
+                              &nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;&nbsp;
                               {formatTime(tableAppointment.endTime)}
                             </td>
                             {/* <td className="py-2 px-4 border text-center">
