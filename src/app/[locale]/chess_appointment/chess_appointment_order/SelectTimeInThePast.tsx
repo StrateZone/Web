@@ -4,21 +4,21 @@ import withReactContent from "sweetalert2-react-content";
 
 const MySwal = withReactContent(Swal);
 
-interface UnavailableTable {
+interface PastBooking {
   tableId: number;
   startTime: string;
   endTime: string;
 }
 
-interface UnavailableTablesPopupProps {
-  unavailableTables: UnavailableTable[];
+interface PastTimePopupProps {
+  pastBookings: PastBooking[];
 }
 
-export const UnavailableTablesPopup = async ({
-  unavailableTables,
-}: UnavailableTablesPopupProps): Promise<void> => {
+export const PastTimePopup = async ({
+  pastBookings,
+}: PastTimePopupProps): Promise<void> => {
   await MySwal.fire({
-    title: "Bàn không khả dụng",
+    title: "Thời gian không hợp lệ",
     html: (
       <div className="text-left">
         <div className="flex items-center justify-center mb-4">
@@ -37,13 +37,12 @@ export const UnavailableTablesPopup = async ({
             />
           </svg>
           <span className="text-xl font-bold text-red-500">
-            Bàn đã được đặt trước
+            Thời gian đã qua
           </span>
         </div>
 
         <p className="mb-3">
-          Các bàn sau đã được đặt trước bởi người dùng khác trong khung giờ bạn
-          chọn:
+          Các bàn sau có thời gian bắt đầu trong quá khứ và không thể đặt:
         </p>
 
         <div className="bg-gray-100 rounded-lg p-3 mb-4">
@@ -56,11 +55,11 @@ export const UnavailableTablesPopup = async ({
               </tr>
             </thead>
             <tbody>
-              {unavailableTables.map((table) => (
-                <tr key={table.tableId} className="border-b">
-                  <td className="py-2 font-bold">#{table.tableId}</td>
-                  <td className="py-2 text-red-500">{table.startTime}</td>
-                  <td className="py-2">{table.endTime}</td>
+              {pastBookings.map((booking) => (
+                <tr key={booking.tableId} className="border-b">
+                  <td className="py-2 font-bold">#{booking.tableId}</td>
+                  <td className="py-2 text-red-500">{booking.startTime}</td>
+                  <td className="py-2">{booking.endTime}</td>
                 </tr>
               ))}
             </tbody>
@@ -68,8 +67,8 @@ export const UnavailableTablesPopup = async ({
         </div>
 
         <p className="text-sm italic text-gray-600">
-          Hệ thống sẽ tự động xóa các bàn không khả dụng. Vui lòng chọn bàn khác
-          hoặc khung giờ khác để tiếp tục
+          Hệ thống sẽ tự động xóa các bàn đã qua trong quá khứ. Vui lòng kiểm
+          tra lại đơn để tiếp tục
         </p>
       </div>
     ),

@@ -38,7 +38,7 @@ export default function ProfileMenu() {
     {
       label: "Thông Tin Cá Nhân",
       icon: UserCircleIcon,
-      onClick: () => router.push("/account"),
+      onClick: () => router.push(`/${localActive}/profile`),
     },
     {
       label: "Ví Tiền",
@@ -55,9 +55,9 @@ export default function ProfileMenu() {
       icon: LifebuoyIcon,
     },
     {
-      label: "Sign Out",
+      label: "Đăng Xuất",
       icon: PowerIcon,
-      onClick: handleLogout, // Gọi hàm logout
+      onClick: handleLogout,
     },
   ];
 

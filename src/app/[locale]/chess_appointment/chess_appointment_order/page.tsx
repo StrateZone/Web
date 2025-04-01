@@ -11,6 +11,9 @@ import OrderAttention from "@/components/OrderAttention/page";
 import { ConfirmBookingPopup } from "./ConfirmBookingPopup";
 import { InsufficientBalancePopup } from "./InsufficientBalancePopup";
 import { useLocale } from "next-intl";
+import { PastTimePopup } from "./SelectTimeInThePast";
+import { UnavailableTablesPopup } from "./UnavailableTablesPopup";
+import { SuccessBookingPopup } from "./BookingSuccess";
 
 interface ChessBooking {
   tableId: number;
@@ -31,19 +34,29 @@ interface ChessBooking {
   startDate: string;
   totalPrice: number;
 }
+interface UnavailableTable {
+  table_id: number;
+  start_time: string;
+  end_time: string;
+}
 
+interface TableNotAvailableError {
+  error: {
+    code: string;
+    message: string;
+    unavailable_tables: UnavailableTable[];
+  };
+}
 const TableBookingPage = () => {
   const router = useRouter();
   const [coupon, setCoupon] = useState("");
   const [discount, setDiscount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const localActive = useLocale();
-
-  // const [showInviteModal, setShowInviteModal] = useState(false);
-  // const [currentTable, setCurrentTable] = useState<number | null>(null);
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [chessBookings, setChessBookings] = useState<ChessBooking[]>([]);
   const { locale } = useParams();
+
   function formatDuration(hours: number): string {
     const fullHours = Math.floor(hours); // Lấy phần nguyên (giờ)
     const minutes = Math.round((hours - fullHours) * 60); // Tính phần dư (phút)
@@ -108,14 +121,7 @@ const TableBookingPage = () => {
   );
   const finalPrice = totalPrice - discount;
 
-  const applyCoupon = () => {
-    // Áp dụng giảm giá dựa trên coupon
-  };
-
-  // const inviteFriend = (tableNumber: number) => {
-  //   setCurrentTable(tableNumber);
-  //   setShowInviteModal(true);
-  // };
+  const applyCoupon = () => {};
 
   const GAME_TYPE_TRANSLATIONS: Record<string, string> = {
     chess: "Cờ Vua",
@@ -133,13 +139,16 @@ const TableBookingPage = () => {
   };
 
   const handleConfirmBooking = async () => {
+    // Hàm cha sẽ đợi hàm con chạy xong mới tiếp tục
     const isConfirmed = await ConfirmBookingPopup({
       chessBookings,
       finalPrice,
     });
     if (!isConfirmed) return;
+
+    // Bật loading khi bắt đầu gọi API
     try {
-      setIsLoading(true); // Bật loading khi bắt đầu gọi API
+      setIsLoading(true);
 
       // 1. Kiểm tra đăng nhập
       const authDataString = localStorage.getItem("authData");
@@ -147,7 +156,6 @@ const TableBookingPage = () => {
         alert("Vui lòng đăng nhập để đặt bàn");
         router.push(`/${locale}/login`);
         setIsLoading(false);
-
         return;
       }
 
@@ -170,8 +178,6 @@ const TableBookingPage = () => {
         totalPrice: finalPrice,
       };
 
-      console.log("📤 Request payload:", requestData);
-
       // 4. Gọi API trực tiếp
       const response = await fetch(
         "https://backend-production-5bc5.up.railway.app/api/payments/booking-payment",
@@ -192,17 +198,20 @@ const TableBookingPage = () => {
         throw new Error(responseText || `HTTP ${response.status}`);
       }
 
-      // console.log("✅ Đặt bàn thành công:", responseText);
-
       // 6. Xóa dữ liệu tạm
       localStorage.removeItem("chessBookings");
       setChessBookings([]);
       setDiscount(0);
       setCoupon("");
 
-      // 7. Chuyển hướng
-      alert("Đặt bàn thành công!");
-      router.push(`/${locale}/chess_appointment/chess_category`);
+      const userChoice = await SuccessBookingPopup();
+      if (userChoice) {
+        // Người dùng chọn "Xem chi tiết đơn đặt"
+        router.push(`/${localActive}/appointment_history`);
+      } else {
+        // Người dùng chọn "Đặt bàn mới"
+        router.push(`/${localActive}/chess_appointment/chess_category`);
+      }
     } catch (error) {
       if (error instanceof Error) {
         if (error.message.includes("Balance is not enough")) {
@@ -214,11 +223,64 @@ const TableBookingPage = () => {
           } else {
             router.push(`/${localActive}/wallet`);
           }
-        } else {
+        } else if (error.message.includes("Can not select time in the past")) {
+          const now = new Date();
+
+          // Lọc các bàn có thời gian trong quá khứ
+          const pastBookings = chessBookings
+            .filter((booking) => new Date(booking.startDate) <= now)
+            .map((booking) => ({
+              tableId: booking.tableId,
+              startTime: formatTime(booking.startDate),
+              endTime: formatTime(booking.endDate),
+            }));
+
+          // Hiển thị popup thông báo
+          await PastTimePopup({
+            pastBookings: pastBookings,
+          });
+
+          // Cập nhật state
+          const validBookings = chessBookings.filter(
+            (booking) => new Date(booking.startDate) > now
+          );
+          setChessBookings(validBookings);
+          localStorage.setItem("chessBookings", JSON.stringify(validBookings));
+        } else if (error.message.includes("TABLE_NOT_AVAILABLE")) {
+          try {
+            const errorData = JSON.parse(error.message);
+            const unavailableTables = errorData.error.unavailable_tables.map(
+              (t) => ({
+                tableId: t.table_id,
+                startTime: formatTime(t.start_time),
+                endTime: formatTime(t.end_time),
+              })
+            );
+
+            await UnavailableTablesPopup({ unavailableTables });
+
+            // Lọc ra các bàn không khả dụng
+            const updatedBookings = chessBookings.filter((booking) => {
+              return !errorData.error.unavailable_tables.some(
+                (unavailable) =>
+                  booking.tableId === unavailable.table_id &&
+                  booking.startDate === unavailable.start_time &&
+                  booking.endDate === unavailable.end_time
+              );
+            });
+
+            setChessBookings(updatedBookings);
+            localStorage.setItem(
+              "chessBookings",
+              JSON.stringify(updatedBookings)
+            );
+          } catch (parseError) {
+            console.error("Error parsing unavailable tables:", parseError);
+          }
         }
       }
-      console.error("❌ Lỗi:", error);
-      alert(`Lỗi: ${error instanceof Error ? error.message : "Hệ thống"}`);
+      // console.error("❌ Lỗi:", error);
+      // alert(`Lỗi: ${error instanceof Error ? error.message : "Hệ thống"}`);
     } finally {
       setIsLoading(false);
     }

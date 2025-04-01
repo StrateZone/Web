@@ -129,6 +129,7 @@ export default function ChessCategoryPage() {
       );
     });
   };
+
   const generateTimeOptions = () => {
     const now = new Date();
     const isSelectedToday = isToday(startDate);
@@ -136,7 +137,6 @@ export default function ChessCategoryPage() {
     const currentMinute = now.getMinutes();
 
     const options = [];
-
     for (let hour = 8; hour < 23; hour++) {
       for (const minute of [0, 30]) {
         // Skip times after 22:30

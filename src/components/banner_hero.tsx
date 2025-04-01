@@ -23,15 +23,17 @@ export default function BannerHero() {
             color="white"
             className="mt-1 mb-12 w-full md:max-w-full lg:max-w-2xl"
           >
-            StrateZone là một ứng dụng kết nối những người yêu cờ vua, giúp dễ
-            dàng tìm kiếm đối thủ phù hợp, sắp xếp các trận đấu tại câu lạc bộ,
-            tham gia các khóa học hấp dẫn và tham gia sự kiện.
+            StrateZone là một ứng dụng kết nối những người yêu các bộ môn cờ,
+            giúp dễ dàng tìm kiếm đối thủ phù hợp, sắp xếp các trận đấu tại câu
+            lạc bộ, tham gia các giải đấu hấp dẫn và gây cấn
           </Typography>
           <div className="flex items-center gap-4">
             <Button
               variant="gradient"
               color="white"
-              onClick={() => router.push(`/${localActive}/chess_appointment`)}
+              onClick={() =>
+                router.push(`/${localActive}/chess_appointment/chess_category`)
+              }
             >
               Đặt ngay
             </Button>
