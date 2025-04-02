@@ -11,47 +11,53 @@ import {
 import {
   UserCircleIcon,
   ChevronDownIcon,
-  Cog6ToothIcon,
-  InboxArrowDownIcon,
   LifebuoyIcon,
   PowerIcon,
 } from "@heroicons/react/24/solid";
 import { useRouter } from "next/navigation";
+import { Wallet, Calendar } from "lucide-react";
+import { useLocale } from "next-intl";
 
 export default function ProfileMenu() {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const localActive = useLocale();
 
   const closeMenu = () => setIsMenuOpen(false);
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
+    localStorage.removeItem("authData");
+    localStorage.removeItem("chessBookings");
+
     router.push("/"); // Điều hướng về trang chủ sau khi logout
   };
 
   const profileMenuItems = [
     {
-      label: "My Profile",
+      label: "Thông Tin Cá Nhân",
       icon: UserCircleIcon,
-      onClick: () => router.push("/account"),
+      onClick: () => router.push(`/${localActive}/profile`),
     },
     {
-      label: "Edit Profile",
-      icon: Cog6ToothIcon,
+      label: "Ví Tiền",
+      icon: Wallet,
+      onClick: () => router.push(`/${localActive}/wallet`),
     },
     {
-      label: "Inbox",
-      icon: InboxArrowDownIcon,
+      label: "Lịch Sử Đặt Bàn",
+      icon: Calendar,
+      onClick: () => router.push(`/${localActive}/appointment_history`),
     },
     {
       label: "Help",
       icon: LifebuoyIcon,
     },
     {
-      label: "Sign Out",
+      label: "Đăng Xuất",
       icon: PowerIcon,
-      onClick: handleLogout, // Gọi hàm logout
+      onClick: handleLogout,
     },
   ];
 

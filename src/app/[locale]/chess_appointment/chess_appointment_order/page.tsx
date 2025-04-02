@@ -8,6 +8,13 @@ import { UserPlus, X } from "lucide-react";
 import CouponsPage from "../coupon_modal/CouponsPage";
 import { useParams, useRouter } from "next/navigation";
 import OrderAttention from "@/components/OrderAttention/page";
+import { ConfirmBookingPopup } from "./ConfirmBookingPopup";
+import { InsufficientBalancePopup } from "./InsufficientBalancePopup";
+import { useLocale } from "next-intl";
+import { PastTimePopup } from "./SelectTimeInThePast";
+import { UnavailableTablesPopup } from "./UnavailableTablesPopup";
+import { SuccessBookingPopup } from "./BookingSuccess";
+import OpponentRecommendationModal from "./FriendListModal ";
 
 interface ChessBooking {
   tableId: number;
@@ -28,16 +35,43 @@ interface ChessBooking {
   startDate: string;
   totalPrice: number;
 }
+interface UnavailableTable {
+  table_id: number;
+  start_time: string;
+  end_time: string;
+}
 
+interface TableNotAvailableError {
+  error: {
+    code: string;
+    message: string;
+    unavailable_tables: UnavailableTable[];
+  };
+}
 const TableBookingPage = () => {
   const router = useRouter();
   const [coupon, setCoupon] = useState("");
   const [discount, setDiscount] = useState(0);
-  // const [showInviteModal, setShowInviteModal] = useState(false);
-  // const [currentTable, setCurrentTable] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const localActive = useLocale();
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [chessBookings, setChessBookings] = useState<ChessBooking[]>([]);
   const { locale } = useParams();
+  const [showOpponentModal, setShowOpponentModal] = useState(false);
+  const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
+  const [selectedStartDate, setSelectedStartDate] = useState<string>("");
+  const [selectedEndDate, setSelectedEndDate] = useState<string>("");
+  // Update the inviteFriend function
+  const inviteFriend = (
+    tableId: number,
+    startDate: string,
+    endDate: string
+  ) => {
+    setSelectedTableId(tableId);
+    setSelectedStartDate(startDate); // Thêm state mới
+    setSelectedEndDate(endDate); // Thêm state mới
+    setShowOpponentModal(true);
+  };
   function formatDuration(hours: number): string {
     const fullHours = Math.floor(hours); // Lấy phần nguyên (giờ)
     const minutes = Math.round((hours - fullHours) * 60); // Tính phần dư (phút)
@@ -69,8 +103,8 @@ const TableBookingPage = () => {
   }) => {
     router.push(
       `/${locale}/chess_appointment/${bookingInfo.id}?startTime=${encodeURIComponent(
-        bookingInfo.startDate,
-      )}&endTime=${encodeURIComponent(bookingInfo.endDate)}`,
+        bookingInfo.startDate
+      )}&endTime=${encodeURIComponent(bookingInfo.endDate)}`
     );
   };
 
@@ -81,7 +115,7 @@ const TableBookingPage = () => {
           booking.tableId === tableId &&
           booking.startDate === startDate &&
           booking.endDate === endDate
-        ),
+        )
     );
     setChessBookings(updatedBookings);
     localStorage.setItem("chessBookings", JSON.stringify(updatedBookings));
@@ -98,18 +132,11 @@ const TableBookingPage = () => {
 
   const totalPrice = chessBookings.reduce(
     (sum, booking) => sum + booking.totalPrice,
-    0,
+    0
   );
   const finalPrice = totalPrice - discount;
 
-  const applyCoupon = () => {
-    // Áp dụng giảm giá dựa trên coupon
-  };
-
-  // const inviteFriend = (tableNumber: number) => {
-  //   setCurrentTable(tableNumber);
-  //   setShowInviteModal(true);
-  // };
+  const applyCoupon = () => {};
 
   const GAME_TYPE_TRANSLATIONS: Record<string, string> = {
     chess: "Cờ Vua",
@@ -126,6 +153,155 @@ const TableBookingPage = () => {
     return roomType;
   };
 
+  const handleConfirmBooking = async () => {
+    // Hàm cha sẽ đợi hàm con chạy xong mới tiếp tục
+    const isConfirmed = await ConfirmBookingPopup({
+      chessBookings,
+      finalPrice,
+    });
+    if (!isConfirmed) return;
+
+    // Bật loading khi bắt đầu gọi API
+    try {
+      setIsLoading(true);
+
+      // 1. Kiểm tra đăng nhập
+      const authDataString = localStorage.getItem("authData");
+      if (!authDataString) {
+        alert("Vui lòng đăng nhập để đặt bàn");
+        router.push(`/${locale}/login`);
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Validate dữ liệu
+      if (chessBookings.length === 0) {
+        alert("Vui lòng chọn ít nhất một bàn để đặt");
+        return;
+      }
+
+      // 3. Chuẩn bị dữ liệu (dùng userId thực từ authData)
+      const authData = JSON.parse(authDataString);
+      const requestData = {
+        userId: authData.userId, // Sửa thành ID thực
+        tablesAppointmentRequests: chessBookings.map((booking) => ({
+          price:
+            (booking.roomTypePrice + booking.gameTypePrice) *
+            booking.durationInHours,
+          tableId: booking.tableId,
+          scheduleTime: booking.startDate,
+          endTime: booking.endDate,
+        })),
+        totalPrice: finalPrice,
+      };
+
+      // 4. Gọi API trực tiếp
+      const response = await fetch(
+        "https://backend-production-5bc5.up.railway.app/api/payments/booking-payment",
+        {
+          method: "POST",
+          headers: {
+            accept: "text/plain",
+            "Content-Type": "application/json-patch+json",
+          },
+          body: JSON.stringify(requestData),
+        }
+      );
+
+      console.log(response);
+      // 5. Xử lý response
+      const responseText = await response.text();
+      if (!response.ok) {
+        throw new Error(responseText || `HTTP ${response.status}`);
+      }
+
+      // 6. Xóa dữ liệu tạm
+      localStorage.removeItem("chessBookings");
+      setChessBookings([]);
+      setDiscount(0);
+      setCoupon("");
+
+      const userChoice = await SuccessBookingPopup();
+      if (userChoice) {
+        // Người dùng chọn "Xem chi tiết đơn đặt"
+        router.push(`/${localActive}/appointment_history`);
+      } else {
+        // Người dùng chọn "Đặt bàn mới"
+        router.push(`/${localActive}/chess_appointment/chess_category`);
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes("Balance is not enough")) {
+          const isConfirmed = await InsufficientBalancePopup({
+            finalPrice,
+          });
+          if (!isConfirmed) {
+            return;
+          } else {
+            router.push(`/${localActive}/wallet`);
+          }
+        } else if (error.message.includes("Can not select time in the past")) {
+          const now = new Date();
+
+          // Lọc các bàn có thời gian trong quá khứ
+          const pastBookings = chessBookings
+            .filter((booking) => new Date(booking.startDate) <= now)
+            .map((booking) => ({
+              tableId: booking.tableId,
+              startTime: formatTime(booking.startDate),
+              endTime: formatTime(booking.endDate),
+            }));
+
+          // Hiển thị popup thông báo
+          await PastTimePopup({
+            pastBookings: pastBookings,
+          });
+
+          // Cập nhật state
+          const validBookings = chessBookings.filter(
+            (booking) => new Date(booking.startDate) > now
+          );
+          setChessBookings(validBookings);
+          localStorage.setItem("chessBookings", JSON.stringify(validBookings));
+        } else if (error.message.includes("TABLE_NOT_AVAILABLE")) {
+          try {
+            const errorData = JSON.parse(error.message);
+            const unavailableTables = errorData.error.unavailable_tables.map(
+              (t: UnavailableTable) => ({
+                tableId: t.table_id,
+                startTime: formatTime(t.start_time),
+                endTime: formatTime(t.end_time),
+              })
+            );
+
+            await UnavailableTablesPopup({ unavailableTables });
+
+            // Lọc ra các bàn không khả dụng
+            const updatedBookings = chessBookings.filter((booking) => {
+              return !errorData.error.unavailable_tables.some(
+                (unavailable: UnavailableTable) =>
+                  booking.tableId === unavailable.table_id &&
+                  booking.startDate === unavailable.start_time &&
+                  booking.endDate === unavailable.end_time
+              );
+            });
+
+            setChessBookings(updatedBookings);
+            localStorage.setItem(
+              "chessBookings",
+              JSON.stringify(updatedBookings)
+            );
+          } catch (parseError) {
+            console.error("Error parsing unavailable tables:", parseError);
+          }
+        }
+      }
+      // console.error("❌ Lỗi:", error);
+      // alert(`Lỗi: ${error instanceof Error ? error.message : "Hệ thống"}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   return (
     <div className="text-base">
       <Navbar />
@@ -159,7 +335,7 @@ const TableBookingPage = () => {
           </h1>
           <div className="bg-white rounded-lg shadow-md p-6">
             {/* Danh sách card bàn */}
-            <div className="max-h-[400px] overflow-y-auto mb-6 space-y-4">
+            <div className="max-h-[800px] overflow-y-auto mb-6 space-y-4">
               {chessBookings.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-gray-500 border rounded-lg">
                   <svg
@@ -193,77 +369,42 @@ const TableBookingPage = () => {
                     <div className="flex-1 grid grid-cols-2 gap-4 text-base">
                       {/* Cột trái */}
                       <div>
-                        <p
-                          onClick={() => {
-                            viewBookingDetail({
-                              id: booking.tableId,
-                              startDate: booking.startDate,
-                              endDate: booking.endDate,
-                            });
-                          }}
-                        >
-                          <span className="font-bold text-lg cursor-pointer">
-                            Loại Cờ:{" "}
-                          </span>
+                        <div className="col-span-2 mb-2">
+                          <p
+                            className="text-blue-500 text-sm italic cursor-pointer hover:underline"
+                            onClick={() => {
+                              viewBookingDetail({
+                                id: booking.tableId,
+                                startDate: booking.startDate,
+                                endDate: booking.endDate,
+                              });
+                            }}
+                          >
+                            🔍 Bấm vào để xem chi tiết bàn
+                          </p>
+                        </div>
+                        <p>
+                          <span className="font-bold text-lg ">Loại Cờ: </span>
                           {GAME_TYPE_TRANSLATIONS[
                             booking.gameType.typeName.toLowerCase()
                           ] || booking.gameType.typeName}{" "}
                         </p>
                         <p>
-                          <span
-                            onClick={() => {
-                              viewBookingDetail({
-                                id: booking.tableId,
-                                startDate: booking.startDate,
-                                endDate: booking.endDate,
-                              });
-                            }}
-                            className="font-bold text-lg cursor-pointer"
-                          >
+                          <span className="font-bold text-lg ">
                             Loại Phòng:{" "}
                           </span>
                           {translateRoomType(booking.roomType)}
                         </p>
                         <p>
-                          <span
-                            onClick={() => {
-                              viewBookingDetail({
-                                id: booking.tableId,
-                                startDate: booking.startDate,
-                                endDate: booking.endDate,
-                              });
-                            }}
-                            className="font-bold text-lg cursor-pointer"
-                          >
-                            Mã Bàn:{" "}
-                          </span>
+                          <span className="font-bold text-lg ">Mã Bàn: </span>
                           {booking.tableId}
                         </p>
                         <p>
-                          <span
-                            onClick={() => {
-                              viewBookingDetail({
-                                id: booking.tableId,
-                                startDate: booking.startDate,
-                                endDate: booking.endDate,
-                              });
-                            }}
-                            className="font-bold text-lg cursor-pointer"
-                          >
-                            Phòng Số:{" "}
-                          </span>
+                          <span className="font-bold text-lg ">Phòng Số: </span>
                           {booking.roomId}
                         </p>
-                        <p
-                          onClick={() => {
-                            viewBookingDetail({
-                              id: booking.tableId,
-                              startDate: booking.startDate,
-                              endDate: booking.endDate,
-                            });
-                          }}
-                        >
-                          <span className="font-bold text-lg cursor-pointer">
+                        <p>
+                          <span className="font-bold text-lg ">
                             Tổng Thời Gian Thuê Bàn:{" "}
                           </span>
                           {formatDuration(booking.durationInHours)}
@@ -273,7 +414,7 @@ const TableBookingPage = () => {
                       <div className="text-right">
                         <p>
                           <span
-                            className="font-bold text-lg cursor-pointer"
+                            className="font-bold text-lg "
                             onClick={() => {
                               viewBookingDetail({
                                 id: booking.tableId,
@@ -287,47 +428,20 @@ const TableBookingPage = () => {
                           {formatDate(booking.startDate)}
                         </p>
                         <p>
-                          <span
-                            className="font-bold text-lg cursor-pointer"
-                            onClick={() => {
-                              viewBookingDetail({
-                                id: booking.tableId,
-                                startDate: booking.startDate,
-                                endDate: booking.endDate,
-                              });
-                            }}
-                          >
+                          <span className="font-bold text-lg ">
                             Giờ Bắt Đầu:{" "}
                           </span>
                           {formatTime(booking.startDate)}
                         </p>
                         <p>
-                          <span
-                            className="font-bold text-lg cursor-pointer"
-                            onClick={() => {
-                              viewBookingDetail({
-                                id: booking.tableId,
-                                startDate: booking.startDate,
-                                endDate: booking.endDate,
-                              });
-                            }}
-                          >
+                          <span className="font-bold text-lg ">
                             Giờ Kết thúc:{" "}
                           </span>
                           {formatTime(booking.endDate)}
                         </p>
                         <div>
                           <p className="font-medium text-base">
-                            <span
-                              className="font-bold text-lg cursor-pointer"
-                              onClick={() => {
-                                viewBookingDetail({
-                                  id: booking.tableId,
-                                  startDate: booking.startDate,
-                                  endDate: booking.endDate,
-                                });
-                              }}
-                            >
+                            <span className="font-bold text-lg ">
                               Giá Thuê Theo Giờ:{" "}
                             </span>
                             {(
@@ -346,7 +460,13 @@ const TableBookingPage = () => {
                     {/* Nhóm nút bên phải */}
                     <div className="flex items-center ml-4 space-x-3">
                       <button
-                        // onClick={() => inviteFriend(booking.tableId)}
+                        onClick={() =>
+                          inviteFriend(
+                            booking.tableId,
+                            booking.startDate,
+                            booking.endDate
+                          )
+                        }
                         className="text-blue-500 hover:text-blue-700 p-2"
                         title="Mời bạn vào bàn này"
                       >
@@ -357,7 +477,7 @@ const TableBookingPage = () => {
                           removeTable(
                             booking.tableId,
                             booking.startDate,
-                            booking.endDate,
+                            booking.endDate
                           )
                         }
                         className="text-red-500 hover:text-red-700 p-2"
@@ -390,21 +510,52 @@ const TableBookingPage = () => {
               <Button
                 onClick={applyCoupon}
                 color="amber"
-                className="py-3 px-6 text-base"
+                className="py-2 px-8 text-small
+                "
               >
                 Áp dụng
               </Button>
               <Button
                 onClick={() => setShowCouponModal(true)}
-                className="py-3 px-6 text-base bg-green-600"
+                className="py-0 px-10 text-small bg-green-600"
               >
                 Mã giảm giá
               </Button>
             </div>
 
             <div className="flex justify-end">
-              <Button className="hover:bg-gray-900 text-white px-6 py-3 text-base">
-                Xác nhận đặt bàn
+              <Button
+                onClick={handleConfirmBooking}
+                className="hover:bg-gray-900 text-white px-12 py-3 text-base"
+                disabled={chessBookings.length === 0 || isLoading}
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Đang xử lý...
+                  </div>
+                ) : (
+                  "Xác nhận đặt bàn"
+                )}
               </Button>
             </div>
           </div>
@@ -417,6 +568,15 @@ const TableBookingPage = () => {
           onClose={() => setShowCouponModal(false)}
           setCoupon={setCoupon}
           setDiscount={setDiscount}
+        />
+      )}
+      {selectedTableId && (
+        <OpponentRecommendationModal
+          startDate={selectedStartDate}
+          endDate={selectedEndDate}
+          tableId={selectedTableId}
+          open={showOpponentModal}
+          onClose={() => setShowOpponentModal(false)}
         />
       )}
       <Footer />
