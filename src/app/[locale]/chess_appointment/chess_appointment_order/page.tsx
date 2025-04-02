@@ -267,7 +267,7 @@ const TableBookingPage = () => {
           try {
             const errorData = JSON.parse(error.message);
             const unavailableTables = errorData.error.unavailable_tables.map(
-              (t) => ({
+              (t: UnavailableTable) => ({
                 tableId: t.table_id,
                 startTime: formatTime(t.start_time),
                 endTime: formatTime(t.end_time),
@@ -279,7 +279,7 @@ const TableBookingPage = () => {
             // Lọc ra các bàn không khả dụng
             const updatedBookings = chessBookings.filter((booking) => {
               return !errorData.error.unavailable_tables.some(
-                (unavailable) =>
+                (unavailable: UnavailableTable) =>
                   booking.tableId === unavailable.table_id &&
                   booking.startDate === unavailable.start_time &&
                   booking.endDate === unavailable.end_time
