@@ -361,9 +361,17 @@ const TableDetailsPage = () => {
   if (error) {
     return (
       <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <div className="flex-grow flex items-center justify-center">
-          <div className="text-red-500 text-xl">{error}</div>
+        {/* <Navbar /> */}
+        <div className="flex-grow flex flex-col items-center justify-center gap-4">
+          <div className="text-red-500 text-xl text-center">
+            Bàn mà bạn chọn đã qua thời gian hợp lệ để đặt!!!
+          </div>
+          <button
+            // onClick={() => router.push(`/${locale}/chess_appointment/`)} // Thay đổi đường dẫn tùy theo route của bạn
+            className="text-blue-500 text-xl underline hover:text-blue-700 cursor-pointer"
+          >
+            Ấn vào đây để tiếp tục
+          </button>
         </div>
         <Footer />
       </div>
@@ -499,7 +507,7 @@ const TableDetailsPage = () => {
                 </div>
                 <div className="border-t border-b border-gray-200 py-4 my-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
+                    {/* <div>
                       <p className="text-base text-gray-500">Giá Của Loại Cờ</p>
                       <p className="font-medium text-lg">
                         {chessBooking.gameTypePrice.toLocaleString("vi-VN")}đ
@@ -510,7 +518,7 @@ const TableDetailsPage = () => {
                       <p className="font-medium text-lg">
                         {chessBooking.roomTypePrice.toLocaleString("vi-VN")}đ
                       </p>
-                    </div>
+                    </div> */}
                     <div>
                       <p className="text-base text-gray-500">
                         Giá Thuê Theo Giờ

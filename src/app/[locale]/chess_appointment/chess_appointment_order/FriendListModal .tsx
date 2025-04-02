@@ -1,6 +1,10 @@
-import { X } from "lucide-react";
+"use client";
+import { useState, useEffect } from "react";
+import { Button } from "@material-tailwind/react";
+import { User, X } from "lucide-react";
+import Image from "next/image";
 
-interface User {
+interface Opponent {
   userId: number;
   username: string;
   avatarUrl: string | null;
@@ -8,24 +12,144 @@ interface User {
   points: number;
 }
 
-interface FriendListModalProps {
-  friends: User[];
+interface OpponentRecommendationModalProps {
+  startDate: string;
+  endDate: string;
+  tableId: number;
+  open: boolean;
   onClose: () => void;
-  onInvite: (friendId: number) => void;
-  isLoading: boolean;
 }
 
-export const FriendListModal = ({
-  friends,
+const OpponentRecommendationModal = ({
+  startDate,
+  endDate,
+  tableId,
+  open,
   onClose,
-  onInvite,
-  isLoading,
-}: FriendListModalProps) => {
+}: OpponentRecommendationModalProps) => {
+  const [opponents, setOpponents] = useState<Opponent[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    pageNumber: 1,
+    pageSize: 5,
+    totalPages: 1,
+  });
+  const [invitedOpponents, setInvitedOpponents] = useState<number[]>([]);
+
+  const fetchOpponents = async (pageNumber: number) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(
+        `https://backend-production-5bc5.up.railway.app/api/users/by-ranking?page-number=${pageNumber}&page-size=${pagination.pageSize}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch opponents");
+      }
+
+      const data = await response.json();
+      setOpponents(data);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (open) {
+      fetchOpponents(pagination.pageNumber);
+    }
+  }, [open, pagination.pageNumber]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage > 0 && newPage <= pagination.totalPages) {
+      setPagination((prev) => ({ ...prev, pageNumber: newPage }));
+      fetchOpponents(newPage);
+    }
+  };
+
+  const handleInvite = async (opponentId: number) => {
+    try {
+      setLoading(true);
+
+      const authDataString = localStorage.getItem("authData");
+      if (!authDataString) throw new Error("User not authenticated");
+
+      const authData = JSON.parse(authDataString);
+      const fromUserId = authData.userId;
+
+      const opponent = opponents.find((o) => o.userId === opponentId);
+      if (!opponent) throw new Error("Opponent not found");
+
+      const response = await fetch(
+        "https://backend-production-5bc5.up.railway.app/api/appointmentrequests",
+        {
+          method: "POST",
+          headers: {
+            accept: "*/*",
+            "Content-Type": "application/json-patch+json",
+          },
+          body: JSON.stringify({
+            fromUser: fromUserId,
+            toUser: opponentId,
+            tableId: tableId,
+            startTime: startDate,
+            endTime: endDate,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to send invitation");
+      }
+
+      const responseData = await response.json();
+      console.log("API Response:", responseData);
+
+      setInvitedOpponents((prev) => [...prev, opponentId]);
+      alert(`Đã gửi lời mời đến ${opponent.username} thành công!`);
+    } catch (err) {
+      console.error("Error details:", err);
+      setError(err instanceof Error ? err.message : "Lỗi khi gửi lời mời");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const translateRanking = (ranking: string) => {
+    switch (ranking.toLowerCase()) {
+      case "basic":
+        return "Cơ bản";
+      case "intermediate":
+        return "Trung cấp";
+      case "advanced":
+        return "Nâng cao";
+      case "expert":
+        return "Chuyên gia";
+      default:
+        return ranking;
+    }
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return `${date.getHours()}:${String(date.getMinutes()).padStart(2, "0")}`;
+  };
+
+  if (!open) return null;
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold">Mời bạn vào bàn</h3>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 text-black">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center border-b p-4">
+          <h2 className="text-xl font-bold">Gợi ý đối thủ</h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -34,55 +158,102 @@ export const FriendListModal = ({
           </button>
         </div>
 
-        {isLoading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-          </div>
-        ) : (
-          <div className="max-h-96 overflow-y-auto">
-            {friends.length === 0 ? (
-              <p className="text-center py-4">Không có bạn bè nào</p>
-            ) : (
-              <ul className="space-y-2">
-                {friends.map((friend) => (
-                  <li
-                    key={friend.userId}
-                    className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
-                  >
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden mr-3">
-                        {friend.avatarUrl ? (
-                          <img
-                            src={friend.avatarUrl}
-                            alt={friend.username}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-600">
-                            {friend.username.charAt(0).toUpperCase()}
-                          </div>
-                        )}
+        <div className="p-4">
+          <p className="text-sm text-gray-600 mb-4">
+            Mời đối thủ phù hợp vào bàn {tableId} từ {formatTime(startDate)} đến{" "}
+            {formatTime(endDate)}
+          </p>
+
+          {loading ? (
+            <div className="flex justify-center items-center h-40">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          ) : error ? (
+            <div className="text-red-500 text-center p-4">{error}</div>
+          ) : opponents.length === 0 ? (
+            <div className="text-center p-4 text-gray-500">
+              Không tìm thấy đối thủ phù hợp
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {opponents.map((opponent) => (
+                <div
+                  key={opponent.userId}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
+                  <div className="flex items-center space-x-3">
+                    {opponent.avatarUrl ? (
+                      <Image
+                        src={opponent.avatarUrl}
+                        alt={opponent.username}
+                        width={50}
+                        height={50}
+                        className="rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
+                        <User className="text-gray-500" size={24} />
                       </div>
-                      <div>
-                        <p className="font-medium">{friend.username}</p>
-                        <p className="text-sm text-gray-500">
-                          {friend.ranking} • {friend.points} điểm
-                        </p>
+                    )}
+                    <div>
+                      <h3 className="font-semibold">{opponent.username}</h3>
+                      <div className="flex space-x-4 text-sm text-gray-600">
+                        <span>Hạng: {translateRanking(opponent.ranking)}</span>
+                        <span>Điểm: {opponent.points.toLocaleString()}</span>
                       </div>
                     </div>
-                    <button
-                      onClick={() => onInvite(friend.userId)}
-                      className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
-                    >
-                      Mời
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+                  </div>
+                  <Button
+                    size="sm"
+                    color={
+                      invitedOpponents.includes(opponent.userId)
+                        ? "gray"
+                        : "green"
+                    }
+                    onClick={() => handleInvite(opponent.userId)}
+                    className="px-3 py-1.5"
+                    disabled={
+                      loading || invitedOpponents.includes(opponent.userId)
+                    }
+                  >
+                    {invitedOpponents.includes(opponent.userId)
+                      ? "Đã mời"
+                      : "Mời"}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="border-t p-4">
+          <div className="flex justify-between items-center">
+            <Button
+              variant="outlined"
+              size="sm"
+              disabled={pagination.pageNumber === 1 || loading}
+              onClick={() => handlePageChange(pagination.pageNumber - 1)}
+            >
+              Trước
+            </Button>
+            <span className="text-sm">
+              Trang {pagination.pageNumber} / {pagination.totalPages}
+            </span>
+            <Button
+              variant="outlined"
+              size="sm"
+              disabled={
+                pagination.pageNumber === pagination.totalPages || loading
+              }
+              onClick={() => handlePageChange(pagination.pageNumber + 1)}
+            >
+              Sau
+            </Button>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
 };
+
+export default OpponentRecommendationModal;

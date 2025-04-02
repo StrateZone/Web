@@ -14,6 +14,7 @@ import { useLocale } from "next-intl";
 import { PastTimePopup } from "./SelectTimeInThePast";
 import { UnavailableTablesPopup } from "./UnavailableTablesPopup";
 import { SuccessBookingPopup } from "./BookingSuccess";
+import OpponentRecommendationModal from "./FriendListModal ";
 
 interface ChessBooking {
   tableId: number;
@@ -56,7 +57,21 @@ const TableBookingPage = () => {
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [chessBookings, setChessBookings] = useState<ChessBooking[]>([]);
   const { locale } = useParams();
-
+  const [showOpponentModal, setShowOpponentModal] = useState(false);
+  const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
+  const [selectedStartDate, setSelectedStartDate] = useState<string>("");
+  const [selectedEndDate, setSelectedEndDate] = useState<string>("");
+  // Update the inviteFriend function
+  const inviteFriend = (
+    tableId: number,
+    startDate: string,
+    endDate: string
+  ) => {
+    setSelectedTableId(tableId);
+    setSelectedStartDate(startDate); // Thêm state mới
+    setSelectedEndDate(endDate); // Thêm state mới
+    setShowOpponentModal(true);
+  };
   function formatDuration(hours: number): string {
     const fullHours = Math.floor(hours); // Lấy phần nguyên (giờ)
     const minutes = Math.round((hours - fullHours) * 60); // Tính phần dư (phút)
@@ -445,7 +460,13 @@ const TableBookingPage = () => {
                     {/* Nhóm nút bên phải */}
                     <div className="flex items-center ml-4 space-x-3">
                       <button
-                        // onClick={() => inviteFriend(booking.tableId)}
+                        onClick={() =>
+                          inviteFriend(
+                            booking.tableId,
+                            booking.startDate,
+                            booking.endDate
+                          )
+                        }
                         className="text-blue-500 hover:text-blue-700 p-2"
                         title="Mời bạn vào bàn này"
                       >
@@ -547,6 +568,15 @@ const TableBookingPage = () => {
           onClose={() => setShowCouponModal(false)}
           setCoupon={setCoupon}
           setDiscount={setDiscount}
+        />
+      )}
+      {selectedTableId && (
+        <OpponentRecommendationModal
+          startDate={selectedStartDate}
+          endDate={selectedEndDate}
+          tableId={selectedTableId}
+          open={showOpponentModal}
+          onClose={() => setShowOpponentModal(false)}
         />
       )}
       <Footer />

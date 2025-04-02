@@ -3,7 +3,13 @@ import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
 import { DefaultPagination } from "@/components/pagination";
 import React, { useState, useEffect } from "react";
-
+import { fetchWallet } from "@/app/[locale]/wallet/walletSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState, AppDispatch } from "@/app/store";
+import CancelConfirmationModal from "./CancelConfirmationModal";
+import { SuccessCancelPopup } from "./CancelSuccessPopup";
+import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
 interface GameType {
   typeId: number;
   typeName: string;
@@ -46,14 +52,12 @@ interface Appointment {
   status: string;
   createdAt: string;
   user: null | {
-    // Thêm các trường thông tin user nếu có
     userId: number;
     name: string;
     email: string;
-    // ...
   };
   tablesAppointments: TablesAppointment[];
-  appointmentrequests: any[]; // Có thể định nghĩa cụ thể hơn nếu biết cấu trúc
+  appointmentrequests: any[];
 }
 
 interface ApiResponse {
@@ -64,6 +68,14 @@ interface ApiResponse {
   totalCount: number;
   hasPrevious: boolean;
   hasNext: boolean;
+}
+
+interface RefundInfo {
+  message: string;
+  refundAmount: number;
+  cancellationTime: string;
+  cancellation_Block_TimeGate: string;
+  cancellation_PartialRefund_TimeGate: string;
 }
 
 function Page() {
@@ -81,17 +93,28 @@ function Page() {
     hasPrevious: false,
     hasNext: false,
   });
+  const router = useRouter();
+  const localActive = useLocale();
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8); // Hoặc số lượng bạn muốn hiển thị mỗi trang
+  const [pageSize, setPageSize] = useState(8);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [hasPrevious, setHasPrevious] = useState(false);
   const [hasNext, setHasNext] = useState(false);
-  const authDataString = localStorage.getItem("authData");
-  const authData = JSON.parse(authDataString);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [refundInfo, setRefundInfo] = useState<RefundInfo | null>(null);
+  const [currentCancellingId, setCurrentCancellingId] = useState<number | null>(
+    null
+  );
 
-  const userId = authData.userId; // User ID cố định từ API
+  const authDataString = localStorage.getItem("authData");
+  const authData = JSON.parse(authDataString || "{}");
+  const userId = authData.userId;
+  const dispatch = useDispatch<AppDispatch>();
+  const { balance, loading: walletLoading } = useSelector(
+    (state: RootState) => state.wallet
+  );
   // Fetch data from API
   const fetchData = async () => {
     setIsLoading(true);
@@ -111,6 +134,8 @@ function Page() {
       }
 
       const result: ApiResponse = await response.json();
+      console.log(result);
+
       setData(result);
       setCurrentPage(result.currentPage);
       setTotalPages(result.totalPages);
@@ -129,6 +154,7 @@ function Page() {
   useEffect(() => {
     fetchData();
   }, [currentPage, pageSize, orderBy]);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return (
@@ -164,50 +190,88 @@ function Page() {
       setCurrentPage(newPage);
     }
   };
+  function toLocalISOString(date: Date) {
+    const tzOffset = date.getTimezoneOffset() * 60000;
+    const localDate = new Date(date.getTime() - tzOffset);
+    return localDate.toISOString().slice(0, -1);
+  }
+  const checkCancelCondition = async (tablesAppointmentId: number) => {
+    try {
+      setIsLoading(true);
+      const currentTime = toLocalISOString(new Date()); // Sử dụng hàm này
 
-  const handleCancelAppointment = async (appointmentId: number) => {
-    if (!confirm("Bạn có chắc chắn muốn hủy đơn đặt này không?")) {
+      const response = await fetch(
+        `https://backend-production-5bc5.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Không thể kiểm tra điều kiện hủy");
+      }
+
+      const data = await response.json();
+      setRefundInfo({
+        message: data.message,
+        refundAmount: data.refundAmount,
+        cancellationTime: data.cancellationTime,
+        cancellation_Block_TimeGate: data.cancellation_Block_TimeGate,
+        cancellation_PartialRefund_TimeGate:
+          data.cancellation_PartialRefund_TimeGate,
+      });
+      setCurrentCancellingId(tablesAppointmentId);
+      setShowCancelConfirm(true);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Lỗi khi kiểm tra điều kiện hủy"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const confirmCancelAppointment = async () => {
+    const authData = JSON.parse(localStorage.getItem("authData") || "{}");
+    const userId = authData.userId;
+
+    if (!currentCancellingId || !userId) {
+      console.error("Missing currentCancellingId or userId");
       return;
     }
 
     try {
       setIsLoading(true);
-      // Gọi API hủy đơn đặt - bạn cần thay thế bằng endpoint thực tế
       const response = await fetch(
-        `https://backend-production-5bc5.up.railway.app/api/appointments/${appointmentId}/cancel`,
+        `https://backend-production-5bc5.up.railway.app/api/tables-appointment/cancel/${currentCancellingId}/users/${userId}`,
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
         }
       );
+      const responseData = await response.json();
+      console.log("API Response:", responseData);
+      if (!response.ok) throw new Error("Hủy đơn đặt không thành công");
 
-      if (!response.ok) {
-        throw new Error("Hủy đơn đặt không thành công");
+      // ✅ Cập nhật lại số dư ví
+      dispatch(fetchWallet(userId));
+
+      // Cập nhật UI trước khi hiển thị popup
+      await fetchData();
+      setShowCancelConfirm(false);
+      setCurrentCancellingId(null);
+      if (selectedAppointment) setSelectedAppointment(null);
+
+      // Hiển thị popup với số tiền hoàn lại
+      const refundAmount = responseData.price;
+      const isConfirmed = await SuccessCancelPopup(refundAmount);
+
+      // Điều hướng dựa trên lựa chọn
+      if (isConfirmed) {
+        router.push(`/${localActive}/appointment_history`); // Điều chỉnh route theo nhu cầu
+      } else {
+        // Nếu người dùng chọn "Đặt bàn mới"
+        router.push(`/${localActive}/chess_appointment/chess_category`);
       }
-
-      // Làm mới dữ liệu sau khi hủy thành công
-      const apiUrl = new URL(
-        `https://backend-production-5bc5.up.railway.app/api/appointments/users/${userId}`
-      );
-      apiUrl.searchParams.append("page-number", currentPage.toString());
-      apiUrl.searchParams.append("page-size", pageSize.toString());
-      apiUrl.searchParams.append("order-by", orderBy);
-
-      const newResponse = await fetch(apiUrl.toString());
-      const newData: ApiResponse = await newResponse.json();
-      setData(newData);
-
-      if (selectedAppointment?.appointmentId === appointmentId) {
-        setSelectedAppointment(null);
-      }
-
-      alert("Hủy đơn đặt thành công!");
     } catch (err) {
-      alert(
-        err instanceof Error ? err.message : "Hủy đơn đặt không thành công"
-      );
+      setError(err instanceof Error ? err.message : "Lỗi không xác định");
     } finally {
       setIsLoading(false);
     }
@@ -228,14 +292,9 @@ function Page() {
     }
   };
 
-  // const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-  //   setPageSize(Number(e.target.value));
-  //   setCurrentPage(1); // Reset về trang đầu tiên khi thay đổi pageSize
-  // };
-
   const handleOrderByChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setOrderBy(e.target.value);
-    setCurrentPage(1); // Reset về trang đầu tiên khi thay đổi sắp xếp
+    setCurrentPage(1);
   };
 
   return (
@@ -266,23 +325,6 @@ function Page() {
 
             {/* Controls */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-              {/* <div className="flex items-center gap-2">
-                <label htmlFor="pageSize" className="font-medium">
-                  Số lượng mỗi trang:
-                </label>
-                <select
-                  id="pageSize"
-                  value={pageSize}
-                  onChange={handlePageSizeChange}
-                  className="border rounded px-2 py-1"
-                >
-                  <option value="5">5</option>
-                  <option value="10">10</option>
-                  <option value="20">20</option>
-                  <option value="50">50</option>
-                </select>
-              </div> */}
-
               <div className="flex items-center gap-2">
                 <label htmlFor="orderBy" className="font-medium">
                   Sắp xếp theo:
@@ -326,18 +368,6 @@ function Page() {
                   <h2 className="text-2xl font-semibold">
                     Chi tiết đơn đặt #{selectedAppointment.appointmentId}
                   </h2>
-                  {selectedAppointment.status === "pending" && (
-                    <button
-                      onClick={() =>
-                        handleCancelAppointment(
-                          selectedAppointment.appointmentId
-                        )
-                      }
-                      className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
-                    >
-                      Hủy đơn đặt
-                    </button>
-                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -372,6 +402,7 @@ function Page() {
                         <th className="py-2 px-4 border">ID Bàn</th>
                         <th className="py-2 px-4 border">Loại Cờ</th>
                         <th className="py-2 px-4 border">Loại Phòng</th>
+                        <th className="py-2 px-4 border">Số Phòng</th>
                         <th className="py-2 px-4 border">
                           Giờ Bắt Đầu Và Kết Thúc
                         </th>
@@ -412,13 +443,13 @@ function Page() {
                                     : tableAppointment.table.roomType}
                             </td>
                             <td className="py-2 px-4 border text-center">
+                              {tableAppointment.table.roomId}
+                            </td>
+                            <td className="py-2 px-4 border text-center">
                               {formatTime(tableAppointment.scheduleTime)}
                               &nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;&nbsp;
                               {formatTime(tableAppointment.endTime)}
                             </td>
-                            {/* <td className="py-2 px-4 border text-center">
-                              {formatTime(tableAppointment.endTime)}
-                            </td> */}
                             <td className="py-2 px-4 border text-center">
                               {new Date(
                                 tableAppointment.scheduleTime
@@ -435,12 +466,11 @@ function Page() {
                               </span>
                             </td>
                             <td className="py-2 px-4 border text-center">
-                              {tableAppointment.status === "pending" && (
+                              {(tableAppointment.status === "confirmed" ||
+                                tableAppointment.status === "pending") && (
                                 <button
                                   onClick={() =>
-                                    handleCancelAppointment(
-                                      selectedAppointment.appointmentId
-                                    )
+                                    checkCancelCondition(tableAppointment.id)
                                   }
                                   className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition text-sm"
                                 >
@@ -502,7 +532,7 @@ function Page() {
                                   {appointment.status}
                                 </span>
                               </td>
-                              <td className="py-3 px-4 space-x-2">
+                              <td className="py-3 px-10 space-x-2">
                                 <button
                                   onClick={() =>
                                     handleAppointmentClick(appointment)
@@ -511,18 +541,6 @@ function Page() {
                                 >
                                   Xem chi tiết
                                 </button>
-                                {appointment.status === "pending" && (
-                                  <button
-                                    onClick={() =>
-                                      handleCancelAppointment(
-                                        appointment.appointmentId
-                                      )
-                                    }
-                                    className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
-                                  >
-                                    Hủy
-                                  </button>
-                                )}
                               </td>
                             </tr>
                           ))}
@@ -546,6 +564,20 @@ function Page() {
                 )}
               </div>
             )}
+
+            {/* Cancel Confirmation Modal */}
+            {
+              <CancelConfirmationModal
+                show={showCancelConfirm}
+                onClose={() => {
+                  setShowCancelConfirm(false);
+                  setCurrentCancellingId(null);
+                }}
+                onConfirm={confirmCancelAppointment}
+                refundInfo={refundInfo}
+                isLoading={isLoading}
+              />
+            }
           </div>
         </div>
         <Footer />
