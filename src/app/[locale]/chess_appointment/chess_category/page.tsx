@@ -309,6 +309,42 @@ export default function ChessCategoryPage() {
     }
   };
 
+  // const handleSearch = async () => {
+  //   setSelectedGameType(gameType);
+
+  //   const [startHour, startMinute] = startTime.split(":").map(Number);
+  //   const [endHour, endMinute] = endTime.split(":").map(Number);
+
+  //   const selectedStartTime = new Date(startDate);
+  //   selectedStartTime.setHours(startHour, startMinute, 0, 0);
+
+  //   const selectedEndTime = new Date(startDate);
+  //   selectedEndTime.setHours(endHour, endMinute, 0, 0);
+
+  //   const now = new Date();
+  //   if (selectedStartTime < now) {
+  //     toast.error("Giờ bắt đầu đã qua, vui lòng chọn thời gian hợp lệ!");
+  //     return;
+  //   }
+
+  //   if (selectedStartTime >= selectedEndTime) {
+  //     toast.error("Giờ bắt đầu phải sớm hơn giờ kết thúc!");
+  //     return;
+  //   }
+
+  //   saveSearchParams({
+  //     startDate,
+  //     startTime,
+  //     endTime,
+  //     roomType,
+  //     gameType,
+  //   });
+
+  //   setSelectedGameType(gameType);
+  //   setHasSearched(true);
+  //   setCurrentPage(1);
+  //   await fetchChessBookings(1);
+  // };
   const handleSearch = async () => {
     setSelectedGameType(gameType);
 
@@ -332,6 +368,24 @@ export default function ChessCategoryPage() {
       return;
     }
 
+    // Tính khoảng thời gian giữa start và end (tính bằng phút)
+    const timeDiffInMinutes =
+      (selectedEndTime.getTime() - selectedStartTime.getTime()) / (1000 * 60);
+
+    // Kiểm tra nếu khoảng thời gian ít hơn 1 tiếng (60 phút)
+    if (timeDiffInMinutes < 60) {
+      toast.error("Khoảng thời gian đặt bàn phải cách nhau ít nhất 1 tiếng!");
+      return;
+    }
+
+    // Kiểm tra nếu khoảng thời gian không phải là bội số của 60 phút (1 tiếng)
+    if (timeDiffInMinutes % 60 !== 0) {
+      toast.error(
+        "Vui lòng chọn khung giờ chẵn (1 tiếng, 2 tiếng...) không chấp nhận khung giờ lẻ như 1 tiếng rưỡi!"
+      );
+      return;
+    }
+
     saveSearchParams({
       startDate,
       startTime,
@@ -345,7 +399,6 @@ export default function ChessCategoryPage() {
     setCurrentPage(1);
     await fetchChessBookings(1);
   };
-
   const handlePageChange = (newPage: number) => {
     if (newPage < 1 || newPage > totalPages) return;
     setCurrentPage(newPage);
@@ -921,7 +974,7 @@ export default function ChessCategoryPage() {
                 </div>
 
                 {totalPages > 1 && (
-                  <div className="flex justify-center mt-8 mb-8">
+                  <div className="flex justify-center mt-8 mb-8 text-black">
                     <DefaultPagination
                       currentPage={currentPage}
                       totalPages={totalPages}

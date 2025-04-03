@@ -195,6 +195,7 @@ function Page() {
     const localDate = new Date(date.getTime() - tzOffset);
     return localDate.toISOString().slice(0, -1);
   }
+
   const checkCancelCondition = async (tablesAppointmentId: number) => {
     try {
       setIsLoading(true);
@@ -278,17 +279,44 @@ function Page() {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
+    const statusLower = status.toLowerCase();
+    switch (statusLower) {
       case "pending":
-        return { bg: "bg-yellow-100", text: "text-yellow-800" };
+        return {
+          bg: "bg-yellow-100",
+          text: "text-yellow-800",
+          display: "Đang chờ thanh toán",
+        };
       case "confirmed":
-        return { bg: "bg-green-100", text: "text-green-800" };
-      case "cancelled":
-        return { bg: "bg-red-100", text: "text-red-800" };
+        return {
+          bg: "bg-green-100",
+          text: "text-green-800",
+          display: "Đã thanh toán",
+        };
+      case "incoming":
+        return {
+          bg: "bg-blue-100",
+          text: "text-blue-800",
+          display: "Sắp diễn ra",
+        };
+      case "expired":
+        return { bg: "bg-gray-100", text: "text-gray-800", display: "Hết hạn" };
       case "completed":
-        return { bg: "bg-blue-100", text: "text-blue-800" };
+        return {
+          bg: "bg-purple-100",
+          text: "text-purple-800",
+          display: "Hoàn thành",
+        };
+      case "cancelled":
+        return { bg: "bg-red-100", text: "text-red-800", display: "Đã hủy" };
+      case "refunded":
+        return {
+          bg: "bg-indigo-100",
+          text: "text-indigo-800",
+          display: "Đã hoàn tiền",
+        };
       default:
-        return { bg: "bg-gray-100", text: "text-gray-800" };
+        return { bg: "bg-gray-100", text: "text-gray-800", display: status };
     }
   };
 
@@ -378,7 +406,7 @@ function Page() {
                       <span
                         className={`ml-2 px-2 py-1 rounded ${getStatusColor(selectedAppointment.status).bg} ${getStatusColor(selectedAppointment.status).text}`}
                       >
-                        {selectedAppointment.status}
+                        {getStatusColor(selectedAppointment.status).display}
                       </span>
                     </p>
                     <p className="mb-2">
@@ -462,7 +490,10 @@ function Page() {
                               <span
                                 className={`px-2 py-1 rounded ${getStatusColor(tableAppointment.status).bg} ${getStatusColor(tableAppointment.status).text}`}
                               >
-                                {tableAppointment.status}
+                                {
+                                  getStatusColor(tableAppointment.status)
+                                    .display
+                                }
                               </span>
                             </td>
                             <td className="py-2 px-4 border text-center">
@@ -529,7 +560,7 @@ function Page() {
                                 <span
                                   className={`px-2 py-1 rounded ${getStatusColor(appointment.status).bg} ${getStatusColor(appointment.status).text}`}
                                 >
-                                  {appointment.status}
+                                  {getStatusColor(appointment.status).display}
                                 </span>
                               </td>
                               <td className="py-3 px-10 space-x-2">

@@ -230,7 +230,7 @@ function WalletPage() {
           {/* Lịch sử giao dịch */}
           <div>
             <h3 className="text-xl font-semibold mb-4 border-b pb-2">
-              Lịch sử giao dịch
+              Biến Động Số Dư
             </h3>
             <div className="space-y-4">
               {transactions.map((txn) => (
