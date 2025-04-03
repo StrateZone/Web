@@ -43,7 +43,7 @@ const OpponentRecommendationModal = ({
       setError(null);
 
       const response = await fetch(
-        `https://backend-production-5bc5.up.railway.app/api/users/by-ranking?page-number=${pageNumber}&page-size=${pagination.pageSize}`
+        `https://backend-production-ac5e.up.railway.app/api/users/by-ranking?page-number=${pageNumber}&page-size=${pagination.pageSize}`
       );
 
       if (!response.ok) {
@@ -88,7 +88,7 @@ const OpponentRecommendationModal = ({
       if (!opponent) throw new Error("Opponent not found");
 
       const response = await fetch(
-        "https://backend-production-5bc5.up.railway.app/api/appointmentrequests",
+        "https://backend-production-ac5e.up.railway.app/api/appointmentrequests",
         {
           method: "POST",
           headers: {

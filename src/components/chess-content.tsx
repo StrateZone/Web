@@ -2,10 +2,8 @@
 
 import { Typography } from "@material-tailwind/react";
 import AboutCard from "./card/home-chess-card";
-import { useTranslations } from "next-intl";
 
 export function ChessContent() {
-  const t = useTranslations("ChessContent"); // Correctly importing the translations
   const GAME_INFO = [
     {
       title: "Cờ Tướng",

@@ -197,7 +197,7 @@ const TableBookingPage = () => {
 
       // 4. Gọi API trực tiếp
       const response = await fetch(
-        "https://backend-production-5bc5.up.railway.app/api/payments/booking-payment",
+        "https://backend-production-ac5e.up.railway.app/api/payments/booking-payment",
         {
           method: "POST",
           headers: {

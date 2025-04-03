@@ -121,7 +121,7 @@ function Page() {
     setError(null);
     try {
       const apiUrl = new URL(
-        `https://backend-production-5bc5.up.railway.app/api/appointments/users/${userId}`
+        `https://backend-production-ac5e.up.railway.app/api/appointments/users/${userId}`
       );
       apiUrl.searchParams.append("page-number", currentPage.toString());
       apiUrl.searchParams.append("page-size", pageSize.toString());
@@ -202,7 +202,7 @@ function Page() {
       const currentTime = toLocalISOString(new Date()); // Sử dụng hàm này
 
       const response = await fetch(
-        `https://backend-production-5bc5.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`
+        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`
       );
 
       if (!response.ok) {
@@ -241,7 +241,7 @@ function Page() {
     try {
       setIsLoading(true);
       const response = await fetch(
-        `https://backend-production-5bc5.up.railway.app/api/tables-appointment/cancel/${currentCancellingId}/users/${userId}`,
+        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel/${currentCancellingId}/users/${userId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -581,7 +581,7 @@ function Page() {
 
                     {/* Pagination */}
                     <div className="flex flex-col sm:flex-row justify-center items-center mt-4 gap-4">
-                      {totalPages > 1 && (
+                      {totalPages >= 1 && (
                         <div className="flex justify-center mt-8 mb-8">
                           <DefaultPagination
                             currentPage={currentPage}

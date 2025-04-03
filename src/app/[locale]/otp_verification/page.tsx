@@ -14,6 +14,8 @@ export default function OTPVerificationPage() {
   const [error, setError] = useState("");
   const [timer, setTimer] = useState(30);
   const [isResendDisabled, setIsResendDisabled] = useState(true);
+
+  // Đếm ngược thời gian để Resend OTP
   useEffect(() => {
     if (!email) {
       router.push("/login"); // Nếu không có email, quay về login
@@ -31,63 +33,61 @@ export default function OTPVerificationPage() {
     }, 1000);
     return () => clearInterval(interval);
   }, [email, router]);
-  // Xử lý nhập OTP
-  const handleOtpChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return; // Chỉ cho phép nhập số
-    const newOtp = [...otp];
-    newOtp[index] = value.slice(-1);
-    setOtp(newOtp);
-    // Tự động chuyển sang ô tiếp theo
-    if (value && index < otp.length - 1) {
-      document.getElementById(`otp-${index + 1}`)?.focus();
-    }
-  };
-  // Xử lý xác nhận OTP
+
+  // 2 API gọi, lẽ ra nên chỉ có 1 thôi
   const handleVerifyOTP = async () => {
     const otpCode = otp.join("");
     if (otpCode.length !== 6) {
       setError("Vui lòng nhập đầy đủ 6 chữ số.");
       return;
     }
+
     try {
-      const loginUrl =
-        "https://backend-production-5bc5.up.railway.app/api/auth/verify-otp";
-      console.log("Đang gửi API xác nhận OTP:", { email, otp: otpCode });
-      const response = await axios.post(
-        loginUrl,
+      // 1. Xác thực OTP trước
+      const verifyUrl =
+        "https://backend-production-ac5e.up.railway.app/api/auth/verify-otp";
+      const verifyResponse = await axios.post(
+        verifyUrl,
         { email, otp: otpCode },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
+        { headers: { "Content-Type": "application/json" } }
       );
 
-      console.log("Phản hồi từ API:", response.data);
-
-      // Kiểm tra nếu response có chứa "data"
-      if (response.data.success && response.data.data) {
-        localStorage.setItem("authData", JSON.stringify(response.data.data));
-        localStorage.setItem("accessToken", response.data.data.accessToken);
-        localStorage.setItem("refreshToken", response.data.data.refreshToken);
-
-        router.push("/chess_appointment");
-      } else {
-        setError(
-          response.data.message || "OTP không hợp lệ, vui lòng thử lại!",
-        );
+      if (!verifyResponse.data.success) {
+        throw new Error(verifyResponse.data.message || "Xác thực OTP thất bại");
       }
+
+      // 2. Lấy thông tin user bằng email
+      const userUrl = `https://backend-production-ac5e.up.railway.app/api/users/email/${encodeURIComponent(email || "")}`;
+      const userResponse = await axios.get(userUrl, {
+        headers: {
+          Authorization: `Bearer ${verifyResponse.data.data.accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      // 3. Lưu tất cả thông tin cần thiết
+      const userData = {
+        ...verifyResponse.data.data, // accessToken, refreshToken
+        userInfo: userResponse.data, // Thông tin user chi tiết
+      };
+
+      localStorage.setItem("authData", JSON.stringify(userData));
+      localStorage.setItem("accessToken", userData.accessToken);
+      localStorage.setItem("refreshToken", userData.refreshToken);
+
+      router.push("/chess_appointment");
     } catch (error) {
-      console.error("Lỗi khi gọi API:", error);
-      setError("Có lỗi xảy ra, vui lòng thử lại!");
+      console.error("Lỗi xác thực:", error);
+      setError(
+        error.response?.data?.message || "Có lỗi xảy ra, vui lòng thử lại!"
+      );
     }
   };
-  // Xử lý gửi lại mã OTP
   const handleResendOTP = async () => {
     try {
       setIsResendDisabled(true);
       setTimer(30); // Reset bộ đếm về 30s
-      const loginUrl = `https://backend-production-5bc5.up.railway.app/api/auth/send-otp?email=${encodeURIComponent(email || "")}`;
+      const loginUrl = `https://backend-production-ac5e.up.railway.app/api/auth/send-otp?email=${encodeURIComponent(email || "")}`;
       console.log("Đang gửi API yêu cầu gửi lại OTP:", { email });
       const response = await axios.post(
         loginUrl,
@@ -97,7 +97,7 @@ export default function OTPVerificationPage() {
           headers: {
             "Content-Type": "application/json",
           },
-        },
+        }
       );
       console.log("Gửi lại OTP thành công!", response.data);
     } catch (error) {
@@ -116,6 +116,18 @@ export default function OTPVerificationPage() {
         return prev - 1;
       });
     }, 1000);
+  };
+
+  // Xử lý Input khi nhập
+  const handleOtpChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return; // Chỉ cho phép nhập số
+    const newOtp = [...otp];
+    newOtp[index] = value.slice(-1);
+    setOtp(newOtp);
+    // Tự động chuyển sang ô tiếp theo
+    if (value && index < otp.length - 1) {
+      document.getElementById(`otp-${index + 1}`)?.focus();
+    }
   };
   const inputsRef = useRef<HTMLInputElement[]>([]); // Khai báo useRef
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {

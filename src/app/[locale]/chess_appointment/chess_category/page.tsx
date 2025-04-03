@@ -248,7 +248,7 @@ export default function ChessCategoryPage() {
       };
 
       const response = await axios.get(
-        "https://backend-production-5bc5.up.railway.app/api/tables/available/filter",
+        "https://backend-production-ac5e.up.railway.app/api/tables/available/filter",
         {
           params,
           paramsSerializer: {
@@ -973,8 +973,8 @@ export default function ChessCategoryPage() {
                   ))}
                 </div>
 
-                {totalPages > 1 && (
-                  <div className="flex justify-center mt-8 mb-8 text-black">
+                {totalPages >= 1 && (
+                  <div className="flex justify-center mt-8 mb-8 ">
                     <DefaultPagination
                       currentPage={currentPage}
                       totalPages={totalPages}

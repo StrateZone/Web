@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { User } from "lucide-react";
 import Link from "next/link";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 import { Button, Input, Select, Option } from "@material-tailwind/react";
 import axios from "axios"; // Import axios
 import { useRouter } from "next/navigation";
@@ -42,7 +42,7 @@ export default function RegisterPage() {
   const handleDisplayNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDisplayName(e.target.value);
     setDisplayNameError(
-      e.target.value ? "" : "Tên hiển thị không được để trống",
+      e.target.value ? "" : "Tên hiển thị không được để trống"
     );
   };
 
@@ -55,7 +55,7 @@ export default function RegisterPage() {
 
     setPhoneNumber(input);
     setPhoneNumberError(
-      phoneRegex.test(input) ? "" : "Số điện thoại phải có 10 chữ số",
+      phoneRegex.test(input) ? "" : "Số điện thoại phải có 10 chữ số"
     );
   };
 
@@ -76,10 +76,10 @@ export default function RegisterPage() {
     if (!email || !displayName || !phoneNumber || !fullName || !gender) {
       setEmailError(email ? "" : "Email không được để trống");
       setDisplayNameError(
-        displayName ? "" : "Tên hiển thị không được để trống",
+        displayName ? "" : "Tên hiển thị không được để trống"
       );
       setPhoneNumberError(
-        phoneNumber ? "" : "Số điện thoại không được để trống",
+        phoneNumber ? "" : "Số điện thoại không được để trống"
       );
       setFullNameError(fullName ? "" : "Họ và tên không được để trống");
       setGenderError(gender ? "" : "Vui lòng chọn giới tính");
@@ -95,10 +95,10 @@ export default function RegisterPage() {
     if (!email || !displayName || !phoneNumber || !fullName || !gender) {
       setEmailError(email ? "" : "Email không được để trống");
       setDisplayNameError(
-        displayName ? "" : "Tên hiển thị không được để trống",
+        displayName ? "" : "Tên hiển thị không được để trống"
       );
       setPhoneNumberError(
-        phoneNumber ? "" : "Số điện thoại không được để trống",
+        phoneNumber ? "" : "Số điện thoại không được để trống"
       );
       setFullNameError(fullName ? "" : "Họ và tên không được để trống");
       setGenderError(gender ? "" : "Vui lòng chọn giới tính");
@@ -107,7 +107,7 @@ export default function RegisterPage() {
 
     try {
       const response = await axios.post(
-        "https://backend-production-5bc5.up.railway.app/api/auth/register",
+        "https://backend-production-ac5e.up.railway.app/api/auth/register",
         {
           email,
           userName: displayName,
@@ -119,15 +119,12 @@ export default function RegisterPage() {
           headers: {
             "Content-Type": "application/json",
           },
-        },
+        }
       );
 
       if (response.status === 200) {
-        // toast.success(
-        //   "Đăng ký thành công vui lòng kiểm tra email để xác thực tài khoản"
-        // );
         router.push(
-          `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`,
+          `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`
         );
       } else {
         console.log("Response từ API:", response); // Log dữ liệu trả về từ API

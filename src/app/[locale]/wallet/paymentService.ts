@@ -1,7 +1,7 @@
 // src/services/paymentService.ts
 import axios from "axios";
 
-const API_URL = "https://backend-production-5bc5.up.railway.app/api";
+const API_URL = "https://backend-production-ac5e.up.railway.app/api";
 
 export const paymentService = {
   createZaloPayment: async (data: {

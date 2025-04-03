@@ -52,7 +52,7 @@ export function CoursesContentCard({
         <Typography className="mb-12 md:w-8/12 font-medium !text-gray-500">
           {des}
         </Typography>
-        <div className="flex items-center gap-4">
+        {/* <div className="flex items-center gap-4">
           <Avatar
             variant="circular"
             src="/logos/spotify-logo.png"
@@ -67,7 +67,7 @@ export function CoursesContentCard({
               {position}
             </Typography>
           </div>
-        </div>
+        </div> */}
       </CardBody>
     </Card>
   );
