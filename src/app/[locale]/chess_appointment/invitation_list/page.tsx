@@ -1,0 +1,802 @@
+"use client";
+import { useState, useEffect } from "react";
+import { Button } from "@material-tailwind/react";
+import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
+import { CheckCircle, XCircle, Clock, User, Loader2 } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
+import CancelConfirmationModal from "../../appointment_history/CancelConfirmationModal";
+import { SuccessCancelPopup } from "../chess_appointment_order/CancelSuccessPopup";
+import { DefaultPagination } from "@/components/pagination";
+
+interface UserNavigation {
+  userId: number;
+  cartId: number | null;
+  username: string;
+  email: string;
+  phone: string;
+  fullName: string;
+  avatarUrl: string | null;
+  bio: string;
+  address: string;
+  gender: number;
+  skillLevel: number;
+  points: number;
+  ranking: number;
+  status: string;
+  userRole: number;
+  wallet: any | null;
+  otp: string | null;
+  otpExpiry: string | null;
+  password: string;
+  refreshToken: string;
+  refreshTokenExpiry: string;
+  createdAt: string;
+  updatedAt: string;
+  friendlistUsers: any[];
+}
+
+interface GameType {
+  typeId: number;
+  typeName: string;
+}
+
+interface Table {
+  tableId: number;
+  roomId: number;
+  roomName: string;
+  roomType: string;
+  roomDescription: string;
+  gameTypeId: number;
+  gameType: GameType | null;
+  startDate: string | null;
+  endDate: string | null;
+  durationInHours: number | null;
+  gameTypePrice: number | null;
+  roomTypePrice: number | null;
+  totalPrice: number | null;
+}
+
+interface AppointmentRequest {
+  id: number;
+  fromUser: number;
+  toUser: number;
+  tableId: number;
+  appointmentId: number | null;
+  tablesAppointmentId: number | null;
+  status:
+    | "pending"
+    | "accepted"
+    | "rejected"
+    | "expired"
+    | "cancelled"
+    | "payment_required"
+    | "await_appointment_creation";
+  startTime: string;
+  endTime: string;
+  expireAt: string;
+  createdAt: string;
+  totalPrice: number | null;
+  fromUserNavigation: UserNavigation;
+  toUserNavigation: any | null;
+  table: Table;
+  appointment: any | null;
+}
+
+const AppointmentRequestsPage = () => {
+  const router = useRouter();
+  const localActive = useLocale();
+  const { locale } = useParams();
+  const [requests, setRequests] = useState<AppointmentRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [selectedRequest, setSelectedRequest] =
+    useState<AppointmentRequest | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [refundInfo, setRefundInfo] = useState<any>(null);
+  const [currentCancellingId, setCurrentCancellingId] = useState<number | null>(
+    null
+  );
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasPrevious, setHasPrevious] = useState(false);
+  const [hasNext, setHasNext] = useState(false);
+
+  const getUserId = () => {
+    const authDataString = localStorage.getItem("authData");
+    if (!authDataString) return null;
+    const authData = JSON.parse(authDataString);
+    return authData.userId;
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const fetchAppointmentRequests = async () => {
+    try {
+      setIsLoading(true);
+      const userId = getUserId();
+      if (!userId) {
+        router.push(`/${locale}/login`);
+        return;
+      }
+
+      const apiUrl = new URL(
+        `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/to/${userId}`
+      );
+
+      apiUrl.searchParams.append("page-number", currentPage.toString());
+      apiUrl.searchParams.append("page-size", pageSize.toString());
+      apiUrl.searchParams.append("order-by", "created-at-desc");
+
+      const response = await fetch(apiUrl.toString(), {
+        method: "GET",
+        headers: {
+          accept: "*/*",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch appointment requests");
+      }
+
+      const data = await response.json();
+      console.log("Fetched appointment requests:", data);
+      setRequests(data.pagedList || []);
+      setCurrentPage(data.currentPage);
+      setTotalPages(data.totalPages);
+      setTotalCount(data.totalCount);
+      setHasPrevious(data.hasPrevious);
+      setHasNext(data.hasNext);
+    } catch (error) {
+      console.error("Error fetching appointment requests:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAcceptRequest = async (requestId: number) => {
+    setIsAccepting(true);
+    try {
+      const response = await fetch(
+        `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/accept/${requestId}`,
+        {
+          method: "PUT",
+          headers: {
+            accept: "*/*",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to accept appointment request");
+      }
+      const data = await response.json();
+      console.log("Payment response:", data);
+      setRequests(
+        requests.map((req) =>
+          req.id === requestId ? { ...req, status: "accepted" } : req
+        )
+      );
+
+      if (selectedRequest?.id === requestId) {
+        setSelectedRequest({
+          ...selectedRequest,
+          status: "accepted",
+        });
+      }
+
+      alert("Đã chấp nhận lời mời thành công!");
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Có lỗi xảy ra: " + (error as Error).message);
+    } finally {
+      setIsAccepting(false);
+      fetchAppointmentRequests();
+    }
+  };
+
+  const handleProcessPayment = async (requestId: number) => {
+    setIsProcessingPayment(true);
+    try {
+      const request = requests.find((req) => req.id === requestId);
+      if (!request || !request.appointmentId) {
+        throw new Error("Request not found or invalid appointment ID");
+      }
+
+      const response = await fetch(
+        "https://backend-production-ac5e.up.railway.app/api/payments/booking-request-payment",
+        {
+          method: "POST",
+          headers: {
+            accept: "*/*",
+            "Content-Type": "application/json-patch+json",
+          },
+          body: JSON.stringify({
+            fromUser: request.fromUser,
+            toUser: request.toUser,
+            tableId: request.tableId,
+            appointmentId: request.appointmentId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Payment processing failed");
+      }
+      const data = await response.json();
+      console.log("Payment response:", data);
+      // alert("Thanh toán thành công!");
+
+      // fetchAppointmentRequests();
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Có lỗi xảy ra: " + (error as Error).message);
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const formatTimeRange = (start: string, end: string) => {
+    const startTime = new Date(start).toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const endTime = new Date(end).toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    return `${startTime} - ${endTime}`;
+  };
+
+  const isExpired = (expireAt: string) => {
+    return new Date(expireAt) < new Date();
+  };
+
+  const getStatusColor = (status: string) => {
+    const statusLower = status.toLowerCase();
+    switch (statusLower) {
+      case "pending":
+        return {
+          bg: "bg-yellow-100",
+          text: "text-yellow-800",
+          display: "Đang chờ phản hồi",
+        };
+      case "accepted":
+        return {
+          bg: "bg-green-100",
+          text: "text-green-800",
+          display: "Đã chấp nhận",
+        };
+      case "payment_required":
+        return {
+          bg: "bg-green-100",
+          text: "text-green-800",
+          display: "Yêu cầu thanh toán",
+        };
+      case "rejected":
+        return {
+          bg: "bg-red-100",
+          text: "text-red-800",
+          display: "Đã từ chối",
+        };
+      case "expired":
+      case "cancelled":
+        return { bg: "bg-gray-100", text: "text-gray-800", display: "Đã hủy" };
+      default:
+        return { bg: "bg-gray-100", text: "text-gray-800", display: status };
+    }
+  };
+
+  const handleViewDetails = (request: AppointmentRequest) => {
+    setSelectedRequest(request);
+  };
+
+  const handleBackToList = () => {
+    setSelectedRequest(null);
+  };
+
+  const checkCancelCondition = async (requestId: number) => {
+    setIsRejecting(true);
+    try {
+      const response = await fetch(
+        `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/cancel-check/${requestId}`,
+        {
+          method: "GET",
+          headers: {
+            accept: "*/*",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Không thể kiểm tra điều kiện hủy");
+      }
+
+      const data = await response.json();
+      setRefundInfo({
+        message: data.message,
+        refundAmount: data.refundAmount || 0,
+      });
+      setCurrentCancellingId(requestId);
+      setShowCancelConfirm(true);
+    } catch (err) {
+      console.error("Error checking cancel condition:", err);
+    } finally {
+      setIsRejecting(false);
+    }
+  };
+
+  const confirmCancelRequest = async () => {
+    if (!currentCancellingId) return;
+
+    setIsCancelling(true);
+    try {
+      const response = await fetch(
+        `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/cancel/${currentCancellingId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Hủy lời mời không thành công");
+      }
+
+      await fetchAppointmentRequests();
+      setShowCancelConfirm(false);
+      setCurrentCancellingId(null);
+      setSelectedRequest(null);
+
+      const isConfirmed = await SuccessCancelPopup(
+        refundInfo?.refundAmount || 0
+      );
+
+      if (isConfirmed) {
+        router.push(`/${localActive}/appointment_history`);
+      } else {
+        router.push(`/${localActive}/chess_appointment/chess_category`);
+      }
+    } catch (err) {
+      console.error("Error canceling request:", err);
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  const getSkillLevelText = (level: number): string => {
+    switch (level) {
+      case 1:
+        return "Mới bắt đầu";
+      case 2:
+        return "Nghiệp dư";
+      case 3:
+        return "Trung cấp";
+      case 4:
+        return "Nâng cao";
+      case 5:
+        return "Chuyên gia";
+      default:
+        return "Chưa xác định";
+    }
+  };
+
+  useEffect(() => {
+    fetchAppointmentRequests();
+  }, [currentPage]);
+
+  return (
+    <div>
+      <div>
+        <Navbar></Navbar>
+        <div className="relative font-sans">
+          <div className="absolute inset-0 w-full h-full bg-gray-900/60 opacity-60 z-20"></div>
+          <img
+            src="https://png.pngtree.com/background/20230524/original/pngtree-the-game-of-chess-picture-image_2710450.jpg"
+            alt="Banner Image"
+            className="absolute inset-0 w-full h-full object-cover z-10"
+          />
+          <div className="min-h-[400px] relative z-30 h-full max-w-7xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
+            <h2 className="sm:text-5xl text-3xl font-bold mb-6">
+              Lời Mời Chơi Cờ
+            </h2>
+            <p className="sm:text-xl text-lg text-center text-gray-200">
+              Quản lý các lời mời chơi cờ của bạn
+            </p>
+          </div>
+        </div>
+
+        <div className="min-h-[calc(100vh-200px)] bg-gray-50 p-4 text-black">
+          <div className="container mx-auto px-2 py-4">
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+              </div>
+            ) : selectedRequest ? (
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <button
+                  onClick={handleBackToList}
+                  className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+                >
+                  ← Quay lại danh sách
+                </button>
+
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-semibold">
+                    Chi tiết lời mời #{selectedRequest.id}
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h3 className="text-lg mb-2 font-bold">
+                      Thông Tin Người Gửi
+                    </h3>
+                    <div className="flex items-center space-x-3 mb-4">
+                      <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                        {selectedRequest.fromUserNavigation.avatarUrl ? (
+                          <img
+                            src={selectedRequest.fromUserNavigation.avatarUrl}
+                            alt="Avatar"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <User className="w-6 h-6 text-gray-500" />
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-bold">
+                          {selectedRequest.fromUserNavigation.fullName ||
+                            selectedRequest.fromUserNavigation.username}
+                        </h4>
+                        <p className="text-gray-600 text-sm">
+                          Trình độ:{" "}
+                          {getSkillLevelText(
+                            selectedRequest.fromUserNavigation.skillLevel
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h3 className="text-lg mb-2 font-bold">Thông Tin Bàn Cờ</h3>
+                    <p className="mb-2">
+                      <span className="font-medium">Loại cờ:</span>{" "}
+                      {selectedRequest?.table?.gameType?.typeName === "chess"
+                        ? "Cờ vua"
+                        : selectedRequest?.table?.gameType?.typeName ===
+                            "xiangqi"
+                          ? "Cờ tướng"
+                          : selectedRequest?.table?.gameType?.typeName === "go"
+                            ? "Cờ vây"
+                            : selectedRequest?.table?.gameType?.typeName ||
+                              "Không xác định"}
+                    </p>
+
+                    <p className="mb-2">
+                      <span className="font-medium">Loại phòng:</span>{" "}
+                      {selectedRequest?.table?.roomType === "basic"
+                        ? "Phòng thường"
+                        : selectedRequest?.table?.roomType === "premium"
+                          ? "Phòng cao cấp"
+                          : "Không xác định"}
+                    </p>
+                    <p className="mb-2">
+                      <span className="font-medium">Số phòng:</span>{" "}
+                      {selectedRequest?.table?.roomId}
+                    </p>
+                    <p>
+                      <span className="font-medium">Số bàn:</span>{" "}
+                      {selectedRequest?.tableId}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                  <h3 className="text-lg mb-2 font-bold">Thời Gian</h3>
+                  <p className="mb-2">
+                    <span className="font-medium">Ngày:</span>{" "}
+                    {new Date(selectedRequest.startTime).toLocaleDateString(
+                      "vi-VN"
+                    )}
+                  </p>
+                  <p className="mb-2">
+                    <span className="font-medium">Giờ bắt đầu - kết thúc:</span>{" "}
+                    {formatTimeRange(
+                      selectedRequest.startTime,
+                      selectedRequest.endTime
+                    )}
+                  </p>
+                  <p>
+                    <span className="font-medium">Trạng thái:</span>{" "}
+                    <span
+                      className={`px-2 py-1 rounded ${getStatusColor(selectedRequest.status).bg} ${getStatusColor(selectedRequest.status).text}`}
+                    >
+                      {getStatusColor(selectedRequest.status).display}
+                    </span>
+                  </p>
+                </div>
+
+                <div className="flex justify-end space-x-3">
+                  {selectedRequest.status === "pending" &&
+                    !isExpired(selectedRequest.expireAt) && (
+                      <>
+                        <Button
+                          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 flex items-center justify-center min-w-[180px]"
+                          onClick={() =>
+                            handleAcceptRequest(selectedRequest.id)
+                          }
+                          disabled={isAccepting}
+                        >
+                          {isAccepting ? (
+                            <>
+                              <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                              Đang xử lý...
+                            </>
+                          ) : (
+                            "Chấp nhận"
+                          )}
+                        </Button>
+
+                        {(selectedRequest.status === "accepted" ||
+                          selectedRequest.status === "payment_required") &&
+                          selectedRequest.appointmentId && (
+                            <Button
+                              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 flex items-center justify-center min-w-[150px]"
+                              onClick={() =>
+                                handleProcessPayment(selectedRequest.id)
+                              }
+                              disabled={isProcessingPayment}
+                            >
+                              {isProcessingPayment ? (
+                                <>
+                                  <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                                  Đang xử lý...
+                                </>
+                              ) : (
+                                "Thanh Toán"
+                              )}
+                            </Button>
+                          )}
+
+                        <Button
+                          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 flex items-center justify-center min-w-[100px]"
+                          onClick={() =>
+                            checkCancelCondition(selectedRequest.id)
+                          }
+                          disabled={isRejecting}
+                        >
+                          {isRejecting ? (
+                            <>
+                              <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                              Đang xử lý...
+                            </>
+                          ) : (
+                            "Từ chối"
+                          )}
+                        </Button>
+                      </>
+                    )}
+                </div>
+              </div>
+            ) : requests.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="mx-auto w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-3">
+                  <Clock className="w-8 h-8 text-gray-400" />
+                </div>
+                <h2 className="text-lg font-medium text-gray-600">
+                  Không có lời mời nào
+                </h2>
+                <p className="text-gray-500 mt-1 text-sm">
+                  Bạn chưa có lời mời chơi cờ nào
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {requests.map((request) => (
+                  <div
+                    key={request.id}
+                    className={`bg-white rounded-md shadow-sm p-4 border-l-4 ${
+                      request.status === "accepted" ||
+                      request.status === "payment_required"
+                        ? "border-green-500"
+                        : request.status === "rejected"
+                          ? "border-red-500"
+                          : isExpired(request.expireAt) ||
+                              request.status === "cancelled"
+                            ? "border-gray-400"
+                            : "border-blue-500"
+                    }`}
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                          {request.fromUserNavigation.avatarUrl ? (
+                            <img
+                              src={request.fromUserNavigation.avatarUrl}
+                              alt="Avatar"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <User className="w-5 h-5 text-gray-500" />
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-base">
+                            {request.fromUserNavigation.fullName ||
+                              request.fromUserNavigation.username}
+                          </h3>
+                          <p className="text-gray-600 text-sm">
+                            Trình độ:{" "}
+                            {getSkillLevelText(
+                              request.fromUserNavigation.skillLevel
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-center md:text-right">
+                        <p className="font-medium text-sm">
+                          Bàn số: {request.tableId}
+                        </p>
+                        <p className="text-gray-600 text-sm">
+                          {formatDateTime(request.startTime)}
+                        </p>
+                        <p className="text-gray-600 text-sm">
+                          {formatTimeRange(request.startTime, request.endTime)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row justify-between items-center gap-3">
+                      <div className="flex items-center">
+                        {request.status === "accepted" ? (
+                          <span className="text-green-600 flex items-center text-sm">
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Đã chấp nhận
+                          </span>
+                        ) : request.status === "payment_required" ? (
+                          <span className="text-green-600 flex items-center text-sm">
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Yêu cầu thanh toán
+                          </span>
+                        ) : request.status === "rejected" ? (
+                          <span className="text-red-600 flex items-center text-sm">
+                            <XCircle className="w-4 h-4 mr-1" />
+                            Đã từ chối
+                          </span>
+                        ) : isExpired(request.expireAt) ||
+                          request.status === "cancelled" ? (
+                          <span className="text-gray-500 flex items-center text-sm">
+                            <XCircle className="w-4 h-4 mr-1" />
+                            Đã hủy
+                          </span>
+                        ) : (
+                          <span className="text-blue-600 flex items-center text-sm">
+                            <Clock className="w-4 h-4 mr-1" />
+                            Đang chờ phản hồi
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex space-x-2">
+                        {request.status === "pending" &&
+                          !isExpired(request.expireAt) && (
+                            <>
+                              <Button
+                                className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[100px]"
+                                onClick={() => handleAcceptRequest(request.id)}
+                                disabled={isAccepting}
+                              >
+                                {isAccepting ? (
+                                  <>
+                                    <Loader2 className="animate-spin mr-1 h-3 w-3" />
+                                    Đang xử lý...
+                                  </>
+                                ) : (
+                                  "Chấp nhận"
+                                )}
+                              </Button>
+
+                              <Button
+                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[80px]"
+                                onClick={() => checkCancelCondition(request.id)}
+                                disabled={isRejecting}
+                              >
+                                {isRejecting ? (
+                                  <>
+                                    <Loader2 className="animate-spin mr-1 h-3 w-3" />
+                                    Đang xử lý...
+                                  </>
+                                ) : (
+                                  "Từ chối"
+                                )}
+                              </Button>
+                            </>
+                          )}
+
+                        {(request.status === "await_appointment_creation" ||
+                          request.status === "payment_required") &&
+                          request.appointmentId && (
+                            <Button
+                              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[100px]"
+                              onClick={() => handleProcessPayment(request.id)}
+                              disabled={isProcessingPayment}
+                            >
+                              {isProcessingPayment ? (
+                                <>
+                                  <Loader2 className="animate-spin mr-1 h-3 w-3" />
+                                  Đang xử lý...
+                                </>
+                              ) : (
+                                "Thanh toán"
+                              )}
+                            </Button>
+                          )}
+
+                        <Button
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-sm"
+                          onClick={() => handleViewDetails(request)}
+                        >
+                          Xem chi tiết
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          {requests.length > 0 && !isLoading && (
+            <div className="flex justify-center mt-8 mb-8">
+              <DefaultPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
+            </div>
+          )}
+        </div>
+
+        <Footer></Footer>
+
+        <CancelConfirmationModal
+          show={showCancelConfirm}
+          onClose={() => {
+            setShowCancelConfirm(false);
+            setCurrentCancellingId(null);
+          }}
+          onConfirm={confirmCancelRequest}
+          refundInfo={refundInfo}
+          isLoading={isCancelling}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default AppointmentRequestsPage;

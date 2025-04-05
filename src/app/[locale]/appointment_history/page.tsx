@@ -7,7 +7,7 @@ import { fetchWallet } from "@/app/[locale]/wallet/walletSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/app/store";
 import CancelConfirmationModal from "./CancelConfirmationModal";
-import { SuccessCancelPopup } from "./CancelSuccessPopup";
+import { SuccessCancelPopup } from "../chess_appointment/chess_appointment_order/CancelSuccessPopup";
 import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 interface GameType {

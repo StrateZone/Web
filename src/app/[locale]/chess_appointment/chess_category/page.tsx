@@ -753,7 +753,7 @@ export default function ChessCategoryPage() {
                       </p>
 
                       <div className="flex gap-2 mt-3">
-                        <Button
+                        {/* <Button
                           variant="gradient"
                           color="amber"
                           className={`flex-1 py-2 text-sm ${
@@ -942,6 +942,126 @@ export default function ChessCategoryPage() {
                               );
                               setLocalBookings(updatedBookings);
                               toast.success(message);
+                            } catch (error) {
+                              console.error("Lỗi khi xử lý đặt bàn:", error);
+                              toast.error("Có lỗi xảy ra khi đặt bàn!");
+                            }
+                          }}
+                        >
+                          {isBooked(
+                            chessBooking.tableId,
+                            chessBooking.startDate,
+                            chessBooking.endDate
+                          )
+                            ? "Đã thêm vào danh sách"
+                            : "Thêm vào danh sách"}
+                        </Button> */}
+                        <Button
+                          variant="gradient"
+                          color="amber"
+                          className={`flex-1 py-2 text-sm ${
+                            isBooked(
+                              chessBooking.tableId,
+                              chessBooking.startDate,
+                              chessBooking.endDate
+                            )
+                              ? "opacity-70 cursor-not-allowed"
+                              : "hover:shadow-md transition-shadow"
+                          }`}
+                          disabled={isBooked(
+                            chessBooking.tableId,
+                            chessBooking.startDate,
+                            chessBooking.endDate
+                          )}
+                          onClick={() => {
+                            try {
+                              const newStart = new Date(chessBooking.startDate);
+                              const newEnd = new Date(chessBooking.endDate);
+
+                              // Kiểm tra xem bàn đã được đặt trong khung giờ này chưa
+                              const isAlreadyBooked = localBookings.some(
+                                (booking) => {
+                                  if (booking.tableId !== chessBooking.tableId)
+                                    return false;
+
+                                  const bookingStart = new Date(
+                                    booking.startDate
+                                  );
+                                  const bookingEnd = new Date(booking.endDate);
+
+                                  return (
+                                    (newStart >= bookingStart &&
+                                      newStart < bookingEnd) ||
+                                    (newEnd > bookingStart &&
+                                      newEnd <= bookingEnd) ||
+                                    (newStart <= bookingStart &&
+                                      newEnd >= bookingEnd)
+                                  );
+                                }
+                              );
+
+                              if (isAlreadyBooked) {
+                                const existingBookings = localBookings.filter(
+                                  (b) => b.tableId === chessBooking.tableId
+                                );
+
+                                const bookingDetails = existingBookings
+                                  .map((b) => {
+                                    const start = new Date(
+                                      b.startDate
+                                    ).toLocaleTimeString("vi-VN", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      hour12: false,
+                                    });
+                                    const end = new Date(
+                                      b.endDate
+                                    ).toLocaleTimeString("vi-VN", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      hour12: false,
+                                    });
+                                    return `${start} - ${end}`;
+                                  })
+                                  .join(", ");
+
+                                toast.warning(
+                                  `Bàn số ${chessBooking.tableId} đã được đặt trong khung giờ: ${bookingDetails}`
+                                );
+                                return;
+                              }
+
+                              // Thêm đơn đặt mới mà không gộp với các đơn khác
+                              const updatedBookings = [
+                                ...localBookings,
+                                chessBooking,
+                              ];
+
+                              const startTimeStr = newStart.toLocaleTimeString(
+                                "vi-VN",
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: false,
+                                }
+                              );
+                              const endTimeStr = newEnd.toLocaleTimeString(
+                                "vi-VN",
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: false,
+                                }
+                              );
+
+                              localStorage.setItem(
+                                "chessBookings",
+                                JSON.stringify(updatedBookings)
+                              );
+                              setLocalBookings(updatedBookings);
+                              toast.success(
+                                `Đã thêm bàn số ${chessBooking.tableId} từ ${startTimeStr} đến ${endTimeStr} vào danh sách đặt!`
+                              );
                             } catch (error) {
                               console.error("Lỗi khi xử lý đặt bàn:", error);
                               toast.error("Có lỗi xảy ra khi đặt bàn!");

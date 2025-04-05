@@ -14,6 +14,7 @@ import {
   XMarkIcon,
   Bars3Icon,
   BuildingStorefrontIcon,
+  BellIcon,
 } from "@heroicons/react/24/solid";
 import { FaChessBoard, FaBookOpen, FaWallet } from "react-icons/fa";
 import { useParams, useRouter } from "next/navigation";
@@ -51,6 +52,7 @@ export function Navbar() {
   const t = useTranslations("NavBar");
   const router = useRouter();
   const localActive = useLocale();
+
   const [showBalance, setShowBalance] = useState<boolean>(() => {
     const saved = localStorage.getItem("showBalance");
     return saved !== null ? JSON.parse(saved) : true;
@@ -59,12 +61,66 @@ export function Navbar() {
 
   const [open, setOpen] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false); // Thêm trạng thái kiểm tra auth
+  const [authChecked, setAuthChecked] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [hasNewInvitations, setHasNewInvitations] = useState(false);
+
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading: walletLoading } = useSelector(
     (state: RootState) => state.wallet
   );
+
+  // Hàm kiểm tra lời mời mới
+  const checkNewInvitations = async () => {
+    try {
+      const authDataString = localStorage.getItem("authData");
+      if (!authDataString) return;
+
+      const authData = JSON.parse(authDataString);
+      const userId = authData.userId;
+
+      const response = await fetch(
+        `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/to/${userId}`,
+        {
+          method: "GET",
+          headers: {
+            accept: "*/*",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Kiểm tra cả pending và accepted
+        const hasPendingOrAccepted = data.pagedList?.some(
+          (request: any) =>
+            request.status === "pending" ||
+            request.status === "accepted" ||
+            (request.status === "await_appointment_creation" &&
+              !isExpired(request.expireAt))
+        );
+
+        setHasNewInvitations(hasPendingOrAccepted);
+      }
+    } catch (error) {
+      console.error("Error checking new invitations:", error);
+    }
+  };
+
+  // Hàm kiểm tra lời mời đã hết hạn chưa
+  const isExpired = (expireAt: string) => {
+    return new Date(expireAt) < new Date();
+  };
+
+  // Lấy userId từ localStorage
+  const getUserId = () => {
+    const authDataString = localStorage.getItem("authData");
+    if (!authDataString) return null;
+    const authData = JSON.parse(authDataString);
+    return authData.userId;
+  };
+
   const toggleShowBalance = () => {
     setShowBalance((prev) => {
       const newValue = !prev;
@@ -72,7 +128,7 @@ export function Navbar() {
       return newValue;
     });
   };
-  // Sử dụng useEffect để đồng bộ hóa trạng thái đăng nhập
+
   useEffect(() => {
     const checkAuth = () => {
       try {
@@ -85,27 +141,35 @@ export function Navbar() {
           const parsedData = JSON.parse(storedAuthData);
           const userId = parsedData.userId || 11;
           dispatch(fetchWallet(userId));
+          checkNewInvitations(); // Kiểm tra lời mời khi đã đăng nhập
         }
       } catch (error) {
         console.error("Error checking auth:", error);
         setIsLoggedIn(false);
       } finally {
-        setAuthChecked(true); // Đánh dấu đã kiểm tra xong
+        setAuthChecked(true);
       }
     };
 
-    // Thêm listener để theo dõi thay đổi localStorage
     const handleStorageChange = () => {
       checkAuth();
     };
 
     window.addEventListener("storage", handleStorageChange);
-    checkAuth(); // Kiểm tra ngay khi component mount
+    checkAuth();
+
+    // Kiểm tra lời mời định kỳ nếu đã đăng nhập
+    let interval: NodeJS.Timeout;
+    if (isLoggedIn) {
+      checkNewInvitations(); // Kiểm tra ngay lập tức
+      interval = setInterval(checkNewInvitations, 60000); // Sau đó kiểm tra mỗi 1 phút
+    }
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
+      if (interval) clearInterval(interval);
     };
-  }, [dispatch]);
+  }, [dispatch, isLoggedIn]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -164,7 +228,6 @@ export function Navbar() {
     },
   ];
 
-  // Hiển thị loading nếu chưa kiểm tra xong trạng thái auth
   if (!authChecked) {
     return (
       <MTNavbar
@@ -235,6 +298,18 @@ export function Navbar() {
                   )}
                 </button>
               </div>
+            </div>
+
+            <div className="relative">
+              <BellIcon
+                onClick={() =>
+                  router.push(`/${locale}/chess_appointment/invitation_list`)
+                }
+                className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2"
+              />
+              {hasNewInvitations && (
+                <span className="absolute top-0 right-1 w-3 h-3 bg-red-500 rounded-full border border-white"></span>
+              )}
             </div>
 
             <FaChess
