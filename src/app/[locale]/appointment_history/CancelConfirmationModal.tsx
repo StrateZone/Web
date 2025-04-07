@@ -42,44 +42,57 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
         <h3 className="text-xl font-bold mb-4">Xác Nhận Hủy Bàn Đã Đặt</h3>
 
         <div className="space-y-3 mb-4">
-          <p className="font-medium">
-            {refundInfo.message.includes("100%") ? (
-              <>
-                Nếu hủy bàn này ở thời điểm hiện tại, bạn sẽ được hoàn tiền{" "}
-                <strong>100%</strong>
-              </>
-            ) : refundInfo.message.includes("50%") ? (
-              <>
-                Nếu hủy bàn này ở thời điểm hiện tại, bạn sẽ được hoàn tiền{" "}
-                <strong>50%</strong>
-              </>
-            ) : (
-              <>
-                Nếu hủy bàn này ở thời điểm hiện tại, bạn sẽ được hoàn tiền{" "}
-                <strong>{refundInfo.message}</strong>
-              </>
-            )}
-          </p>
-          <p>
-            <span className="font-medium">**Số tiền nhận lại được**:</span>{" "}
-            <strong>{formatCurrency(refundInfo.refundAmount)}</strong>
-          </p>
-          <p>
-            <span className="font-medium">**Thời gian hủy của bạn là**:</span>{" "}
-            <strong>{formatDate(refundInfo.cancellationTime)}</strong>
-          </p>
-          <p>
-            <span className="font-medium">**Hạn chót hủy đơn**:</span>{" "}
-            <strong>
-              {formatDate(refundInfo.cancellation_Block_TimeGate)}
-            </strong>
-          </p>
-          <p>
-            <span className="font-medium">**Hạn hoàn tiền một phần**:</span>{" "}
-            <strong>
-              {formatDate(refundInfo.cancellation_PartialRefund_TimeGate)}
-            </strong>
-          </p>
+          {refundInfo.message.includes(
+            "No refund. Reason: Cancellation on shared appointment will not be refund."
+          ) ? (
+            <p className="font-medium text-red-600">
+              <strong>Không hoàn tiền.</strong> Lý do: Việc hủy lịch đã có sự
+              thanh toán của đối phương sẽ không được hoàn tiền.
+            </p>
+          ) : (
+            <>
+              <p className="font-medium">
+                {refundInfo.message.includes("100%") ? (
+                  <>
+                    Nếu hủy bàn này ở thời điểm hiện tại, bạn sẽ được hoàn tiền{" "}
+                    <strong>100%</strong>
+                  </>
+                ) : refundInfo.message.includes("50%") ? (
+                  <>
+                    Nếu hủy bàn này ở thời điểm hiện tại, bạn sẽ được hoàn tiền{" "}
+                    <strong>50%</strong>
+                  </>
+                ) : (
+                  <>
+                    Nếu hủy bàn này ở thời điểm hiện tại, bạn sẽ được hoàn tiền{" "}
+                    <strong>{refundInfo.message}</strong>
+                  </>
+                )}
+              </p>
+              <p>
+                <span className="font-medium">**Số tiền nhận lại được**:</span>{" "}
+                <strong>{formatCurrency(refundInfo.refundAmount)}</strong>
+              </p>
+              <p>
+                <span className="font-medium">
+                  **Thời gian hủy của bạn là**:
+                </span>{" "}
+                <strong>{formatDate(refundInfo.cancellationTime)}</strong>
+              </p>
+              <p>
+                <span className="font-medium">**Hạn chót hủy đơn**:</span>{" "}
+                <strong>
+                  {formatDate(refundInfo.cancellation_Block_TimeGate)}
+                </strong>
+              </p>
+              <p>
+                <span className="font-medium">**Hạn hoàn tiền một phần**:</span>{" "}
+                <strong>
+                  {formatDate(refundInfo.cancellation_PartialRefund_TimeGate)}
+                </strong>
+              </p>
+            </>
+          )}
         </div>
 
         <div className="flex justify-center space-x-3">

@@ -1778,6 +1778,7 @@ const TableBookingPage = () => {
           open={showOpponentModal}
           onClose={() => setShowOpponentModal(false)}
           onInviteSuccess={() => handleInviteSuccess(selectedTableId)}
+          bookingInfo={chessBookings.find((b) => b.tableId === selectedTableId)}
         />
       )}
       <Footer />

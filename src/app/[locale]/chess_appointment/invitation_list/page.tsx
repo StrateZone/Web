@@ -1,14 +1,25 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@material-tailwind/react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
-import { CheckCircle, XCircle, Clock, User, Loader2 } from "lucide-react";
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
+  User,
+  Loader2,
+  RefreshCw,
+  Circle,
+} from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import CancelConfirmationModal from "../../appointment_history/CancelConfirmationModal";
 import { SuccessCancelPopup } from "../chess_appointment_order/CancelSuccessPopup";
 import { DefaultPagination } from "@/components/pagination";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState, AppDispatch } from "@/app/store";
+import { fetchWallet } from "@/app/[locale]/wallet/walletSlice";
 
 interface UserNavigation {
   userId: number;
@@ -107,62 +118,78 @@ const AppointmentRequestsPage = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [hasPrevious, setHasPrevious] = useState(false);
   const [hasNext, setHasNext] = useState(false);
-
+  const dispatch = useDispatch<AppDispatch>();
+  const { balance, loading: walletLoading } = useSelector(
+    (state: RootState) => state.wallet
+  );
   const getUserId = () => {
     const authDataString = localStorage.getItem("authData");
     if (!authDataString) return null;
     const authData = JSON.parse(authDataString);
     return authData.userId;
   };
+  const authDataString = localStorage.getItem("authData");
+  const authData = JSON.parse(authDataString || "{}");
+  const userId = authData.userId;
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
+      fetchAppointmentRequests(newPage);
     }
   };
 
-  const fetchAppointmentRequests = async () => {
-    try {
-      setIsLoading(true);
-      const userId = getUserId();
-      if (!userId) {
-        router.push(`/${locale}/login`);
-        return;
+  const fetchAppointmentRequests = useCallback(
+    async (page: number = 1) => {
+      try {
+        setIsLoading(true);
+        const userId = getUserId();
+        if (!userId) {
+          router.push(`/${locale}/login`);
+          return;
+        }
+
+        const apiUrl = new URL(
+          `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/to/${userId}`
+        );
+        apiUrl.searchParams.append("page-number", page.toString());
+        apiUrl.searchParams.append("page-size", pageSize.toString());
+        apiUrl.searchParams.append("order-by", "created-at-desc");
+
+        const response = await fetch(apiUrl.toString(), {
+          method: "GET",
+          headers: {
+            accept: "*/*",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch appointment requests");
+        }
+
+        const data = await response.json();
+        setRequests(data.pagedList || []);
+        setCurrentPage(data.currentPage);
+        setTotalPages(data.totalPages);
+        setTotalCount(data.totalCount);
+        setHasPrevious(data.hasPrevious);
+        setHasNext(data.hasNext);
+      } catch (error) {
+        console.error("Error fetching appointment requests:", error);
+      } finally {
+        setIsLoading(false);
       }
+    },
+    [locale, pageSize, router]
+  );
 
-      const apiUrl = new URL(
-        `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/to/${userId}`
-      );
-
-      apiUrl.searchParams.append("page-number", currentPage.toString());
-      apiUrl.searchParams.append("page-size", pageSize.toString());
-      apiUrl.searchParams.append("order-by", "created-at-desc");
-
-      const response = await fetch(apiUrl.toString(), {
-        method: "GET",
-        headers: {
-          accept: "*/*",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch appointment requests");
-      }
-
-      const data = await response.json();
-      console.log("Fetched appointment requests:", data);
-      setRequests(data.pagedList || []);
-      setCurrentPage(data.currentPage);
-      setTotalPages(data.totalPages);
-      setTotalCount(data.totalCount);
-      setHasPrevious(data.hasPrevious);
-      setHasNext(data.hasNext);
-    } catch (error) {
-      console.error("Error fetching appointment requests:", error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleRefresh = () => {
+    fetchAppointmentRequests(currentPage);
   };
+
+  useEffect(() => {
+    fetchAppointmentRequests(currentPage);
+  }, [fetchAppointmentRequests]);
 
   const handleAcceptRequest = async (requestId: number) => {
     setIsAccepting(true);
@@ -177,31 +204,16 @@ const AppointmentRequestsPage = () => {
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to accept appointment request");
-      }
+      if (!response.ok) throw new Error("Failed to accept appointment request");
+
       const data = await response.json();
-      console.log("Payment response:", data);
-      setRequests(
-        requests.map((req) =>
-          req.id === requestId ? { ...req, status: "accepted" } : req
-        )
-      );
-
-      if (selectedRequest?.id === requestId) {
-        setSelectedRequest({
-          ...selectedRequest,
-          status: "accepted",
-        });
-      }
-
-      alert("Đã chấp nhận lời mời thành công!");
+      console.log("Accept response:", data);
+      await fetchAppointmentRequests(currentPage);
     } catch (error) {
       console.error("Error:", error);
-      alert("Có lỗi xảy ra: " + (error as Error).message);
+      alert("Error: " + (error as Error).message);
     } finally {
       setIsAccepting(false);
-      fetchAppointmentRequests();
     }
   };
 
@@ -233,14 +245,15 @@ const AppointmentRequestsPage = () => {
       if (!response.ok) {
         throw new Error("Payment processing failed");
       }
+
       const data = await response.json();
       console.log("Payment response:", data);
-      // alert("Thanh toán thành công!");
+      dispatch(fetchWallet(userId));
 
-      // fetchAppointmentRequests();
+      await fetchAppointmentRequests(currentPage);
     } catch (error) {
       console.error("Error:", error);
-      alert("Có lỗi xảy ra: " + (error as Error).message);
+      alert("Error: " + (error as Error).message);
     } finally {
       setIsProcessingPayment(false);
     }
@@ -254,6 +267,8 @@ const AppointmentRequestsPage = () => {
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      second: "2-digit",
+      hour12: false, // dùng định dạng 24 giờ
     });
   };
 
@@ -279,32 +294,60 @@ const AppointmentRequestsPage = () => {
       case "pending":
         return {
           bg: "bg-yellow-100",
-          text: "text-yellow-800",
-          display: "Đang chờ phản hồi",
+          text: "text-yellow-700",
+          border: "border-yellow-500",
+          display: "Chờ Phản Hồi",
+          icon: <Clock className="w-4 h-4 mr-1" />,
         };
       case "accepted":
         return {
-          bg: "bg-green-100",
-          text: "text-green-800",
-          display: "Đã chấp nhận",
+          bg: "bg-blue-100",
+          text: "text-blue-700",
+          border: "border-blue-500",
+          display: "Hoàn Thành Thanh Toán",
+          icon: <CheckCircle className="w-4 h-4 mr-1" />,
         };
       case "payment_required":
         return {
-          bg: "bg-green-100",
-          text: "text-green-800",
-          display: "Yêu cầu thanh toán",
+          bg: "bg-indigo-100",
+          text: "text-indigo-700",
+          border: "border-indigo-500",
+          display: "Yêu Cầu Thanh Toán",
+          icon: <CheckCircle className="w-4 h-4 mr-1" />,
         };
       case "rejected":
         return {
           bg: "bg-red-100",
-          text: "text-red-800",
-          display: "Đã từ chối",
+          text: "text-red-700",
+          border: "border-red-500",
+          display: "Đã Từ Chối",
+          icon: <XCircle className="w-4 h-4 mr-1" />,
         };
-      case "expired":
+      case "await_appointment_creation":
+        return {
+          bg: "bg-yellow-100",
+          text: "text-yellow-600",
+          border: "border-yellow-500",
+          display: "Chờ Đối Phương Tạo Cuộc Hẹn",
+          icon: <Clock className="w-4 h-4 mr-1" />,
+        };
       case "cancelled":
-        return { bg: "bg-gray-100", text: "text-gray-800", display: "Đã hủy" };
+      case "expired":
+        return {
+          bg: "bg-gray-100",
+          text: "text-gray-600",
+          border: "border-gray-400",
+          display: "Đã Hủy",
+          icon: <XCircle className="w-4 h-4 mr-1" />,
+        };
       default:
-        return { bg: "bg-gray-100", text: "text-gray-800", display: status };
+        return {
+          bg: "bg-gray-100",
+          text: "text-gray-800",
+          border: "border-gray-400",
+          display: status,
+          icon: <Circle className="w-4 h-4 mr-1" />,
+        };
     }
   };
 
@@ -320,9 +363,9 @@ const AppointmentRequestsPage = () => {
     setIsRejecting(true);
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/cancel-check/${requestId}`,
+        `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/reject/${requestId}`,
         {
-          method: "GET",
+          method: "PUT",
           headers: {
             accept: "*/*",
           },
@@ -330,10 +373,11 @@ const AppointmentRequestsPage = () => {
       );
 
       if (!response.ok) {
-        throw new Error("Không thể kiểm tra điều kiện hủy");
+        throw new Error("Failed to check cancel condition");
       }
 
       const data = await response.json();
+      console.log("Cancel condition response:", data);
       setRefundInfo({
         message: data.message,
         refundAmount: data.refundAmount || 0,
@@ -351,6 +395,23 @@ const AppointmentRequestsPage = () => {
     if (!currentCancellingId) return;
 
     setIsCancelling(true);
+    const previousRequests = [...requests];
+    const previousSelectedRequest = selectedRequest
+      ? { ...selectedRequest }
+      : null;
+
+    setRequests((prev) =>
+      prev.map((req) =>
+        req.id === currentCancellingId ? { ...req, status: "cancelled" } : req
+      )
+    );
+
+    if (selectedRequest?.id === currentCancellingId) {
+      setSelectedRequest((prev) =>
+        prev ? { ...prev, status: "cancelled" } : null
+      );
+    }
+
     try {
       const response = await fetch(
         `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/cancel/${currentCancellingId}`,
@@ -363,10 +424,9 @@ const AppointmentRequestsPage = () => {
       );
 
       if (!response.ok) {
-        throw new Error("Hủy lời mời không thành công");
+        throw new Error("Failed to cancel request");
       }
 
-      await fetchAppointmentRequests();
       setShowCancelConfirm(false);
       setCurrentCancellingId(null);
       setSelectedRequest(null);
@@ -381,38 +441,38 @@ const AppointmentRequestsPage = () => {
         router.push(`/${localActive}/chess_appointment/chess_category`);
       }
     } catch (err) {
+      setRequests(previousRequests);
+      if (previousSelectedRequest) {
+        setSelectedRequest(previousSelectedRequest);
+      }
       console.error("Error canceling request:", err);
     } finally {
       setIsCancelling(false);
     }
   };
 
-  const getSkillLevelText = (level: number): string => {
+  const getRankLevelText = (level: number): string => {
     switch (level) {
+      case 0:
+        return "Mới Bắt Đầu";
       case 1:
-        return "Mới bắt đầu";
+        return "Cấp Độ Bạc";
       case 2:
-        return "Nghiệp dư";
+        return "Cấp Độ Vàng";
       case 3:
-        return "Trung cấp";
+        return "Cấp Độ Bạch Kim";
       case 4:
-        return "Nâng cao";
-      case 5:
-        return "Chuyên gia";
+        return "Expert";
       default:
-        return "Chưa xác định";
+        return "Unknown";
     }
   };
-
-  useEffect(() => {
-    fetchAppointmentRequests();
-  }, [currentPage]);
 
   return (
     <div>
       <div>
         <Navbar></Navbar>
-        <div className="relative font-sans">
+        <div className="relative ">
           <div className="absolute inset-0 w-full h-full bg-gray-900/60 opacity-60 z-20"></div>
           <img
             src="https://png.pngtree.com/background/20230524/original/pngtree-the-game-of-chess-picture-image_2710450.jpg"
@@ -421,16 +481,30 @@ const AppointmentRequestsPage = () => {
           />
           <div className="min-h-[400px] relative z-30 h-full max-w-7xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
             <h2 className="sm:text-5xl text-3xl font-bold mb-6">
-              Lời Mời Chơi Cờ
+              <strong>Chess Appointment Requests</strong>
             </h2>
             <p className="sm:text-xl text-lg text-center text-gray-200">
-              Quản lý các lời mời chơi cờ của bạn
+              <strong>Manage your chess game invitations</strong>
             </p>
           </div>
         </div>
 
         <div className="min-h-[calc(100vh-200px)] bg-gray-50 p-4 text-black">
           <div className="container mx-auto px-2 py-4">
+            <div className="flex justify-between items-center mb-4">
+              <h1 className="text-2xl font-bold">Lời Mời Đánh Cờ</h1>
+              <Button
+                onClick={handleRefresh}
+                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600"
+                disabled={isLoading}
+              >
+                <RefreshCw
+                  className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+                />
+                <strong>Làm Mới</strong>
+              </Button>
+            </div>
+
             {isLoading ? (
               <div className="flex justify-center items-center h-64">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -441,19 +515,24 @@ const AppointmentRequestsPage = () => {
                   onClick={handleBackToList}
                   className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
                 >
-                  ← Quay lại danh sách
+                  ← <strong>Quay Lại</strong>
                 </button>
 
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-semibold">
-                    Chi tiết lời mời #{selectedRequest.id}
+                    Thông Tin Chi Tiết Của Lời Mời Đánh Cờ
                   </h2>
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedRequest.status).bg} ${getStatusColor(selectedRequest.status).text}`}
+                  >
+                    {getStatusColor(selectedRequest.status).display}
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h3 className="text-lg mb-2 font-bold">
-                      Thông Tin Người Gửi
+                      <strong>Thông Tin Người Gửi</strong>
                     </h3>
                     <div className="flex items-center space-x-3 mb-4">
                       <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
@@ -473,76 +552,136 @@ const AppointmentRequestsPage = () => {
                             selectedRequest.fromUserNavigation.username}
                         </h4>
                         <p className="text-gray-600 text-sm">
-                          Trình độ:{" "}
-                          {getSkillLevelText(
-                            selectedRequest.fromUserNavigation.skillLevel
+                          <strong>Trình Độ:</strong>{" "}
+                          {getRankLevelText(
+                            selectedRequest.fromUserNavigation.ranking
                           )}
                         </p>
                       </div>
                     </div>
+                    <div className="space-y-2">
+                      <p>
+                        <span className="font-medium">
+                          <strong>Email:</strong>
+                        </span>{" "}
+                        {selectedRequest.fromUserNavigation.email}
+                      </p>
+                      <p>
+                        <span className="font-medium">
+                          <strong>Số Điện Thoại:</strong>
+                        </span>{" "}
+                        {selectedRequest.fromUserNavigation.phone || "N/A"}
+                      </p>
+                      <p>
+                        <span className="font-medium">
+                          <strong>Giới Thiệu:</strong>
+                        </span>{" "}
+                        {selectedRequest.fromUserNavigation.bio ||
+                          "Không đề cập"}
+                      </p>
+                    </div>
                   </div>
 
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="text-lg mb-2 font-bold">Thông Tin Bàn Cờ</h3>
-                    <p className="mb-2">
-                      <span className="font-medium">Loại cờ:</span>{" "}
-                      {selectedRequest?.table?.gameType?.typeName === "chess"
-                        ? "Cờ vua"
-                        : selectedRequest?.table?.gameType?.typeName ===
-                            "xiangqi"
-                          ? "Cờ tướng"
-                          : selectedRequest?.table?.gameType?.typeName === "go"
-                            ? "Cờ vây"
-                            : selectedRequest?.table?.gameType?.typeName ||
-                              "Không xác định"}
-                    </p>
-
-                    <p className="mb-2">
-                      <span className="font-medium">Loại phòng:</span>{" "}
-                      {selectedRequest?.table?.roomType === "basic"
-                        ? "Phòng thường"
-                        : selectedRequest?.table?.roomType === "premium"
-                          ? "Phòng cao cấp"
-                          : "Không xác định"}
-                    </p>
-                    <p className="mb-2">
-                      <span className="font-medium">Số phòng:</span>{" "}
-                      {selectedRequest?.table?.roomId}
-                    </p>
-                    <p>
-                      <span className="font-medium">Số bàn:</span>{" "}
-                      {selectedRequest?.tableId}
-                    </p>
+                    <h3 className="text-lg mb-2 font-bold">
+                      <strong>Thông Tin Bàn</strong>
+                    </h3>
+                    <div className="space-y-2">
+                      <p>
+                        <span className="font-medium">
+                          <strong>Loại Cờ:</strong>
+                        </span>{" "}
+                        {selectedRequest.table?.gameTypeId === 1
+                          ? "Cờ Vua"
+                          : selectedRequest.table?.gameTypeId === 2
+                            ? "Cờ Tướng"
+                            : selectedRequest.table?.gameTypeId === 3
+                              ? "Cờ Vây"
+                              : selectedRequest.table?.gameType?.typeName ||
+                                "Unknown"}
+                      </p>
+                      <p>
+                        <span className="font-medium">
+                          <strong>Loại Phòng:</strong>
+                        </span>{" "}
+                        {selectedRequest.table?.roomType === "basic"
+                          ? "Phòng Thường"
+                          : selectedRequest.table?.roomType === "premium"
+                            ? "Phòng Cao Cấp"
+                            : selectedRequest.table?.roomType === "openspaced"
+                              ? "Không Gian Mở"
+                              : "Unknown"}
+                      </p>
+                      <p>
+                        <span className="font-medium">
+                          <strong>Số Phòng:</strong>
+                        </span>{" "}
+                        {selectedRequest.table?.roomId}
+                      </p>
+                      <p>
+                        <span className="font-medium">
+                          <strong>Số Bàn:</strong>
+                        </span>{" "}
+                        {selectedRequest.tableId}
+                      </p>
+                      {selectedRequest.totalPrice && (
+                        <p>
+                          <span className="font-medium">
+                            <strong>Tổng Giá:</strong>
+                          </span>{" "}
+                          {selectedRequest.totalPrice.toLocaleString()} VND
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                  <h3 className="text-lg mb-2 font-bold">Thời Gian</h3>
-                  <p className="mb-2">
-                    <span className="font-medium">Ngày:</span>{" "}
-                    {new Date(selectedRequest.startTime).toLocaleDateString(
-                      "vi-VN"
+                  <h3 className="text-lg mb-2 font-bold">
+                    <strong>Thông Tin Thời Gian</strong>
+                  </h3>
+                  <div className="space-y-2">
+                    <p>
+                      <span className="font-medium">
+                        <strong>Ngày Chơi:</strong>
+                      </span>{" "}
+                      {new Date(selectedRequest.startTime).toLocaleDateString(
+                        "vi-VN"
+                      )}
+                    </p>
+                    <p>
+                      <span className="font-medium">
+                        <strong>Thời Gian Bắt Đầu Và Kết Thúc:</strong>
+                      </span>{" "}
+                      {formatTimeRange(
+                        selectedRequest.startTime,
+                        selectedRequest.endTime
+                      )}
+                    </p>
+                    <p>
+                      <span className="font-medium">
+                        <strong>Gửi Lời Mời Lúc:</strong>
+                      </span>{" "}
+                      {formatDateTime(selectedRequest.createdAt)}
+                    </p>
+                    {selectedRequest.expireAt && (
+                      <p>
+                        <span className="font-medium">
+                          <strong>Lời Mời Hết Hạn Vào Lúc:</strong>
+                        </span>{" "}
+                        {formatDateTime(selectedRequest.expireAt)}
+                        {isExpired(selectedRequest.expireAt) && (
+                          <span className="ml-2 text-red-500">
+                            (Đã Hết Hạn)
+                          </span>
+                        )}
+                      </p>
                     )}
-                  </p>
-                  <p className="mb-2">
-                    <span className="font-medium">Giờ bắt đầu - kết thúc:</span>{" "}
-                    {formatTimeRange(
-                      selectedRequest.startTime,
-                      selectedRequest.endTime
-                    )}
-                  </p>
-                  <p>
-                    <span className="font-medium">Trạng thái:</span>{" "}
-                    <span
-                      className={`px-2 py-1 rounded ${getStatusColor(selectedRequest.status).bg} ${getStatusColor(selectedRequest.status).text}`}
-                    >
-                      {getStatusColor(selectedRequest.status).display}
-                    </span>
-                  </p>
+                  </div>
                 </div>
 
                 <div className="flex justify-end space-x-3">
-                  {selectedRequest.status === "pending" &&
+                  {/* {selectedRequest.status === "pending" &&
                     !isExpired(selectedRequest.expireAt) && (
                       <>
                         <Button
@@ -555,34 +694,12 @@ const AppointmentRequestsPage = () => {
                           {isAccepting ? (
                             <>
                               <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                              Đang xử lý...
+                              Processing...
                             </>
                           ) : (
-                            "Chấp nhận"
+                            <strong>Chấp Nhận</strong>
                           )}
                         </Button>
-
-                        {(selectedRequest.status === "accepted" ||
-                          selectedRequest.status === "payment_required") &&
-                          selectedRequest.appointmentId && (
-                            <Button
-                              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 flex items-center justify-center min-w-[150px]"
-                              onClick={() =>
-                                handleProcessPayment(selectedRequest.id)
-                              }
-                              disabled={isProcessingPayment}
-                            >
-                              {isProcessingPayment ? (
-                                <>
-                                  <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                                  Đang xử lý...
-                                </>
-                              ) : (
-                                "Thanh Toán"
-                              )}
-                            </Button>
-                          )}
-
                         <Button
                           className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 flex items-center justify-center min-w-[100px]"
                           onClick={() =>
@@ -593,13 +710,33 @@ const AppointmentRequestsPage = () => {
                           {isRejecting ? (
                             <>
                               <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                              Đang xử lý...
+                              Processing...
                             </>
                           ) : (
-                            "Từ chối"
+                            <strong>Từ Chối</strong>
                           )}
                         </Button>
                       </>
+                    )} */}
+
+                  {(selectedRequest.status === "payment_required" ||
+                    selectedRequest.status === "await_appointment_creation") &&
+                    selectedRequest.appointmentId &&
+                    !isExpired(selectedRequest.expireAt) && (
+                      <Button
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 flex items-center justify-center min-w-[150px]"
+                        onClick={() => handleProcessPayment(selectedRequest.id)}
+                        disabled={isProcessingPayment}
+                      >
+                        {isProcessingPayment ? (
+                          <>
+                            <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                            Processing...
+                          </>
+                        ) : (
+                          <strong>Thanh Toán Ngay</strong>
+                        )}
+                      </Button>
                     )}
                 </div>
               </div>
@@ -609,177 +746,195 @@ const AppointmentRequestsPage = () => {
                   <Clock className="w-8 h-8 text-gray-400" />
                 </div>
                 <h2 className="text-lg font-medium text-gray-600">
-                  Không có lời mời nào
+                  <strong>No appointment requests</strong>
                 </h2>
                 <p className="text-gray-500 mt-1 text-sm">
-                  Bạn chưa có lời mời chơi cờ nào
+                  <strong>
+                    You don't have any chess appointment requests yet
+                  </strong>
                 </p>
               </div>
             ) : (
-              <div className="grid gap-4">
-                {requests.map((request) => (
-                  <div
-                    key={request.id}
-                    className={`bg-white rounded-md shadow-sm p-4 border-l-4 ${
-                      request.status === "accepted" ||
-                      request.status === "payment_required"
-                        ? "border-green-500"
-                        : request.status === "rejected"
-                          ? "border-red-500"
-                          : isExpired(request.expireAt) ||
-                              request.status === "cancelled"
-                            ? "border-gray-400"
-                            : "border-blue-500"
-                    }`}
-                  >
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                          {request.fromUserNavigation.avatarUrl ? (
-                            <img
-                              src={request.fromUserNavigation.avatarUrl}
-                              alt="Avatar"
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <User className="w-5 h-5 text-gray-500" />
-                          )}
+              <>
+                <div className="grid gap-4">
+                  {requests.map((request) => (
+                    <div
+                      key={request.id}
+                      className={`bg-white rounded-md shadow-sm p-4 border-l-4 ${
+                        request.status === "accepted" ||
+                        request.status === "payment_required"
+                          ? "border-green-500"
+                          : request.status === "rejected"
+                            ? "border-red-500"
+                            : isExpired(request.expireAt) ||
+                                request.status === "cancelled"
+                              ? "border-gray-400"
+                              : "border-blue-500"
+                      }`}
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                            {request.fromUserNavigation.avatarUrl ? (
+                              <img
+                                src={request.fromUserNavigation.avatarUrl}
+                                alt="Avatar"
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <User className="w-5 h-5 text-gray-500" />
+                            )}
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-base">
+                              {request.fromUserNavigation.fullName ||
+                                request.fromUserNavigation.username}
+                            </h3>
+                            <p className="text-gray-600 text-sm">
+                              <strong>Trình Độ:</strong>{" "}
+                              {getRankLevelText(
+                                request.fromUserNavigation.ranking
+                              )}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-bold text-base">
-                            {request.fromUserNavigation.fullName ||
-                              request.fromUserNavigation.username}
-                          </h3>
+
+                        <div className="text-center md:text-right">
+                          <p className="font-medium text-sm">
+                            <strong>Số Bàn:</strong> {request.tableId}
+                          </p>
                           <p className="text-gray-600 text-sm">
-                            Trình độ:{" "}
-                            {getSkillLevelText(
-                              request.fromUserNavigation.skillLevel
+                            {formatDateTime(request.startTime)}
+                          </p>
+                          <p className="text-gray-600 text-sm">
+                            {formatTimeRange(
+                              request.startTime,
+                              request.endTime
                             )}
                           </p>
                         </div>
                       </div>
 
-                      <div className="text-center md:text-right">
-                        <p className="font-medium text-sm">
-                          Bàn số: {request.tableId}
-                        </p>
-                        <p className="text-gray-600 text-sm">
-                          {formatDateTime(request.startTime)}
-                        </p>
-                        <p className="text-gray-600 text-sm">
-                          {formatTimeRange(request.startTime, request.endTime)}
-                        </p>
-                      </div>
-                    </div>
+                      <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row justify-between items-center gap-3">
+                        <div className="flex items-center">
+                          {request.status === "accepted" ? (
+                            <span className="text-blue-700 flex items-center text-sm">
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              <strong>Hoàn Thành Thanh Toán</strong>
+                            </span>
+                          ) : request.status === "payment_required" ? (
+                            <span className="text-indigo-700 flex items-center text-sm">
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              <strong>Yêu Cầu Thanh Toán</strong>
+                            </span>
+                          ) : request.status === "rejected" ? (
+                            <span className="text-red-700 flex items-center text-sm">
+                              <XCircle className="w-4 h-4 mr-1" />
+                              <strong>Đã Từ Chối</strong>
+                            </span>
+                          ) : request.status ===
+                            "await_appointment_creation" ? (
+                            <span className="text-yellow-600 flex items-center text-sm">
+                              <Clock className="w-4 h-4 mr-1" />
+                              <strong>Chờ Đối Phương Tạo Cuộc Hẹn</strong>
+                            </span>
+                          ) : isExpired(request.expireAt) ||
+                            request.status === "cancelled" ? (
+                            <span className="text-gray-600 flex items-center text-sm">
+                              <XCircle className="w-4 h-4 mr-1" />
+                              <strong>Đã Hủy</strong>
+                            </span>
+                          ) : (
+                            <span className="text-yellow-700 flex items-center text-sm">
+                              <Clock className="w-4 h-4 mr-1" />
+                              <strong>Chờ Phản Hồi</strong>
+                            </span>
+                          )}
+                        </div>
 
-                    <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row justify-between items-center gap-3">
-                      <div className="flex items-center">
-                        {request.status === "accepted" ? (
-                          <span className="text-green-600 flex items-center text-sm">
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            Đã chấp nhận
-                          </span>
-                        ) : request.status === "payment_required" ? (
-                          <span className="text-green-600 flex items-center text-sm">
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            Yêu cầu thanh toán
-                          </span>
-                        ) : request.status === "rejected" ? (
-                          <span className="text-red-600 flex items-center text-sm">
-                            <XCircle className="w-4 h-4 mr-1" />
-                            Đã từ chối
-                          </span>
-                        ) : isExpired(request.expireAt) ||
-                          request.status === "cancelled" ? (
-                          <span className="text-gray-500 flex items-center text-sm">
-                            <XCircle className="w-4 h-4 mr-1" />
-                            Đã hủy
-                          </span>
-                        ) : (
-                          <span className="text-blue-600 flex items-center text-sm">
-                            <Clock className="w-4 h-4 mr-1" />
-                            Đang chờ phản hồi
-                          </span>
-                        )}
-                      </div>
+                        <div className="flex space-x-2">
+                          {request.status === "pending" &&
+                            !isExpired(request.expireAt) && (
+                              <>
+                                <Button
+                                  className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[100px]"
+                                  onClick={() =>
+                                    handleAcceptRequest(request.id)
+                                  }
+                                  disabled={isAccepting}
+                                >
+                                  {isAccepting ? (
+                                    <>
+                                      <Loader2 className="animate-spin mr-1 h-3 w-3" />
+                                      Processing...
+                                    </>
+                                  ) : (
+                                    "Chấp Nhận"
+                                  )}
+                                </Button>
+                                <Button
+                                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[80px]"
+                                  onClick={() =>
+                                    checkCancelCondition(request.id)
+                                  }
+                                  disabled={isRejecting}
+                                >
+                                  {isRejecting ? (
+                                    <>
+                                      <Loader2 className="animate-spin mr-1 h-3 w-3" />
+                                      Processing...
+                                    </>
+                                  ) : (
+                                    "Từ Chối"
+                                  )}
+                                </Button>
+                              </>
+                            )}
 
-                      <div className="flex space-x-2">
-                        {request.status === "pending" &&
-                          !isExpired(request.expireAt) && (
-                            <>
+                          {(request.status === "await_appointment_creation" ||
+                            request.status === "payment_required") &&
+                            request.appointmentId &&
+                            !isExpired(request.expireAt) && (
                               <Button
-                                className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[100px]"
-                                onClick={() => handleAcceptRequest(request.id)}
-                                disabled={isAccepting}
+                                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[100px]"
+                                onClick={() => handleProcessPayment(request.id)}
+                                disabled={isProcessingPayment}
                               >
-                                {isAccepting ? (
+                                {isProcessingPayment ? (
                                   <>
                                     <Loader2 className="animate-spin mr-1 h-3 w-3" />
-                                    Đang xử lý...
+                                    Processing...
                                   </>
                                 ) : (
-                                  "Chấp nhận"
+                                  "Thanh Toán Ngay"
                                 )}
                               </Button>
+                            )}
 
-                              <Button
-                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[80px]"
-                                onClick={() => checkCancelCondition(request.id)}
-                                disabled={isRejecting}
-                              >
-                                {isRejecting ? (
-                                  <>
-                                    <Loader2 className="animate-spin mr-1 h-3 w-3" />
-                                    Đang xử lý...
-                                  </>
-                                ) : (
-                                  "Từ chối"
-                                )}
-                              </Button>
-                            </>
-                          )}
-
-                        {(request.status === "await_appointment_creation" ||
-                          request.status === "payment_required") &&
-                          request.appointmentId && (
-                            <Button
-                              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[100px]"
-                              onClick={() => handleProcessPayment(request.id)}
-                              disabled={isProcessingPayment}
-                            >
-                              {isProcessingPayment ? (
-                                <>
-                                  <Loader2 className="animate-spin mr-1 h-3 w-3" />
-                                  Đang xử lý...
-                                </>
-                              ) : (
-                                "Thanh toán"
-                              )}
-                            </Button>
-                          )}
-
-                        <Button
-                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-sm"
-                          onClick={() => handleViewDetails(request)}
-                        >
-                          Xem chi tiết
-                        </Button>
+                          <Button
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-sm"
+                            onClick={() => handleViewDetails(request)}
+                          >
+                            Xem Chi Tiết
+                          </Button>
+                        </div>
                       </div>
                     </div>
+                  ))}
+                </div>
+
+                {requests.length > 0 && (
+                  <div className="flex justify-center mt-8 mb-8">
+                    <DefaultPagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={handlePageChange}
+                    />
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </div>
-          {requests.length > 0 && !isLoading && (
-            <div className="flex justify-center mt-8 mb-8">
-              <DefaultPagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-              />
-            </div>
-          )}
         </div>
 
         <Footer></Footer>

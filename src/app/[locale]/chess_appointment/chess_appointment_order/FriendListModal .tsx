@@ -371,7 +371,25 @@ const OpponentRecommendationModal = ({
       const opponent = opponents.find((o) => o.userId === opponentId);
       if (!opponent) throw new Error("Opponent not found");
 
+      // Calculate the discounted price (50% of original price)
       const response = await fetch(
+        `https://backend-production-ac5e.up.railway.app/api/tables/${tableId}/price?startTime=${encodeURIComponent(startDate)}&endTime=${encodeURIComponent(endDate)}`,
+        {
+          method: "GET",
+          headers: {
+            accept: "*/*",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch table price");
+      }
+
+      const priceData = await response.json();
+      const discountedPrice = priceData.price * 0.5; // Apply 50% discount
+
+      const invitationResponse = await fetch(
         "https://backend-production-ac5e.up.railway.app/api/appointmentrequests",
         {
           method: "POST",
@@ -385,16 +403,17 @@ const OpponentRecommendationModal = ({
             tableId: tableId,
             startTime: startDate,
             endTime: endDate,
+            totalPrice: discountedPrice, // Pass the discounted price
           }),
         }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      if (!invitationResponse.ok) {
+        const errorData = await invitationResponse.json();
         throw new Error(errorData.message || "Failed to send invitation");
       }
 
-      const responseData = await response.json();
+      const responseData = await invitationResponse.json();
       console.log("API Response:", responseData);
 
       setInvitedOpponents((prev) => [...prev, opponentId]);

@@ -210,6 +210,7 @@ function Page() {
       }
 
       const data = await response.json();
+      console.log("API Response:", data);
       setRefundInfo({
         message: data.message,
         refundAmount: data.refundAmount,
