@@ -20,6 +20,9 @@ import { DefaultPagination } from "@/components/pagination";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/app/store";
 import { fetchWallet } from "@/app/[locale]/wallet/walletSlice";
+import Swal from "sweetalert2";
+import { ConfirmPaymentPopup } from "./ConfirmPaymentPopup";
+import { InsufficientBalancePopup } from "../chess_appointment_order/InsufficientBalancePopup";
 
 interface UserNavigation {
   userId: number;
@@ -216,22 +219,88 @@ const AppointmentRequestsPage = () => {
       setIsAccepting(false);
     }
   };
+  const checkCancelCondition = async (requestId: number) => {
+    setIsRejecting(true);
+    try {
+      const response = await fetch(
+        `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/reject/${requestId}`,
+        {
+          method: "PUT",
+          headers: {
+            accept: "*/*",
+          },
+        }
+      );
 
+      if (!response.ok) {
+        throw new Error("Failed to check cancel condition");
+      }
+
+      const data = await response.json();
+      console.log("Cancel condition response:", data);
+      await fetchAppointmentRequests(currentPage);
+    } catch (err) {
+      console.error("Error checking cancel condition:", err);
+    } finally {
+      setIsRejecting(false);
+    }
+  };
   const handleProcessPayment = async (requestId: number) => {
     setIsProcessingPayment(true);
+
     try {
       const request = requests.find((req) => req.id === requestId);
       if (!request || !request.appointmentId) {
         throw new Error("Request not found or invalid appointment ID");
       }
 
+      // Kiểm tra số dư trước khi thực hiện thanh toán
+      if (balance < (request.totalPrice || 0)) {
+        const isRedirect = await InsufficientBalancePopup({
+          finalPrice: request.totalPrice || 0,
+        });
+        if (isRedirect) {
+          router.push(`/${localActive}/wallet`);
+        }
+        return;
+      }
+
+      // ... (phần chuẩn bị thông tin và xác nhận thanh toán)
+      const tableInfo = {
+        tableId: request.tableId,
+        roomName: request.table.roomName,
+        gameType:
+          request.table.gameTypeId === 1
+            ? "Cờ Vua"
+            : request.table.gameTypeId === 2
+              ? "Cờ Tướng"
+              : "Cờ Vây",
+        roomType: request.table.roomType,
+        startTime: request.startTime,
+        endTime: request.endTime,
+        totalPrice: request.totalPrice || 0,
+        opponentName:
+          request.fromUserNavigation.fullName ||
+          request.fromUserNavigation.username,
+        opponentRank: getRankLevelText(request.fromUserNavigation.ranking),
+      };
+
+      // Hiển thị popup xác nhận thanh toán
+      const isConfirmed = await ConfirmPaymentPopup({
+        tableInfo,
+        currentBalance: balance,
+      });
+
+      if (!isConfirmed) {
+        setIsProcessingPayment(false);
+        return;
+      }
       const response = await fetch(
         "https://backend-production-ac5e.up.railway.app/api/payments/booking-request-payment",
         {
           method: "POST",
           headers: {
-            accept: "*/*",
-            "Content-Type": "application/json-patch+json",
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             fromUser: request.fromUser,
@@ -242,18 +311,54 @@ const AppointmentRequestsPage = () => {
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Payment processing failed");
+      const result = await response.json();
+
+      // Kiểm tra kết quả trả về từ server
+      if (!response.ok || !result.success) {
+        // Xử lý riêng trường hợp số dư không đủ
+        if (result.message === "Balance is not enough") {
+          const isRedirect = await InsufficientBalancePopup({
+            finalPrice: request.totalPrice || 0,
+          });
+          if (isRedirect) {
+            router.push(`/${localActive}/wallet`);
+          }
+          return;
+        }
+
+        throw new Error(result.message || "Payment processing failed");
       }
 
-      const data = await response.json();
-      console.log("Payment response:", data);
+      // Cập nhật state và hiển thị thông báo thành công
       dispatch(fetchWallet(userId));
-
       await fetchAppointmentRequests(currentPage);
+
+      await MySwal.fire({
+        title: "Thành công!",
+        text: `Thanh toán ${(request.totalPrice || 0).toLocaleString()}đ thành công.`,
+        icon: "success",
+        confirmButtonText: "OK",
+      });
     } catch (error) {
-      console.error("Error:", error);
-      alert("Error: " + (error as Error).message);
+      console.error("Payment error:", error);
+
+      // Chỉ hiển thị thông báo lỗi nếu không phải lỗi số dư
+      if (
+        !(
+          error instanceof Error &&
+          error.message.includes("Balance is not enough")
+        )
+      ) {
+        await MySwal.fire({
+          title: "Lỗi",
+          text:
+            error instanceof Error
+              ? error.message
+              : "Đã xảy ra lỗi không xác định",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      }
     } finally {
       setIsProcessingPayment(false);
     }
@@ -357,38 +462,6 @@ const AppointmentRequestsPage = () => {
 
   const handleBackToList = () => {
     setSelectedRequest(null);
-  };
-
-  const checkCancelCondition = async (requestId: number) => {
-    setIsRejecting(true);
-    try {
-      const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/reject/${requestId}`,
-        {
-          method: "PUT",
-          headers: {
-            accept: "*/*",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to check cancel condition");
-      }
-
-      const data = await response.json();
-      console.log("Cancel condition response:", data);
-      setRefundInfo({
-        message: data.message,
-        refundAmount: data.refundAmount || 0,
-      });
-      setCurrentCancellingId(requestId);
-      setShowCancelConfirm(true);
-    } catch (err) {
-      console.error("Error checking cancel condition:", err);
-    } finally {
-      setIsRejecting(false);
-    }
   };
 
   const confirmCancelRequest = async () => {
@@ -627,7 +700,7 @@ const AppointmentRequestsPage = () => {
                       {selectedRequest.totalPrice && (
                         <p>
                           <span className="font-medium">
-                            <strong>Tổng Giá:</strong>
+                            <strong>Số Tiền Cần Trả:</strong>
                           </span>{" "}
                           {selectedRequest.totalPrice.toLocaleString()} VND
                         </p>

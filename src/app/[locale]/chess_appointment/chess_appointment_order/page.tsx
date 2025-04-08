@@ -938,6 +938,7 @@ import OpponentRecommendationModal from "./FriendListModal ";
 import { toast } from "react-toastify";
 import Image from "next/image";
 import { ConfirmCancelPopup } from "./ConfirmCancelPopup";
+import { CloseTimeWarningPopup } from "./CloseTimeWarningPopup";
 
 interface InvitedUser {
   userId: number;
@@ -994,6 +995,9 @@ const TableBookingPage = () => {
   const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
   const [selectedStartDate, setSelectedStartDate] = useState<string>("");
   const [selectedEndDate, setSelectedEndDate] = useState<string>("");
+  const [selectedTotalPrice, setselectedTotalPrice] = useState<number | null>(
+    null
+  );
 
   const handleCancelInvitation = async (
     tableId: number,
@@ -1070,12 +1074,12 @@ const TableBookingPage = () => {
       }
 
       const data = await response.json();
-      console.log("[DEBUG] Full API Response:", JSON.stringify(data, null, 2));
+      // console.log("[DEBUG] Full API Response:", JSON.stringify(data, null, 2));
 
       const invitedUsers = data.map((invite: any) => {
         // Lấy thông tin từ toUserNavigation thay vì toUser
         const userInfo = invite.toUserNavigation || {};
-        console.log("User info from toUserNavigation:", userInfo);
+        // console.log("User info from toUserNavigation:", userInfo);
 
         return {
           userId: userInfo.userId || 0,
@@ -1295,11 +1299,13 @@ const TableBookingPage = () => {
   const inviteFriend = (
     tableId: number,
     startDate: string,
-    endDate: string
+    endDate: string,
+    totalPrice: number
   ) => {
     setSelectedTableId(tableId);
     setSelectedStartDate(startDate);
     setSelectedEndDate(endDate);
+    setselectedTotalPrice(totalPrice);
     setShowOpponentModal(true);
   };
 
@@ -1309,6 +1315,24 @@ const TableBookingPage = () => {
       finalPrice,
     });
     if (!isConfirmed) return;
+    const now = new Date();
+    const closeToNowBookings = chessBookings.filter(
+      (booking) =>
+        new Date(booking.startDate).getTime() - now.getTime() < 90 * 60 * 1000
+    );
+
+    if (closeToNowBookings.length > 0) {
+      const confirmContinue = await CloseTimeWarningPopup({
+        closeBookings: closeToNowBookings.map((b) => ({
+          tableId: b.tableId,
+          startTime: formatTime(b.startDate),
+          gameType: b.gameType.typeName, // Extract typeName as a string
+          roomType: b.roomType,
+        })),
+      });
+
+      if (!confirmContinue) return;
+    }
 
     try {
       setIsLoading(true);
@@ -1621,7 +1645,8 @@ const TableBookingPage = () => {
                           inviteFriend(
                             booking.tableId,
                             booking.startDate,
-                            booking.endDate
+                            booking.endDate,
+                            booking.totalPrice
                           )
                         }
                         className="text-blue-500 hover:text-blue-700 p-2"
@@ -1775,10 +1800,10 @@ const TableBookingPage = () => {
           startDate={selectedStartDate}
           endDate={selectedEndDate}
           tableId={selectedTableId}
+          totalPrice={selectedTotalPrice ?? 0}
           open={showOpponentModal}
           onClose={() => setShowOpponentModal(false)}
           onInviteSuccess={() => handleInviteSuccess(selectedTableId)}
-          bookingInfo={chessBookings.find((b) => b.tableId === selectedTableId)}
         />
       )}
       <Footer />

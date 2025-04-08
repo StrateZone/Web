@@ -15,7 +15,7 @@ import {
   PowerIcon,
 } from "@heroicons/react/24/solid";
 import { useRouter } from "next/navigation";
-import { Wallet, Calendar } from "lucide-react";
+import { Wallet, Calendar, Mail } from "lucide-react";
 import { useLocale } from "next-intl";
 
 export default function ProfileMenu() {
@@ -49,6 +49,13 @@ export default function ProfileMenu() {
       label: "Lịch Sử Đặt Bàn",
       icon: Calendar,
       onClick: () => router.push(`/${localActive}/appointment_history`),
+    },
+
+    {
+      label: "Lời Mởi Đánh Cờ",
+      icon: Mail,
+      onClick: () =>
+        router.push(`/${localActive}/chess_appointment/invitation_list`),
     },
     {
       label: "Help",
