@@ -78,9 +78,11 @@ export default function OTPVerificationPage() {
       router.push("/chess_appointment");
     } catch (error) {
       console.error("Lỗi xác thực:", error);
-      setError(
-        error.response?.data?.message || "Có lỗi xảy ra, vui lòng thử lại!"
-      );
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else {
+        setError("Có lỗi xảy ra, vui lòng thử lại!");
+      }
     }
   };
   const handleResendOTP = async () => {
