@@ -20,7 +20,6 @@ import { DefaultPagination } from "@/components/pagination";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/app/store";
 import { fetchWallet } from "@/app/[locale]/wallet/walletSlice";
-import Swal from "sweetalert2";
 import { ConfirmPaymentPopup } from "./ConfirmPaymentPopup";
 import { InsufficientBalancePopup } from "../chess_appointment_order/InsufficientBalancePopup";
 
@@ -97,6 +96,11 @@ interface AppointmentRequest {
   table: Table;
   appointment: any | null;
 }
+
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
+
+const MySwal = withReactContent(Swal);
 
 const AppointmentRequestsPage = () => {
   const router = useRouter();
