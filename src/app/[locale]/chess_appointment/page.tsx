@@ -56,24 +56,24 @@ export default function ChessAppointment() {
         console.log("Đang gọi API...");
 
         const response = await axios.get(
-          "https://backend-production-5bc5.up.railway.app/api/tables/available/each",
+          "https://backend-production-ac5e.up.railway.app/api/tables/available/each",
           {
             params: {
               StartTime: toLocalISOString(startTime), // ✅ Giờ đã chỉnh sửa
               EndTime: toLocalISOString(endTime), // ✅ Giờ đã chỉnh sửa
               tableCount: 6,
             },
-          },
+          }
         );
 
         console.log("Dữ liệu nhận được:", response.data);
 
         if (response.data) {
           setChessBookings(
-            Array.isArray(response.data.chess) ? response.data.chess : [],
+            Array.isArray(response.data.chess) ? response.data.chess : []
           );
           setChessChinese(
-            Array.isArray(response.data.xiangqi) ? response.data.xiangqi : [],
+            Array.isArray(response.data.xiangqi) ? response.data.xiangqi : []
           );
           setChessGos(Array.isArray(response.data.go) ? response.data.go : []);
         } else {
@@ -169,7 +169,7 @@ export default function ChessAppointment() {
                     onClick={() => {
                       localStorage.setItem(
                         "chessBooking",
-                        JSON.stringify(chessBooking),
+                        JSON.stringify(chessBooking)
                       );
                     }}
                   >
@@ -190,7 +190,7 @@ export default function ChessAppointment() {
                     <span className="font-medium text-black text-sm ml-1">
                       (
                       {Number(chessBooking.gameTypePrice).toLocaleString(
-                        "vi-VN",
+                        "vi-VN"
                       )}{" "}
                       ₫/giờ)
                     </span>
@@ -208,7 +208,7 @@ export default function ChessAppointment() {
                     <span className="font-medium text-black text-sm ml-1">
                       (
                       {Number(chessBooking.roomTypePrice).toLocaleString(
-                        "vi-VN",
+                        "vi-VN"
                       )}{" "}
                       ₫/giờ)
                     </span>
@@ -221,7 +221,7 @@ export default function ChessAppointment() {
                   <p className="text-gray-600 text-sm mt-2">
                     <span className="font-medium text-black">Ngày: </span>{" "}
                     {new Date(chessBooking.startDate).toLocaleDateString(
-                      "vi-VN",
+                      "vi-VN"
                     )}
                   </p>
                   <p className="text-gray-600 text-sm mt-2">
@@ -235,7 +235,7 @@ export default function ChessAppointment() {
                         minute: "2-digit",
                         hour12: false,
                         timeZone: "Asia/Ho_Chi_Minh",
-                      },
+                      }
                     )}
                     {" giờ"}
                     <span className="font-medium text-black">
@@ -249,7 +249,7 @@ export default function ChessAppointment() {
                         minute: "2-digit",
                         hour12: false,
                         timeZone: "Asia/Ho_Chi_Minh",
-                      },
+                      }
                     )}{" "}
                     {" giờ"}
                   </p>
@@ -279,7 +279,7 @@ export default function ChessAppointment() {
                           router.push(`/${locale}/login`); // Chuyển đến trang đăng nhập nếu chưa đăng nhập
                         } else {
                           router.push(
-                            `/${locale}/chess_appointment/chess_appointment_order`,
+                            `/${locale}/chess_appointment/chess_appointment_order`
                           ); // Nếu có token thì tiếp tục
                         }
                       }}
@@ -295,8 +295,8 @@ export default function ChessAppointment() {
                           // Truyền tableId, startTime, endTime qua URL
                           router.push(
                             `/${locale}/chess_appointment/${chessBooking.tableId}?startTime=${encodeURIComponent(
-                              chessBooking.startDate,
-                            )}&endTime=${encodeURIComponent(chessBooking.endDate)}`,
+                              chessBooking.startDate
+                            )}&endTime=${encodeURIComponent(chessBooking.endDate)}`
                           );
                         }
                       }}
@@ -363,7 +363,7 @@ export default function ChessAppointment() {
                     <span className="font-medium text-black text-sm ml-1">
                       (
                       {Number(chessBooking.gameTypePrice).toLocaleString(
-                        "vi-VN",
+                        "vi-VN"
                       )}{" "}
                       ₫/giờ)
                     </span>
@@ -380,7 +380,7 @@ export default function ChessAppointment() {
                     <span className="font-medium text-black text-sm ml-1">
                       (
                       {Number(chessBooking.roomTypePrice).toLocaleString(
-                        "vi-VN",
+                        "vi-VN"
                       )}{" "}
                       ₫/giờ)
                     </span>
@@ -393,7 +393,7 @@ export default function ChessAppointment() {
                   <p className="text-gray-600 text-sm mt-2">
                     <span className="font-medium text-black">Ngày: </span>{" "}
                     {new Date(chessBooking.startDate).toLocaleDateString(
-                      "vi-VN",
+                      "vi-VN"
                     )}
                   </p>
                   <p className="text-gray-600 text-sm mt-2">
@@ -405,7 +405,7 @@ export default function ChessAppointment() {
                         minute: "2-digit",
                         hour12: false,
                         timeZone: "Asia/Ho_Chi_Minh",
-                      },
+                      }
                     )}
                     {" giờ"}
                     <span className="font-medium text-black"> Đến: </span>{" "}
@@ -416,7 +416,7 @@ export default function ChessAppointment() {
                         minute: "2-digit",
                         hour12: false,
                         timeZone: "Asia/Ho_Chi_Minh",
-                      },
+                      }
                     )}{" "}
                     {" giờ"}
                   </p>
@@ -442,7 +442,7 @@ export default function ChessAppointment() {
                       className="flex items-center gap-2 text-xs px-2 py-1"
                       onClick={() =>
                         router.push(
-                          `/${locale}/chess_appointment/chess_appointment_order`,
+                          `/${locale}/chess_appointment/chess_appointment_order`
                         )
                       }
                     >
@@ -457,8 +457,8 @@ export default function ChessAppointment() {
                           // Truyền tableId, startTime, endTime qua URL
                           router.push(
                             `/${locale}/chess_appointment/${chessBooking.tableId}?startTime=${encodeURIComponent(
-                              chessBooking.startDate,
-                            )}&endTime=${encodeURIComponent(chessBooking.endDate)}`,
+                              chessBooking.startDate
+                            )}&endTime=${encodeURIComponent(chessBooking.endDate)}`
                           );
                         }
                       }}
@@ -524,7 +524,7 @@ export default function ChessAppointment() {
                     <span className="font-medium text-black text-sm ml-1">
                       (
                       {Number(chessBooking.gameTypePrice).toLocaleString(
-                        "vi-VN",
+                        "vi-VN"
                       )}{" "}
                       ₫/giờ)
                     </span>
@@ -541,7 +541,7 @@ export default function ChessAppointment() {
                     <span className="font-medium text-black text-sm ml-1">
                       (
                       {Number(chessBooking.roomTypePrice).toLocaleString(
-                        "vi-VN",
+                        "vi-VN"
                       )}{" "}
                       ₫/giờ)
                     </span>
@@ -554,7 +554,7 @@ export default function ChessAppointment() {
                   <p className="text-gray-600 text-sm mt-2">
                     <span className="font-medium text-black">Ngày: </span>{" "}
                     {new Date(chessBooking.startDate).toLocaleDateString(
-                      "vi-VN",
+                      "vi-VN"
                     )}
                   </p>
                   <p className="text-gray-600 text-sm mt-2">
@@ -566,7 +566,7 @@ export default function ChessAppointment() {
                         minute: "2-digit",
                         hour12: false,
                         timeZone: "Asia/Ho_Chi_Minh",
-                      },
+                      }
                     )}
                     {" giờ"}
                     <span className="font-medium text-black"> Đến: </span>{" "}
@@ -577,7 +577,7 @@ export default function ChessAppointment() {
                         minute: "2-digit",
                         hour12: false,
                         timeZone: "Asia/Ho_Chi_Minh",
-                      },
+                      }
                     )}{" "}
                     {" giờ"}
                   </p>
@@ -603,7 +603,7 @@ export default function ChessAppointment() {
                       className="flex items-center gap-2 text-xs px-2 py-1"
                       onClick={() =>
                         router.push(
-                          `/${locale}/chess_appointment/chess_appointment_order`,
+                          `/${locale}/chess_appointment/chess_appointment_order`
                         )
                       }
                     >
@@ -618,8 +618,8 @@ export default function ChessAppointment() {
                           // Truyền tableId, startTime, endTime qua URL
                           router.push(
                             `/${locale}/chess_appointment/${chessBooking.tableId}?startTime=${encodeURIComponent(
-                              chessBooking.startDate,
-                            )}&endTime=${encodeURIComponent(chessBooking.endDate)}`,
+                              chessBooking.startDate
+                            )}&endTime=${encodeURIComponent(chessBooking.endDate)}`
                           );
                         }
                       }}

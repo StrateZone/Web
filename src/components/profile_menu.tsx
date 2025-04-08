@@ -15,7 +15,7 @@ import {
   PowerIcon,
 } from "@heroicons/react/24/solid";
 import { useRouter } from "next/navigation";
-import { Wallet, Calendar } from "lucide-react";
+import { Wallet, Calendar, Mail } from "lucide-react";
 import { useLocale } from "next-intl";
 
 export default function ProfileMenu() {
@@ -50,6 +50,13 @@ export default function ProfileMenu() {
       icon: Calendar,
       onClick: () => router.push(`/${localActive}/appointment_history`),
     },
+
+    {
+      label: "Lời Mởi Đánh Cờ",
+      icon: Mail,
+      onClick: () =>
+        router.push(`/${localActive}/chess_appointment/invitation_list`),
+    },
     {
       label: "Help",
       icon: LifebuoyIcon,
@@ -60,7 +67,11 @@ export default function ProfileMenu() {
       onClick: handleLogout,
     },
   ];
+  const authData = JSON.parse(localStorage.getItem("authData") || "{}");
+  const userInfo = authData.userInfo || {}; // Fallback to empty object
 
+  // Safe access to avatarUrl with fallback
+  const avatarUrl = userInfo.avatarUrl || "/default-avatar.png";
   return (
     <Menu open={isMenuOpen} handler={setIsMenuOpen} placement="bottom-end">
       <MenuHandler>
@@ -74,7 +85,7 @@ export default function ProfileMenu() {
             size="sm"
             alt="user avatar"
             className="border border-gray-900 p-0.5"
-            src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1480&q=80"
+            src={avatarUrl}
           />
           <ChevronDownIcon
             strokeWidth={2.5}

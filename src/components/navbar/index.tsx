@@ -14,6 +14,7 @@ import {
   XMarkIcon,
   Bars3Icon,
   BuildingStorefrontIcon,
+  BellIcon,
 } from "@heroicons/react/24/solid";
 import { FaChessBoard, FaBookOpen, FaWallet } from "react-icons/fa";
 import { useParams, useRouter } from "next/navigation";
@@ -26,6 +27,7 @@ import { FaChess } from "react-icons/fa";
 import { fetchWallet } from "@/app/[locale]/wallet/walletSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/app/store";
+import NotificationDropdown from "./notification_dropdown";
 
 interface NavItemProps {
   children: React.ReactNode;
@@ -51,6 +53,7 @@ export function Navbar() {
   const t = useTranslations("NavBar");
   const router = useRouter();
   const localActive = useLocale();
+
   const [showBalance, setShowBalance] = useState<boolean>(() => {
     const saved = localStorage.getItem("showBalance");
     return saved !== null ? JSON.parse(saved) : true;
@@ -59,12 +62,21 @@ export function Navbar() {
 
   const [open, setOpen] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false); // Thêm trạng thái kiểm tra auth
+  const [authChecked, setAuthChecked] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading: walletLoading } = useSelector(
     (state: RootState) => state.wallet
   );
+
+  const getUserId = () => {
+    const authDataString = localStorage.getItem("authData");
+    if (!authDataString) return null;
+    const authData = JSON.parse(authDataString);
+    return authData.userId;
+  };
+
   const toggleShowBalance = () => {
     setShowBalance((prev) => {
       const newValue = !prev;
@@ -72,7 +84,7 @@ export function Navbar() {
       return newValue;
     });
   };
-  // Sử dụng useEffect để đồng bộ hóa trạng thái đăng nhập
+
   useEffect(() => {
     const checkAuth = () => {
       try {
@@ -90,17 +102,16 @@ export function Navbar() {
         console.error("Error checking auth:", error);
         setIsLoggedIn(false);
       } finally {
-        setAuthChecked(true); // Đánh dấu đã kiểm tra xong
+        setAuthChecked(true);
       }
     };
 
-    // Thêm listener để theo dõi thay đổi localStorage
     const handleStorageChange = () => {
       checkAuth();
     };
 
     window.addEventListener("storage", handleStorageChange);
-    checkAuth(); // Kiểm tra ngay khi component mount
+    checkAuth();
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
@@ -164,7 +175,6 @@ export function Navbar() {
     },
   ];
 
-  // Hiển thị loading nếu chưa kiểm tra xong trạng thái auth
   if (!authChecked) {
     return (
       <MTNavbar
@@ -236,7 +246,8 @@ export function Navbar() {
                 </button>
               </div>
             </div>
-
+            {/* <BellIcon className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2" /> */}
+            <NotificationDropdown />
             <FaChess
               onClick={() =>
                 router.push(
@@ -245,9 +256,7 @@ export function Navbar() {
               }
               className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
             />
-
             <ShoppingCart className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2" />
-
             <ProfileMenu />
           </div>
         ) : (

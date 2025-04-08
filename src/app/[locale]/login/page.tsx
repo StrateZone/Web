@@ -2,8 +2,8 @@
 import React, { useState } from "react";
 import { User } from "lucide-react";
 import Link from "next/link";
-import { useLocale, useTranslations } from "next-intl";
-import { Input, Checkbox, Button, Typography } from "@material-tailwind/react";
+import { useLocale } from "next-intl";
+import { Input, Button } from "@material-tailwind/react";
 import axios from "axios"; // Import axios
 
 import Footer from "@/components/footer";
@@ -13,14 +13,13 @@ import { toast } from "react-toastify"; // Import toast
 
 export default function LoginPage() {
   const localActive = useLocale();
-
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [loading, setLoading] = useState(false);
   const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
 
-  const router = useRouter();
-
+  //Validate Input không đúng định dạng or để trống
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
     validateEmail(e.target.value);
@@ -36,12 +35,13 @@ export default function LoginPage() {
     }
   };
 
+  // API Login gọi OTP
   const handleLogin = async () => {
     if (!emailError && email) {
       //xu ly ben trong luon ko ca`n tach ra
       try {
         const response = await axios.post(
-          `https://backend-production-5bc5.up.railway.app/api/auth/send-otp?email=${encodeURIComponent(email)}`
+          `https://backend-production-ac5e.up.railway.app/api/auth/send-otp?email=${encodeURIComponent(email)}`
         );
 
         console.log("API Response:", response.data); // Kiểm tra dữ liệu trả về

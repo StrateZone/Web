@@ -122,7 +122,7 @@ export function DefaultPagination({
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-black">
       <div className="flex items-center gap-2">
         {/* Nút Previous */}
         <Button
@@ -132,7 +132,7 @@ export function DefaultPagination({
           disabled={currentPage === 1}
         >
           <ArrowLeftIcon strokeWidth={2} className="h-4 w-4" />
-          <span className="hidden sm:inline">{t("pagination.previous")}</span>
+          <span className="hidden sm:inline">{"Trước"}</span>
         </Button>
 
         {/* Danh sách trang */}
@@ -172,7 +172,7 @@ export function DefaultPagination({
           onClick={next}
           disabled={currentPage === totalPages}
         >
-          <span className="hidden sm:inline">{t("pagination.next")}</span>
+          <span className="hidden sm:inline">{"Sau"}</span>
           <ArrowRightIcon strokeWidth={2} className="h-4 w-4" />
         </Button>
       </div>

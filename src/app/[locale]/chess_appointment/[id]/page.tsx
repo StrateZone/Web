@@ -109,7 +109,7 @@ const TableDetailsPage = () => {
         const startTime = searchParams.get("startTime");
         const endTime = searchParams.get("endTime");
         const response = await axios.get(
-          `https://backend-production-5bc5.up.railway.app/api/tables/${id}`,
+          `https://backend-production-ac5e.up.railway.app/api/tables/${id}`,
           {
             params: {
               startTime: startTime ? decodeURIComponent(startTime) : undefined,
