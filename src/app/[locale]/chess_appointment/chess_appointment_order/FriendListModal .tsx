@@ -8,9 +8,14 @@ import { toast } from "react-toastify";
 interface Opponent {
   userId: number;
   username: string;
+  email: string;
+  fullName: string;
+  status: string;
   avatarUrl: string | null;
-  ranking: string;
+  bio: string | null;
   points: number;
+  gender: string;
+  ranking: string;
   isInvited?: boolean;
 }
 
@@ -19,9 +24,8 @@ interface OpponentRecommendationModalProps {
   endDate: string;
   tableId: number;
   open: boolean;
-  totalPrice: number;
   onClose: () => void;
-  onInviteSuccess: () => void;
+  onInviteSuccess: (opponent: Opponent) => void;
 }
 
 const OpponentRecommendationModal = ({
@@ -29,7 +33,6 @@ const OpponentRecommendationModal = ({
   endDate,
   tableId,
   open,
-  totalPrice,
   onClose,
   onInviteSuccess,
 }: OpponentRecommendationModalProps) => {
@@ -40,6 +43,60 @@ const OpponentRecommendationModal = ({
   const [refreshTrigger, setRefreshTrigger] = useState(false);
   const hasFetchedInitialData = useRef(false);
 
+  // const fetchOpponents = async () => {
+  //   try {
+  //     setLoading(true);
+  //     setError(null);
+
+  //     const authDataString = localStorage.getItem("authData");
+  //     const authData = JSON.parse(authDataString || "{}");
+  //     const userId = authData.userId;
+  //     const userRanking = authData.ranking || "basic";
+
+  //     const formattedStartTime = new Date(startDate).toISOString();
+  //     const formattedEndTime = new Date(endDate).toISOString();
+
+  //     const url = new URL(
+  //       `https://backend-production-ac5e.up.railway.app/api/users/by-ranking/random/${userId}/tables/${tableId}`
+  //     );
+
+  //     url.searchParams.append("StartTime", formattedStartTime);
+  //     url.searchParams.append("EndTime", formattedEndTime);
+  //     url.searchParams.append("ranking", userRanking);
+  //     url.searchParams.append("up", "1");
+  //     url.searchParams.append("down", "1");
+
+  //     const response = await fetch(url.toString(), {
+  //       headers: {
+  //         accept: "*/*",
+  //       },
+  //     });
+
+  //     if (!response.ok) {
+  //       throw new Error("Failed to fetch opponents");
+  //     }
+
+  //     const data = await response.json();
+
+  //     const allOpponents = [
+  //       ...(data.matchingOpponents?.basic || []),
+  //       ...(data.matchingOpponents?.silver || []),
+  //       ...(data.matchingOpponents?.gold || []),
+  //       ...(data.matchingOpponents?.platinum || []),
+  //       ...(data.matchingOpponents?.intermediate || []),
+  //       ...(data.matchingOpponents?.advanced || []),
+  //       ...(data.matchingOpponents?.expert || []),
+  //     ];
+
+  //     setOpponents(allOpponents);
+  //   } catch (err) {
+  //     setError(
+  //       err instanceof Error ? err.message : "An unknown error occurred"
+  //     );
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
   const fetchOpponents = async () => {
     try {
       setLoading(true);
@@ -48,16 +105,27 @@ const OpponentRecommendationModal = ({
       const authDataString = localStorage.getItem("authData");
       const authData = JSON.parse(authDataString || "{}");
       const userId = authData.userId;
+      const userRanking = authData.ranking || "basic";
 
       const formattedStartTime = new Date(startDate).toISOString();
       const formattedEndTime = new Date(endDate).toISOString();
 
       const url = new URL(
-        `https://backend-production-ac5e.up.railway.app/api/users/by-ranking/random/${userId}/table/${tableId}`
+        `https://backend-production-ac5e.up.railway.app/api/users/by-ranking/random/${userId}/tables/${tableId}`
       );
 
       url.searchParams.append("StartTime", formattedStartTime);
       url.searchParams.append("EndTime", formattedEndTime);
+      url.searchParams.append("ranking", userRanking);
+      url.searchParams.append("up", "1");
+      url.searchParams.append("down", "1");
+
+      // Thêm excludedIds vào query params
+      if (invitedOpponents.length > 0) {
+        invitedOpponents.forEach((id) => {
+          url.searchParams.append("excludedIds", id.toString());
+        });
+      }
 
       const response = await fetch(url.toString(), {
         headers: {
@@ -70,7 +138,18 @@ const OpponentRecommendationModal = ({
       }
 
       const data = await response.json();
-      setOpponents(data.matchingOpponents || []);
+
+      const allOpponents = [
+        ...(data.matchingOpponents?.basic || []),
+        ...(data.matchingOpponents?.silver || []),
+        ...(data.matchingOpponents?.gold || []),
+        ...(data.matchingOpponents?.platinum || []),
+        ...(data.matchingOpponents?.intermediate || []),
+        ...(data.matchingOpponents?.advanced || []),
+        ...(data.matchingOpponents?.expert || []),
+      ];
+
+      setOpponents(allOpponents);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "An unknown error occurred"
@@ -79,76 +158,59 @@ const OpponentRecommendationModal = ({
       setLoading(false);
     }
   };
-
   useEffect(() => {
     if (open && !hasFetchedInitialData.current) {
       hasFetchedInitialData.current = true;
       fetchOpponents();
     }
-  }, [open]); // Only depends on open
+  }, [open]);
 
   useEffect(() => {
     if (refreshTrigger && open) {
       fetchOpponents();
     }
-  }, [refreshTrigger]); // Only depends on refreshTrigger
+  }, [refreshTrigger]);
 
   const handleRefresh = () => {
     setRefreshTrigger((prev) => !prev);
   };
 
-  const handleInvite = async (opponentId: number) => {
+  // const handleInvite = (opponent: Opponent) => {
+  //   try {
+  //     setLoading(true);
+
+  //     const updatedOpponents = opponents.map((o) =>
+  //       o.userId === opponent.userId ? { ...o, isInvited: true } : o
+  //     );
+  //     setOpponents(updatedOpponents);
+
+  //     setInvitedOpponents((prev) => [...prev, opponent.userId]);
+
+  //     onInviteSuccess(opponent);
+
+  //     toast.success(`Đã gửi lời mời đến ${opponent.username} thành công!`);
+  //   } catch (err) {
+  //     console.error("Error details:", err);
+  //     setError(err instanceof Error ? err.message : "Lỗi khi gửi lời mời");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+  const handleInvite = (opponent: Opponent) => {
     try {
       setLoading(true);
 
-      const authDataString = localStorage.getItem("authData");
-      if (!authDataString) throw new Error("User not authenticated");
-
-      const authData = JSON.parse(authDataString);
-      const fromUserId = authData.userId;
-
-      const opponent = opponents.find((o) => o.userId === opponentId);
-      if (!opponent) throw new Error("Opponent not found");
-
-      const halfPrice = totalPrice / 2;
-
-      const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/appointmentrequests",
-        {
-          method: "POST",
-          headers: {
-            accept: "*/*",
-            "Content-Type": "application/json-patch+json",
-          },
-          body: JSON.stringify({
-            fromUser: fromUserId,
-            toUser: opponentId,
-            tableId: tableId,
-            startTime: startDate,
-            endTime: endDate,
-            totalPrice: halfPrice,
-          }),
-        }
+      const updatedOpponents = opponents.map((o) =>
+        o.userId === opponent.userId ? { ...o, isInvited: true } : o
       );
+      setOpponents(updatedOpponents);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to send invitation");
-      }
+      // Thêm userId vào danh sách excludedIds
+      setInvitedOpponents((prev) => [...prev, opponent.userId]);
 
-      const responseData = await response.json();
-      console.log("API Response:", responseData);
+      onInviteSuccess(opponent);
 
-      setInvitedOpponents((prev) => [...prev, opponentId]);
       toast.success(`Đã gửi lời mời đến ${opponent.username} thành công!`);
-
-      setOpponents((prev) =>
-        prev.map((o) =>
-          o.userId === opponentId ? { ...o, isInvited: true } : o
-        )
-      );
-
-      onInviteSuccess();
     } catch (err) {
       console.error("Error details:", err);
       setError(err instanceof Error ? err.message : "Lỗi khi gửi lời mời");
@@ -156,7 +218,6 @@ const OpponentRecommendationModal = ({
       setLoading(false);
     }
   };
-
   const translateRanking = (ranking: string) => {
     switch (ranking.toLowerCase()) {
       case "basic":
@@ -167,14 +228,36 @@ const OpponentRecommendationModal = ({
         return "Nâng cao";
       case "expert":
         return "Chuyên gia";
+      case "silver":
+        return "Bạc";
+      case "gold":
+        return "Vàng";
+      case "platinum":
+        return "Bạch kim";
       default:
         return ranking;
     }
   };
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return `${date.getHours()}:${String(date.getMinutes()).padStart(2, "0")}`;
+  const getRankingColor = (ranking: string) => {
+    switch (ranking.toLowerCase()) {
+      case "basic":
+        return "bg-gray-200 text-gray-800";
+      case "silver":
+        return "bg-gray-300 text-gray-800";
+      case "gold":
+        return "bg-yellow-200 text-yellow-800";
+      case "platinum":
+        return "bg-blue-200 text-blue-800";
+      case "intermediate":
+        return "bg-green-200 text-green-800";
+      case "advanced":
+        return "bg-purple-200 text-purple-800";
+      case "expert":
+        return "bg-red-200 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
   };
 
   if (!open) return null;
@@ -182,7 +265,7 @@ const OpponentRecommendationModal = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 text-black">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center border-b p-4">
+        <div className="flex justify-between items-center border-b p-4 sticky top-0 bg-white z-10">
           <h2 className="text-xl font-bold">Gợi ý đối thủ</h2>
           <div className="flex items-center gap-2">
             <button
@@ -203,82 +286,88 @@ const OpponentRecommendationModal = ({
         </div>
 
         <div className="p-4">
-          <p className="text-sm text-gray-600 mb-4">
-            Mời đối thủ phù hợp vào bàn {tableId} từ {formatTime(startDate)} đến{" "}
-            {formatTime(endDate)}
-          </p>
-
-          {loading && opponents.length === 0 ? (
-            <div className="flex justify-center items-center h-40">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-            </div>
+          {loading ? (
+            <div className="text-center text-gray-500 py-4">Đang tải...</div>
           ) : error ? (
-            <div className="text-red-500 text-center p-4">{error}</div>
+            <div className="text-center text-red-500 py-4">{error}</div>
           ) : opponents.length === 0 ? (
-            <div className="text-center p-4 text-gray-500">
-              Không tìm thấy đối thủ phù hợp
-              <Button
-                onClick={handleRefresh}
-                variant="text"
-                className="mt-2 text-blue-500"
-                disabled={loading}
-              >
-                Thử lại
-              </Button>
+            <div className="text-center text-gray-500 py-4">
+              Không tìm thấy đối thủ phù hợp.
             </div>
           ) : (
-            <div className="space-y-3">
-              {opponents.map((opponent) => (
-                <div
-                  key={opponent.userId}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center space-x-3">
+            <>
+              <div className="mb-3 text-sm text-gray-600">
+                <p>
+                  Hiển thị đối thủ phù hợp với hạng{" "}
+                  <span className="font-medium">
+                    {translateRanking(
+                      JSON.parse(localStorage.getItem("authData") || "{}")
+                        .ranking || "basic"
+                    )}
+                  </span>{" "}
+                  của bạn
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {opponents.map((opponent) => (
+                  <div
+                    key={opponent.userId}
+                    className="border rounded-lg p-3 flex items-center gap-3 hover:bg-gray-50 transition-colors"
+                  >
                     {opponent.avatarUrl ? (
                       <Image
                         src={opponent.avatarUrl}
-                        alt={opponent.username}
-                        width={50}
-                        height={50}
-                        className="rounded-full object-cover"
+                        alt={opponent.fullName}
+                        width={40}
+                        height={40}
+                        className="rounded-full object-cover w-10 h-10 flex-shrink-0"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
-                        <User className="text-gray-500" size={24} />
+                      <div className="bg-gray-200 text-gray-500 w-10 h-10 flex items-center justify-center rounded-full flex-shrink-0">
+                        <User size={18} />
                       </div>
                     )}
-                    <div>
-                      <h3 className="font-semibold">{opponent.username}</h3>
-                      <div className="flex space-x-4 text-sm text-gray-600">
-                        <span>Hạng: {translateRanking(opponent.ranking)}</span>
-                        <span>Điểm: {opponent.points.toLocaleString()}</span>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm truncate">
+                        {opponent.fullName || opponent.username}
+                      </h3>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <div
+                          className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${getRankingColor(
+                            opponent.ranking
+                          )}`}
+                        >
+                          {translateRanking(opponent.ranking)}
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {opponent.gender === "male" ? "Nam" : "Nữ"}
+                        </span>
+                        {opponent.points > 0 && (
+                          <span className="text-xs text-gray-500">
+                            {opponent.points} điểm
+                          </span>
+                        )}
                       </div>
                     </div>
+                    <div className="flex-shrink-0">
+                      <Button
+                        onClick={() => handleInvite(opponent)}
+                        disabled={opponent.isInvited || loading}
+                        size="sm"
+                        className={`text-white text-xs px-2.5 py-1 ${
+                          opponent.isInvited
+                            ? "bg-gray-400"
+                            : "bg-blue-500 hover:bg-blue-600"
+                        }`}
+                      >
+                        {opponent.isInvited ? "Đã mời" : "Mời"}
+                      </Button>
+                    </div>
                   </div>
-                  <Button
-                    size="sm"
-                    color={
-                      opponent.isInvited ||
-                      invitedOpponents.includes(opponent.userId)
-                        ? "gray"
-                        : "green"
-                    }
-                    onClick={() => handleInvite(opponent.userId)}
-                    className="px-3 py-1.5"
-                    disabled={
-                      loading ||
-                      opponent.isInvited ||
-                      invitedOpponents.includes(opponent.userId)
-                    }
-                  >
-                    {opponent.isInvited ||
-                    invitedOpponents.includes(opponent.userId)
-                      ? "Đã mời"
-                      : "Mời"}
-                  </Button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>
