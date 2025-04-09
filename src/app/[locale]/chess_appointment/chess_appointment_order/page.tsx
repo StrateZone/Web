@@ -15,7 +15,6 @@ import { UnavailableTablesPopup } from "./UnavailableTablesPopup";
 import { SuccessBookingPopup } from "./BookingSuccess";
 import OpponentRecommendationModal from "./FriendListModal ";
 import { toast } from "react-toastify";
-import Image from "next/image";
 import { ConfirmCancelPopup } from "./ConfirmCancelPopup";
 import { CloseTimeWarningPopup } from "./CloseTimeWarningPopup";
 
@@ -74,11 +73,8 @@ const TableBookingPage = () => {
   const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
   const [selectedStartDate, setSelectedStartDate] = useState<string>("");
   const [selectedEndDate, setSelectedEndDate] = useState<string>("");
-  const [selectedTotalPrice, setselectedTotalPrice] = useState<number | null>(
-    null
-  );
 
-  const handleCancelInvitation = async (
+  const handleCancelInvitation = (
     tableId: number,
     startDate: string,
     endDate: string
@@ -86,165 +82,75 @@ const TableBookingPage = () => {
     try {
       setIsLoading(true);
 
-      // Gọi API hủy tất cả lời mời
-      const success = await cancelTableInvitations(tableId, startDate, endDate);
+      const updatedBookings = chessBookings.map((booking) => {
+        if (
+          booking.tableId === tableId &&
+          booking.startDate === startDate &&
+          booking.endDate === endDate
+        ) {
+          return {
+            ...booking,
+            hasInvitations: false,
+            invitedUsers: [],
+            totalPrice: booking.originalPrice || booking.totalPrice * 2, // Khôi phục giá gốc
+            originalPrice: undefined,
+          };
+        }
+        return booking;
+      });
 
-      if (success) {
-        // Cập nhật lại danh sách booking với giá mới
-        const updatedBookings = await Promise.all(
-          chessBookings.map(async (booking) => {
-            if (
-              booking.tableId === tableId &&
-              booking.startDate === startDate &&
-              booking.endDate === endDate
-            ) {
-              return await updateBookingPrice(booking);
-            }
-            return booking;
-          })
-        );
+      setChessBookings(updatedBookings);
+      localStorage.setItem("chessBookings", JSON.stringify(updatedBookings));
 
-        setChessBookings(updatedBookings);
-        localStorage.setItem("chessBookings", JSON.stringify(updatedBookings));
-
-        toast.info(
-          `Đã hủy tất cả lời mời cho bàn số ${tableId} (${formatTime(startDate)} - ${formatTime(endDate)})`
-        );
-      } else {
-        alert("Có lỗi xảy ra khi hủy lời mời");
-      }
+      toast.info(
+        `Đã hủy tất cả lời mời cho bàn số ${tableId} (${formatTime(startDate)} - ${formatTime(endDate)})`
+      );
     } catch (error) {
       console.error("Error canceling invitations:", error);
-      alert("Có lỗi xảy ra khi hủy lời mời");
+      toast.error("Có lỗi xảy ra khi hủy lời mời");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const checkTableInvitations = async (
-    tableId: number,
-    startDate: string,
-    endDate: string
-  ) => {
-    try {
-      const authDataString = localStorage.getItem("authData");
-      if (!authDataString) return { hasInvitations: false, invitedUsers: [] };
+  const handleInviteSuccess = (opponent: Opponent, tableId: number) => {
+    const invitedUser: InvitedUser = {
+      userId: opponent.userId,
+      username: opponent.username,
+      avatarUrl: opponent.avatarUrl,
+    };
 
-      const authData = JSON.parse(authDataString);
-      const userId = authData.userId;
-
-      const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/users/${userId}/tables/${tableId}?startTime=${encodeURIComponent(startDate)}&endTime=${encodeURIComponent(endDate)}`,
-        {
-          method: "GET",
-          headers: {
-            accept: "*/*",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        console.error(
-          "API Response not OK:",
-          response.status,
-          response.statusText
+    const updatedBookings = chessBookings.map((booking) => {
+      if (booking.tableId === tableId) {
+        const existingInvites = booking.invitedUsers || [];
+        const isAlreadyInvited = existingInvites.some(
+          (u) => u.userId === opponent.userId
         );
-        return { hasInvitations: false, invitedUsers: [] };
-      }
 
-      const data = await response.json();
-      // console.log("[DEBUG] Full API Response:", JSON.stringify(data, null, 2));
+        if (isAlreadyInvited) {
+          return booking;
+        }
 
-      const invitedUsers = data.map((invite: any) => {
-        // Lấy thông tin từ toUserNavigation thay vì toUser
-        const userInfo = invite.toUserNavigation || {};
-        // console.log("User info from toUserNavigation:", userInfo);
+        const newInvitedUsers = [...existingInvites, invitedUser];
+        const hasInvitations = newInvitedUsers.length > 0;
+
+        // Chỉ giảm giá nếu đây là lời mời đầu tiên
+        const shouldApplyDiscount = existingInvites.length === 0;
 
         return {
-          userId: userInfo.userId || 0,
-          username: userInfo.username || "Người chơi",
-          avatarUrl: userInfo.avatarUrl || null,
+          ...booking,
+          invitedUsers: newInvitedUsers,
+          hasInvitations,
+          originalPrice: shouldApplyDiscount
+            ? booking.totalPrice
+            : booking.originalPrice,
+          totalPrice: shouldApplyDiscount
+            ? booking.totalPrice * 0.5
+            : booking.totalPrice,
         };
-      });
-
-      return {
-        hasInvitations: data.length > 0,
-        invitedUsers,
-      };
-    } catch (error) {
-      console.error("Error in checkTableInvitations:", error);
-      return { hasInvitations: false, invitedUsers: [] };
-    }
-  };
-
-  const cancelTableInvitations = async (
-    tableId: number,
-    startDate: string,
-    endDate: string
-  ) => {
-    try {
-      const authDataString = localStorage.getItem("authData");
-      if (!authDataString) return false;
-
-      const authData = JSON.parse(authDataString);
-      const userId = authData.userId;
-
-      const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/cancel-all/users/${userId}/tables/${tableId}?startTime=${encodeURIComponent(startDate)}&endTime=${encodeURIComponent(endDate)}`,
-        {
-          method: "PUT",
-          headers: {
-            accept: "*/*",
-          },
-        }
-      );
-
-      return response.ok;
-    } catch (error) {
-      console.error("Error canceling invitations:", error);
-      return false;
-    }
-  };
-
-  const updateBookingPrice = async (booking: ChessBooking) => {
-    const { hasInvitations, invitedUsers } = await checkTableInvitations(
-      booking.tableId,
-      booking.startDate,
-      booking.endDate
-    );
-
-    if (hasInvitations && !booking.hasInvitations) {
-      return {
-        ...booking,
-        originalPrice: booking.totalPrice,
-        totalPrice: booking.totalPrice * 0.5,
-        hasInvitations: true,
-        invitedUsers,
-      };
-    } else if (!hasInvitations && booking.hasInvitations) {
-      return {
-        ...booking,
-        totalPrice: booking.originalPrice || booking.totalPrice * 2,
-        hasInvitations: false,
-        originalPrice: undefined,
-        invitedUsers: [],
-      };
-    }
-    return {
-      ...booking,
-      invitedUsers: invitedUsers || booking.invitedUsers || [],
-    };
-  };
-
-  const handleInviteSuccess = async (tableId: number) => {
-    const updatedBookings = await Promise.all(
-      chessBookings.map(async (booking) => {
-        if (booking.tableId === tableId) {
-          return await updateBookingPrice(booking);
-        }
-        return booking;
-      })
-    );
+      }
+      return booking;
+    });
 
     setChessBookings(updatedBookings);
     localStorage.setItem("chessBookings", JSON.stringify(updatedBookings));
@@ -256,26 +162,22 @@ const TableBookingPage = () => {
     endDate: string
   ) => {
     try {
-      // Kiểm tra xem có lời mời nào không
-      const { hasInvitations, invitedUsers } = await checkTableInvitations(
-        tableId,
-        startDate,
-        endDate
+      // Check if there are any invited users
+      const booking = chessBookings.find(
+        (b) =>
+          b.tableId === tableId &&
+          b.startDate === startDate &&
+          b.endDate === endDate
       );
 
-      // Nếu có lời mời, hiển thị popup cảnh báo
-      if (hasInvitations && invitedUsers && invitedUsers.length > 0) {
+      if (booking?.invitedUsers && booking.invitedUsers.length > 0) {
         const isConfirmed = await ConfirmCancelPopup();
         if (!isConfirmed) {
-          return; // Không tiếp tục nếu người dùng không xác nhận
+          return;
         }
-      } else {
-        // Hiển thị popup xác nhận thông thường nếu không có lời mời
       }
-      // Hủy tất cả lời mời nếu có
-      await cancelTableInvitations(tableId, startDate, endDate);
 
-      // Xóa bàn khỏi danh sách
+      // Remove the table from the list
       const updatedBookings = chessBookings.filter(
         (booking) =>
           !(
@@ -294,26 +196,15 @@ const TableBookingPage = () => {
   };
 
   useEffect(() => {
-    const loadBookings = async () => {
-      const savedBookings = localStorage.getItem("chessBookings");
-      if (savedBookings) {
-        try {
-          const parsedBookings: ChessBooking[] = JSON.parse(savedBookings);
-
-          const updatedBookings = await Promise.all(
-            parsedBookings.map(async (booking) => {
-              return await updateBookingPrice(booking);
-            })
-          );
-
-          setChessBookings(updatedBookings);
-        } catch (error) {
-          console.error("Error parsing data from localStorage:", error);
-        }
+    const savedBookings = localStorage.getItem("chessBookings");
+    if (savedBookings) {
+      try {
+        const parsedBookings: ChessBooking[] = JSON.parse(savedBookings);
+        setChessBookings(parsedBookings);
+      } catch (error) {
+        console.error("Error parsing data from localStorage:", error);
       }
-    };
-
-    loadBookings();
+    }
   }, []);
 
   const formatTime = (dateString: string) => {
@@ -378,13 +269,11 @@ const TableBookingPage = () => {
   const inviteFriend = (
     tableId: number,
     startDate: string,
-    endDate: string,
-    totalPrice: number
+    endDate: string
   ) => {
     setSelectedTableId(tableId);
     setSelectedStartDate(startDate);
     setSelectedEndDate(endDate);
-    setselectedTotalPrice(totalPrice);
     setShowOpponentModal(true);
   };
 
@@ -405,7 +294,7 @@ const TableBookingPage = () => {
         closeBookings: closeToNowBookings.map((b) => ({
           tableId: b.tableId,
           startTime: formatTime(b.startDate),
-          gameType: b.gameType.typeName, // Extract typeName as a string
+          gameType: b.gameType.typeName,
           roomType: b.roomType,
         })),
       });
@@ -436,7 +325,9 @@ const TableBookingPage = () => {
           tableId: booking.tableId,
           scheduleTime: booking.startDate,
           endTime: booking.endDate,
+          invitedUsers: booking.invitedUsers?.map((user) => user.userId) || [],
         })),
+
         totalPrice: finalPrice,
       };
 
@@ -724,8 +615,7 @@ const TableBookingPage = () => {
                           inviteFriend(
                             booking.tableId,
                             booking.startDate,
-                            booking.endDate,
-                            booking.totalPrice
+                            booking.endDate
                           )
                         }
                         className="text-blue-500 hover:text-blue-700 p-2"
@@ -798,35 +688,10 @@ const TableBookingPage = () => {
             </div>
 
             <div className="mb-6 flex justify-between items-center">
-              {/* <p className="font-bold text-xl">Nhập Mã Giảm Giá</p> */}
               <p className="font-bold text-xl">
                 Thành tiền: {finalPrice.toLocaleString()}đ
               </p>
             </div>
-
-            {/* <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <Input
-                type="text"
-                placeholder="Nhập coupon..."
-                value={coupon}
-                onChange={(e) => setCoupon(e.target.value)}
-                className="flex-1 text-base h-12"
-                crossOrigin="anonymous"
-              />
-              <Button
-                onClick={applyCoupon}
-                color="amber"
-                className="py-2 px-8 text-small"
-              >
-                Áp dụng
-              </Button>
-              <Button
-                onClick={() => setShowCouponModal(true)}
-                className="py-0 px-10 text-small bg-green-600"
-              >
-                Mã giảm giá
-              </Button>
-            </div> */}
 
             <div className="flex justify-end">
               <Button
@@ -879,12 +744,14 @@ const TableBookingPage = () => {
           startDate={selectedStartDate}
           endDate={selectedEndDate}
           tableId={selectedTableId}
-          totalPrice={selectedTotalPrice ?? 0}
-          open={showOpponentModal}
+          open={showOpponentModal} // ✅ Truyền open
           onClose={() => setShowOpponentModal(false)}
-          onInviteSuccess={() => handleInviteSuccess(selectedTableId)}
+          onInviteSuccess={(opponent) =>
+            handleInviteSuccess(opponent, selectedTableId)
+          }
         />
       )}
+
       <Footer />
     </div>
   );

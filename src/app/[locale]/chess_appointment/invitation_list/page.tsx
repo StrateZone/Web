@@ -87,6 +87,7 @@ interface AppointmentRequest {
     | "payment_required"
     | "await_appointment_creation";
   startTime: string;
+  tablesAppointmentStatus: string;
   endTime: string;
   expireAt: string;
   createdAt: string;
@@ -107,6 +108,7 @@ const AppointmentRequestsPage = () => {
   const localActive = useLocale();
   const { locale } = useParams();
   const [requests, setRequests] = useState<AppointmentRequest[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAccepting, setIsAccepting] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
@@ -198,32 +200,7 @@ const AppointmentRequestsPage = () => {
     fetchAppointmentRequests(currentPage);
   }, [fetchAppointmentRequests]);
 
-  const handleAcceptRequest = async (requestId: number) => {
-    setIsAccepting(true);
-    try {
-      const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/accept/${requestId}`,
-        {
-          method: "PUT",
-          headers: {
-            accept: "*/*",
-          },
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to accept appointment request");
-
-      const data = await response.json();
-      console.log("Accept response:", data);
-      await fetchAppointmentRequests(currentPage);
-    } catch (error) {
-      console.error("Error:", error);
-      alert("Error: " + (error as Error).message);
-    } finally {
-      setIsAccepting(false);
-    }
-  };
-  const checkCancelCondition = async (requestId: number) => {
+  const rejectAppointment = async (requestId: number) => {
     setIsRejecting(true);
     try {
       const response = await fetch(
@@ -587,7 +564,149 @@ const AppointmentRequestsPage = () => {
         return "Unknown";
     }
   };
+  function toLocalISOString(date: Date) {
+    const tzOffset = date.getTimezoneOffset() * 60000;
+    const localDate = new Date(date.getTime() - tzOffset);
+    return localDate.toISOString().slice(0, -1);
+  }
 
+  const checkCancelCondition = async (tablesAppointmentId: number) => {
+    try {
+      setIsLoading(true);
+      const currentTime = toLocalISOString(new Date()); // Sử dụng hàm này
+
+      const response = await fetch(
+        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Không thể kiểm tra điều kiện hủy");
+      }
+
+      const data = await response.json();
+      console.log("API Response:", data);
+      setRefundInfo({
+        message: data.message,
+        refundAmount: data.refundAmount,
+        cancellationTime: data.cancellationTime,
+        cancellation_Block_TimeGate: data.cancellation_Block_TimeGate,
+        cancellation_PartialRefund_TimeGate:
+          data.cancellation_PartialRefund_TimeGate,
+      });
+      setCurrentCancellingId(tablesAppointmentId);
+      setShowCancelConfirm(true);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Lỗi khi kiểm tra điều kiện hủy"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  // const confirmCancelAppointment = async () => {
+  //   const authData = JSON.parse(localStorage.getItem("authData") || "{}");
+  //   const userId = authData.userId;
+
+  //   if (!currentCancellingId || !userId) {
+  //     console.error("Missing currentCancellingId or userId");
+  //     return;
+  //   }
+
+  //   try {
+  //     setIsLoading(true);
+  //     const response = await fetch(
+  //       `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel/${currentCancellingId}/users/${userId}`,
+  //       {
+  //         method: "PUT",
+  //         headers: { "Content-Type": "application/json" },
+  //       }
+  //     );
+  //     const responseData = await response.json();
+  //     console.log("API Response:", responseData);
+  //     if (!response.ok) throw new Error("Hủy đơn đặt không thành công");
+
+  //     // ✅ Cập nhật lại số dư ví
+  //     dispatch(fetchWallet(userId));
+
+  //     // Cập nhật UI trước khi hiển thị popup
+  //     await fetchAppointmentRequests();
+  //     setShowCancelConfirm(false);
+  //     setCurrentCancellingId(null);
+  //     if (selectedRequest) setSelectedRequest(null);
+
+  //     // Hiển thị popup với số tiền hoàn lại
+  //     const refundAmount = responseData.price;
+  //     const isConfirmed = await SuccessCancelPopup(refundAmount);
+
+  //     // Điều hướng dựa trên lựa chọn
+  //     if (isConfirmed) {
+  //       router.push(`/${localActive}/chess_appointment/invitation_list`); // Điều chỉnh route theo nhu cầu
+  //     } else {
+  //       // Nếu người dùng chọn "Đặt bàn mới"
+  //       router.push(`/${localActive}/chess_appointment/chess_category`);
+  //     }
+  //   } catch (err) {
+  //     setError(err instanceof Error ? err.message : "Lỗi không xác định");
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+  const confirmCancelAppointment = async () => {
+    const authData = JSON.parse(localStorage.getItem("authData") || "{}");
+    const userId = authData.userId;
+
+    if (!currentCancellingId || !userId) {
+      console.error("Missing currentCancellingId or userId");
+      setShowCancelConfirm(false); // Đóng popup nếu có lỗi
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await fetch(
+        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel/${currentCancellingId}/users/${userId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      const responseData = await response.json();
+      console.log("API Response:", responseData);
+
+      if (!response.ok) {
+        setShowCancelConfirm(false); // Đóng popup nếu có lỗi
+        throw new Error("Hủy đơn đặt không thành công");
+      }
+
+      // ✅ Cập nhật lại số dư ví
+      await dispatch(fetchWallet(userId));
+
+      // Cập nhật UI trước khi hiển thị popup
+      await fetchAppointmentRequests();
+
+      // Đóng popup xác nhận trước khi hiển thị popup thành công
+      setShowCancelConfirm(false);
+      setCurrentCancellingId(null);
+      if (selectedRequest) setSelectedRequest(null);
+
+      // Hiển thị popup với số tiền hoàn lại
+      const refundAmount = responseData.price;
+      const isConfirmed = await SuccessCancelPopup(refundAmount);
+
+      // Điều hướng dựa trên lựa chọn
+      if (isConfirmed) {
+        router.push(`/${localActive}/chess_appointment/invitation_list`);
+      } else {
+        router.push(`/${localActive}/chess_appointment/chess_category`);
+      }
+    } catch (err) {
+      setShowCancelConfirm(false); // Đảm bảo popup luôn được đóng khi có lỗi
+      setError(err instanceof Error ? err.message : "Lỗi không xác định");
+    } finally {
+      setIsLoading(false);
+    }
+  };
   return (
     <div>
       <div>
@@ -994,30 +1113,28 @@ const AppointmentRequestsPage = () => {
                                 <Button
                                   className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[100px]"
                                   onClick={() =>
-                                    handleAcceptRequest(request.id)
+                                    handleProcessPayment(request.id)
                                   }
                                   disabled={isAccepting}
                                 >
                                   {isAccepting ? (
                                     <>
                                       <Loader2 className="animate-spin mr-1 h-3 w-3" />
-                                      Processing...
+                                      Đang Xử Lý
                                     </>
                                   ) : (
-                                    "Chấp Nhận"
+                                    "Chấp Nhận Và Thanh Toán"
                                   )}
                                 </Button>
                                 <Button
                                   className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[80px]"
-                                  onClick={() =>
-                                    checkCancelCondition(request.id)
-                                  }
+                                  onClick={() => rejectAppointment(request.id)}
                                   disabled={isRejecting}
                                 >
                                   {isRejecting ? (
                                     <>
                                       <Loader2 className="animate-spin mr-1 h-3 w-3" />
-                                      Processing...
+                                      Đang Xử Lý
                                     </>
                                   ) : (
                                     "Từ Chối"
@@ -1025,27 +1142,32 @@ const AppointmentRequestsPage = () => {
                                 </Button>
                               </>
                             )}
-
-                          {(request.status === "await_appointment_creation" ||
-                            request.status === "payment_required") &&
-                            request.appointmentId &&
-                            !isExpired(request.expireAt) && (
-                              <Button
-                                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[100px]"
-                                onClick={() => handleProcessPayment(request.id)}
-                                disabled={isProcessingPayment}
-                              >
-                                {isProcessingPayment ? (
-                                  <>
-                                    <Loader2 className="animate-spin mr-1 h-3 w-3" />
-                                    Processing...
-                                  </>
-                                ) : (
-                                  "Thanh Toán Ngay"
-                                )}
-                              </Button>
+                          {request.status === "accepted" &&
+                            !isExpired(request.expireAt) &&
+                            (request.tablesAppointmentStatus === "confirmed" ||
+                              request.tablesAppointmentStatus ===
+                                "pending") && (
+                              <>
+                                <Button
+                                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[80px]"
+                                  disabled={isRejecting}
+                                  onClick={() =>
+                                    checkCancelCondition(
+                                      request.tablesAppointmentId!
+                                    )
+                                  }
+                                >
+                                  {isRejecting ? (
+                                    <>
+                                      <Loader2 className="animate-spin mr-1 h-3 w-3" />
+                                      Đang Xử Lý
+                                    </>
+                                  ) : (
+                                    "Hủy"
+                                  )}
+                                </Button>
+                              </>
                             )}
-
                           <Button
                             className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-sm"
                             onClick={() => handleViewDetails(request)}
@@ -1080,7 +1202,7 @@ const AppointmentRequestsPage = () => {
             setShowCancelConfirm(false);
             setCurrentCancellingId(null);
           }}
-          onConfirm={confirmCancelRequest}
+          onConfirm={confirmCancelAppointment}
           refundInfo={refundInfo}
           isLoading={isCancelling}
         />
