@@ -301,7 +301,11 @@ function Page() {
           display: "Sắp diễn ra",
         };
       case "expired":
-        return { bg: "bg-gray-100", text: "text-gray-800", display: "Hết hạn" };
+        return {
+          bg: "bg-gray-100",
+          text: "text-gray-800",
+          display: "Hết hạn",
+        };
       case "completed":
         return {
           bg: "bg-purple-100",
@@ -309,15 +313,29 @@ function Page() {
           display: "Hoàn thành",
         };
       case "cancelled":
-        return { bg: "bg-red-100", text: "text-red-800", display: "Đã hủy" };
+        return {
+          bg: "bg-red-100",
+          text: "text-red-800",
+          display: "Đã hủy",
+        };
       case "refunded":
         return {
           bg: "bg-indigo-100",
           text: "text-indigo-800",
           display: "Đã hoàn tiền",
         };
+      case "incompleted":
+        return {
+          bg: "bg-orange-100",
+          text: "text-orange-800",
+          display: "Chưa hoàn tất",
+        };
       default:
-        return { bg: "bg-gray-100", text: "text-gray-800", display: status };
+        return {
+          bg: "bg-gray-100",
+          text: "text-gray-800",
+          display: status,
+        };
     }
   };
 

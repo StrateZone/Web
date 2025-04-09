@@ -14,6 +14,8 @@ interface Notification {
   tablesAppointmentId?: number | null;
   orderId?: number | null;
   tournamentId?: number | null;
+  type: number; // 0-4
+  status: number; // 1: unread, 0: read
 }
 
 const NotificationDropdown = () => {
@@ -24,6 +26,7 @@ const NotificationDropdown = () => {
   const [expandedNotifications, setExpandedNotifications] = useState<number[]>(
     []
   );
+  const [unreadCount, setUnreadCount] = useState(0);
   const router = useRouter();
   const { locale } = useParams();
 
@@ -42,11 +45,11 @@ const NotificationDropdown = () => {
 
         const userId = getUserId();
         if (!userId) {
-          throw new Error("User ID not found");
+          return; // Không throw error nếu không có userId
         }
 
         const response = await fetch(
-          `https://backend-production-ac5e.up.railway.app/api/notifications/users/${userId}?page-number=1&page-size=5`,
+          `https://backend-production-ac5e.up.railway.app/api/notifications/users/${userId}?page-number=1&page-size=8`,
           {
             headers: {
               Accept: "application/json",
@@ -56,11 +59,10 @@ const NotificationDropdown = () => {
         );
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          return; // Không throw error nếu response không ok
         }
 
         const data = await response.json();
-        console.log("Fetched notifications:", data);
         const latestNotifications = data.pagedList.map((item: any) => ({
           id: item.id,
           title: item.title,
@@ -69,54 +71,74 @@ const NotificationDropdown = () => {
           tablesAppointmentId: item.tablesAppointmentId,
           orderId: item.orderId,
           tournamentId: item.tournamentId,
+          type: item.type,
+          status: item.status,
         }));
 
         setNotifications(latestNotifications);
+        const unread = latestNotifications.filter((n) => n.status === 1).length;
+        setUnreadCount(unread);
       } catch (error) {
         console.error("Error fetching notifications:", error);
-        setError("Failed to load notifications");
+        // Không set error state để không hiển thị thông báo lỗi
       } finally {
         setLoading(false);
       }
     };
 
-    if (isOpen) {
-      fetchNotifications();
-    }
+    fetchNotifications();
   }, [isOpen]);
 
   const toggleDropdown = () => {
     setIsOpen(!isOpen);
     if (!isOpen) {
-      setExpandedNotifications([]); // Reset expanded state khi mở dropdown mới
+      setExpandedNotifications([]);
     }
   };
 
-  const toggleExpand = (id: number) => {
+  const toggleExpand = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
     setExpandedNotifications((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
   };
 
-  const handleNotificationClick = (notification: Notification) => {
-    setIsOpen(false);
-    markAsRead(notification.id);
-
-    if (notification.tablesAppointmentId) {
-      router.push(
-        `/${locale}/chess_appointment/${notification.tablesAppointmentId}`
+  const handleNotificationClick = async (notification: Notification) => {
+    if (notification.status === 1) {
+      await markAsRead(notification.id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notification.id ? { ...n, status: 0 } : n))
       );
-    } else if (notification.orderId) {
-      router.push(`/${locale}/orders/${notification.orderId}`);
-    } else if (notification.tournamentId) {
-      router.push(`/${locale}/tournament/${notification.tournamentId}`);
+      setUnreadCount((prev) => prev - 1);
+    }
+
+    setIsOpen(false);
+
+    switch (notification.type) {
+      case 0:
+        router.push(`/${locale}/appointment_history`);
+        break;
+      case 1:
+      // router.push(`/${locale}/orders/${notification.orderId}`);
+      // break;
+      case 2:
+        router.push(`/${locale}/appointment_history`);
+        break;
+      case 3:
+        router.push(`/${locale}/chess_appointment/invitation_list`);
+        break;
+      case 4:
+        router.push(`/${locale}/chess_appointment/send_invitation_list`);
+        break;
+      default:
+        router.push(`/${locale}/appointment_history`);
     }
   };
 
   const markAsRead = async (notificationId: number) => {
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/notifications/${notificationId}/read`,
+        `https://backend-production-ac5e.up.railway.app/api/notifications/read/${notificationId}`,
         {
           method: "PUT",
           headers: {
@@ -134,13 +156,34 @@ const NotificationDropdown = () => {
     }
   };
 
-  // Hàm kiểm tra nội dung có dài không (quá 100 ký tự)
-  const isLongContent = (content: string) => content.length > 100;
+  const markAllAsRead = async () => {
+    try {
+      const userId = getUserId();
+      if (!userId) return;
 
-  // Hàm rút gọn nội dung
-  const truncateContent = (content: string) => {
-    return content.length > 100 ? `${content.substring(0, 100)}...` : content;
+      const response = await fetch(
+        `https://backend-production-ac5e.up.railway.app/api/notifications/users/${userId}/mark-all-as-read`,
+        {
+          method: "PUT",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        setNotifications((prev) => prev.map((n) => ({ ...n, status: 0 })));
+        setUnreadCount(0);
+      }
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+    }
   };
+
+  const isLongContent = (content: string) => content.length > 100;
+  const truncateContent = (content: string) =>
+    content.length > 100 ? `${content.substring(0, 100)}...` : content;
 
   return (
     <div className="relative">
@@ -149,9 +192,9 @@ const NotificationDropdown = () => {
         className="p-1 rounded-full hover:bg-gray-200 focus:outline-none relative"
       >
         <BellIcon className="h-6 w-6 text-blue-700" />
-        {notifications.length > 0 && (
+        {unreadCount > 0 && (
           <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
-            {notifications.length}
+            {unreadCount}
           </span>
         )}
       </button>
@@ -159,16 +202,22 @@ const NotificationDropdown = () => {
       {isOpen && (
         <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg overflow-hidden z-50">
           <div className="py-1">
-            <div className="px-4 py-2 border-b border-gray-200">
+            <div className="px-4 py-2 border-b border-gray-200 flex justify-between items-center">
               <Typography variant="h6" className="font-bold text-gray-800">
                 Thông báo
               </Typography>
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="text-blue-500 text-sm hover:underline"
+                >
+                  Đánh dấu tất cả đã đọc
+                </button>
+              )}
             </div>
 
             {loading ? (
               <div className="px-4 py-4 text-center">Đang tải...</div>
-            ) : error ? (
-              <div className="px-4 py-4 text-center text-red-500">{error}</div>
             ) : notifications.length === 0 ? (
               <div className="px-4 py-4 text-center text-gray-500">
                 Không có thông báo mới
@@ -178,15 +227,13 @@ const NotificationDropdown = () => {
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className="px-4 py-3 border-b border-gray-100"
+                    className={`px-4 py-3 border-b border-gray-100 cursor-pointer ${notification.status === 1 ? "bg-blue-50" : ""}`}
+                    onClick={() => handleNotificationClick(notification)}
                   >
-                    <div
-                      className="cursor-pointer"
-                      onClick={() => handleNotificationClick(notification)}
-                    >
+                    <div>
                       <Typography
                         variant="small"
-                        className="font-semibold text-gray-800"
+                        className={`font-semibold ${notification.status === 1 ? "text-blue-800" : "text-gray-800"}`}
                       >
                         {notification.title}
                       </Typography>
@@ -199,10 +246,7 @@ const NotificationDropdown = () => {
                       </Typography>
                       {isLongContent(notification.content) && (
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleExpand(notification.id);
-                          }}
+                          onClick={(e) => toggleExpand(notification.id, e)}
                           className="text-blue-500 text-xs mt-1 hover:underline focus:outline-none"
                         >
                           {expandedNotifications.includes(notification.id)
@@ -211,12 +255,17 @@ const NotificationDropdown = () => {
                         </button>
                       )}
                     </div>
-                    <Typography
-                      variant="small"
-                      className="text-xs text-gray-400 mt-1"
-                    >
-                      {new Date(notification.createdAt).toLocaleString()}
-                    </Typography>
+                    <div className="flex justify-between items-center mt-1">
+                      <Typography
+                        variant="small"
+                        className="text-xs text-gray-400"
+                      >
+                        {new Date(notification.createdAt).toLocaleString()}
+                      </Typography>
+                      {notification.status === 1 && (
+                        <span className="inline-block w-2 h-2 rounded-full bg-blue-500"></span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

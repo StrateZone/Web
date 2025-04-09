@@ -380,6 +380,14 @@ const AppointmentRequestsPage = () => {
       hour12: false, // dùng định dạng 24 giờ
     });
   };
+  const formatDateTimeWithoutHour = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
 
   const formatTimeRange = (start: string, end: string) => {
     const startTime = new Date(start).toLocaleTimeString("vi-VN", {
@@ -881,13 +889,19 @@ const AppointmentRequestsPage = () => {
                             <strong>Số Bàn:</strong> {request.tableId}
                           </p>
                           <p className="text-gray-600 text-sm">
-                            {formatDateTime(request.startTime)}
+                            <strong>Ngày Chơi Cờ:</strong>{" "}
+                            {formatDateTimeWithoutHour(request.startTime)}
                           </p>
                           <p className="text-gray-600 text-sm">
+                            <strong>Giờ Bắt Đầu Và Kết Thúc</strong>{" "}
                             {formatTimeRange(
                               request.startTime,
                               request.endTime
                             )}
+                          </p>
+                          <p className="text-gray-600 text-sm">
+                            <strong>Số Tiền Cần Trả</strong>{" "}
+                            {request.totalPrice?.toLocaleString()} VND
                           </p>
                         </div>
                       </div>

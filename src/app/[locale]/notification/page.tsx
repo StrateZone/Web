@@ -5,6 +5,7 @@ import { Typography, Button } from "@material-tailwind/react";
 import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
+import { DefaultPagination } from "@/components/pagination";
 
 interface Notification {
   id: number;
@@ -14,14 +15,20 @@ interface Notification {
   tablesAppointmentId?: number | null;
   orderId?: number | null;
   tournamentId?: number | null;
+  type: number; // 0-4
+  status: number; // 1: unread, 0: read
 }
 
 const NotificationsPage = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [expandedNotifications, setExpandedNotifications] = useState<number[]>(
+    []
+  );
   const { locale } = useParams();
   const router = useRouter();
 
@@ -40,11 +47,11 @@ const NotificationsPage = () => {
 
         const userId = getUserId();
         if (!userId) {
-          throw new Error("User ID not found");
+          return;
         }
 
         const response = await fetch(
-          `https://backend-production-ac5e.up.railway.app/api/notifications/users/${userId}?page-number=${page}&page-size=10`,
+          `https://backend-production-ac5e.up.railway.app/api/notifications/users/${userId}?page-number=${currentPage}&page-size=10`,
           {
             headers: {
               Accept: "application/json",
@@ -54,36 +61,46 @@ const NotificationsPage = () => {
         );
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          return;
         }
 
         const data = await response.json();
 
-        setNotifications(data.pagedList);
+        const formattedNotifications = data.pagedList.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          content: item.content,
+          createdAt: item.createdAt,
+          tablesAppointmentId: item.tablesAppointmentId,
+          orderId: item.orderId,
+          tournamentId: item.tournamentId,
+          type: item.type,
+          status: item.status,
+        }));
+
+        setNotifications(formattedNotifications);
         setTotalPages(data.totalPages);
+        setTotalCount(data.totalCount);
       } catch (error) {
         console.error("Error fetching notifications:", error);
-        setError("Failed to load notifications");
       } finally {
         setLoading(false);
       }
     };
 
     fetchAllNotifications();
-  }, [page]);
+  }, [currentPage]);
 
-  const handlePrevPage = () => {
-    if (page > 1) setPage(page - 1);
-  };
-
-  const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
   };
 
   const markAsRead = async (notificationId: number) => {
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/notifications/${notificationId}/read`,
+        `https://backend-production-ac5e.up.railway.app/api/notifications/read/${notificationId}`,
         {
           method: "PUT",
           headers: {
@@ -101,19 +118,67 @@ const NotificationsPage = () => {
     }
   };
 
-  const handleNotificationClick = (notification: Notification) => {
-    markAsRead(notification.id);
+  const markAllAsRead = async () => {
+    try {
+      const userId = getUserId();
+      if (!userId) return;
 
-    if (notification.tablesAppointmentId) {
-      router.push(
-        `/${locale}/chess_appointment/${notification.tablesAppointmentId}`
+      const response = await fetch(
+        `https://backend-production-ac5e.up.railway.app/api/notifications/users/${userId}/mark-all-as-read`,
+        {
+          method: "PUT",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
       );
-    } else if (notification.orderId) {
-      router.push(`/${locale}/orders/${notification.orderId}`);
-    } else if (notification.tournamentId) {
-      router.push(`/${locale}/tournament/${notification.tournamentId}`);
-    } else {
-      router.push(`/${locale}/notification/${notification.id}`);
+
+      if (response.ok) {
+        setNotifications((prev) => prev.map((n) => ({ ...n, status: 0 })));
+      }
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+    }
+  };
+
+  const toggleExpand = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedNotifications((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const isLongContent = (content: string) => content.length > 100;
+  const truncateContent = (content: string) =>
+    content.length > 100 ? `${content.substring(0, 100)}...` : content;
+
+  const handleNotificationClick = async (notification: Notification) => {
+    if (notification.status === 1) {
+      await markAsRead(notification.id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notification.id ? { ...n, status: 0 } : n))
+      );
+    }
+
+    switch (notification.type) {
+      case 0:
+        router.push(`/${locale}/appointment_history`);
+        break;
+      case 1:
+        // router.push(`/${locale}/orders/${notification.orderId}`);
+        break;
+      case 2:
+        router.push(`/${locale}/appointment_history`);
+        break;
+      case 3:
+        router.push(`/${locale}/invitation_list`);
+        break;
+      case 4:
+        router.push(`/${locale}/chess_appointment/send_invitation_list`);
+        break;
+      default:
+        router.push(`/${locale}/chess_appointment/appointment_history`);
     }
   };
 
@@ -139,57 +204,86 @@ const NotificationsPage = () => {
           </div>
         </div>
         <div className="container mx-auto py-8 text-black">
-          <Typography variant="h2" className="mb-6">
-            Thông báo
-          </Typography>
+          <div className="flex justify-between items-center mb-6">
+            <Typography variant="h2">Thông báo</Typography>
+            <Button
+              color="blue"
+              size="sm"
+              onClick={markAllAsRead}
+              disabled={!notifications.some((n) => n.status === 1)}
+            >
+              Đánh dấu tất cả đã đọc
+            </Button>
+          </div>
 
           {loading ? (
             <div className="text-center py-8">Đang tải thông báo...</div>
-          ) : error ? (
-            <div className="text-center py-8 text-red-500">{error}</div>
           ) : notifications.length === 0 ? (
             <div className="text-center py-8">
               <Typography variant="h5">Không có thông báo</Typography>
             </div>
           ) : (
-            <div className="space-y-4">
-              {notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => handleNotificationClick(notification)}
-                >
-                  <Typography variant="h5" className="font-semibold">
-                    {notification.title}
-                  </Typography>
-                  <Typography className="mt-2 text-gray-700">
-                    {notification.content}
-                  </Typography>
-                  <Typography className="mt-2 text-sm text-gray-500">
-                    {new Date(notification.createdAt).toLocaleString()}
-                  </Typography>
-                </div>
-              ))}
-
-              <div className="flex justify-between items-center mt-6">
-                <Button
-                  onClick={handlePrevPage}
-                  disabled={page === 1}
-                  variant="outlined"
-                >
-                  Trước
-                </Button>
-                <Typography>
-                  Trang {page} / {totalPages}
-                </Typography>
-                <Button
-                  onClick={handleNextPage}
-                  disabled={page === totalPages}
-                  variant="outlined"
-                >
-                  Sau
-                </Button>
+            <div>
+              <div className="space-y-4 mb-6">
+                {notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer ${
+                      notification.status === 1
+                        ? "bg-blue-50 border-blue-200"
+                        : "border-gray-200"
+                    }`}
+                    onClick={() => handleNotificationClick(notification)}
+                  >
+                    <div className="flex justify-between items-start">
+                      <Typography
+                        variant="h5"
+                        className={`font-semibold ${
+                          notification.status === 1
+                            ? "text-blue-800"
+                            : "text-gray-800"
+                        }`}
+                      >
+                        {notification.title}
+                      </Typography>
+                      {notification.status === 1 && (
+                        <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mt-2"></span>
+                      )}
+                    </div>
+                    <div className="mt-2">
+                      <Typography className="text-gray-700">
+                        {expandedNotifications.includes(notification.id)
+                          ? notification.content
+                          : truncateContent(notification.content)}
+                      </Typography>
+                      {isLongContent(notification.content) && (
+                        <button
+                          onClick={(e) => toggleExpand(notification.id, e)}
+                          className="text-blue-500 text-sm mt-1 hover:underline focus:outline-none"
+                        >
+                          {expandedNotifications.includes(notification.id)
+                            ? "Thu gọn"
+                            : "Xem thêm"}
+                        </button>
+                      )}
+                    </div>
+                    <Typography className="mt-2 text-sm text-gray-500">
+                      {new Date(notification.createdAt).toLocaleString()}
+                    </Typography>
+                  </div>
+                ))}
               </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center mt-8">
+                  <DefaultPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
