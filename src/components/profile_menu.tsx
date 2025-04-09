@@ -80,7 +80,7 @@ const useProfileMenu = () => {
   const getMenuConfig = () =>
     menuConfig.map((item) => ({
       ...item,
-      onClick: item.isLogout ? handleLogout : null,
+      onClick: item.isLogout ? handleLogout : undefined,
       items: item.items?.map((subItem) => ({
         ...subItem,
         onClick: () => router.push(`/${localActive}/${subItem.path}`),
@@ -148,9 +148,10 @@ const SubMenu = ({
         onClick={menu.isLogout ? menu.onClick : () => setOpen(!open)}
       >
         <div className="flex items-center gap-2">
-          {React.createElement(menu.icon, {
-            className: `h-4 w-4 ${menu.isLogout ? "text-red-500" : ""}`,
-          })}
+          {menu.icon &&
+            React.createElement(menu.icon, {
+              className: `h-4 w-4 ${menu.isLogout ? "text-red-500" : ""}`,
+            })}
           <Typography
             as="span"
             variant="small"
