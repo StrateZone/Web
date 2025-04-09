@@ -90,7 +90,16 @@ const useProfileMenu = () => {
   return { getMenuConfig };
 };
 
-const SubMenuItem = ({ item, onClose }) => {
+type SubMenuItemProps = {
+  item: {
+    label: string;
+    icon?: React.ElementType;
+    onClick?: () => void;
+  };
+  onClose: () => void;
+};
+
+const SubMenuItem = ({ item, onClose }: SubMenuItemProps) => {
   return (
     <MenuItem
       onClick={() => {
