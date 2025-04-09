@@ -120,7 +120,25 @@ const SubMenuItem = ({ item, onClose }: SubMenuItemProps) => {
   );
 };
 
-const SubMenu = ({ menu, onClose }) => {
+type MenuItemType = {
+  label: string;
+  icon?: React.ElementType;
+  isLogout?: boolean;
+  onClick?: () => void;
+  items?: {
+    label: string;
+    icon?: React.ElementType;
+    onClick?: () => void;
+  }[];
+};
+
+const SubMenu = ({
+  menu,
+  onClose,
+}: {
+  menu: MenuItemType;
+  onClose: () => void;
+}) => {
   const [open, setOpen] = useState(false);
 
   return (
