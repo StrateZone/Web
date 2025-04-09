@@ -113,6 +113,12 @@ const TableBookingPage = () => {
     }
   };
 
+  interface Opponent {
+    userId: number;
+    username: string;
+    avatarUrl: string | null;
+  }
+
   const handleInviteSuccess = (opponent: Opponent, tableId: number) => {
     const invitedUser: InvitedUser = {
       userId: opponent.userId,
