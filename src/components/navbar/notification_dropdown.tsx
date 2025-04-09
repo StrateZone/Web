@@ -76,7 +76,9 @@ const NotificationDropdown = () => {
         }));
 
         setNotifications(latestNotifications);
-        const unread = latestNotifications.filter((n) => n.status === 1).length;
+        const unread = latestNotifications.filter(
+          (n: Notification) => n.status === 1
+        ).length;
         setUnreadCount(unread);
       } catch (error) {
         console.error("Error fetching notifications:", error);
