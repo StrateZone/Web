@@ -19,9 +19,6 @@ import { SuccessCancelPopup } from "../chess_appointment_order/CancelSuccessPopu
 import { DefaultPagination } from "@/components/pagination";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/app/store";
-import { fetchWallet } from "@/app/[locale]/wallet/walletSlice";
-import { ConfirmPaymentPopup } from "./ConfirmPaymentPopup";
-import { InsufficientBalancePopup } from "../chess_appointment_order/InsufficientBalancePopup";
 
 interface UserNavigation {
   userId: number;
@@ -91,7 +88,7 @@ interface AppointmentRequest {
   expireAt: string;
   createdAt: string;
   totalPrice: number | null;
-  fromUserNavigation: UserNavigation;
+  fromUserNavigation: UserNavigation | null;
   toUserNavigation: any | null;
   table: Table;
   appointment: any | null;
@@ -102,7 +99,7 @@ import withReactContent from "sweetalert2-react-content";
 
 const MySwal = withReactContent(Swal);
 
-const AppointmentRequestsPage = () => {
+const AppointmentSendRequestsPage = () => {
   const router = useRouter();
   const localActive = useLocale();
   const { locale } = useParams();
@@ -157,7 +154,7 @@ const AppointmentRequestsPage = () => {
         }
 
         const apiUrl = new URL(
-          `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/to/${userId}`
+          `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/from/${userId}`
         );
         apiUrl.searchParams.append("page-number", page.toString());
         apiUrl.searchParams.append("page-size", pageSize.toString());
@@ -198,176 +195,6 @@ const AppointmentRequestsPage = () => {
     fetchAppointmentRequests(currentPage);
   }, [fetchAppointmentRequests]);
 
-  const handleAcceptRequest = async (requestId: number) => {
-    setIsAccepting(true);
-    try {
-      const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/accept/${requestId}`,
-        {
-          method: "PUT",
-          headers: {
-            accept: "*/*",
-          },
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to accept appointment request");
-
-      const data = await response.json();
-      console.log("Accept response:", data);
-      await fetchAppointmentRequests(currentPage);
-    } catch (error) {
-      console.error("Error:", error);
-      alert("Error: " + (error as Error).message);
-    } finally {
-      setIsAccepting(false);
-    }
-  };
-  const checkCancelCondition = async (requestId: number) => {
-    setIsRejecting(true);
-    try {
-      const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/reject/${requestId}`,
-        {
-          method: "PUT",
-          headers: {
-            accept: "*/*",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to check cancel condition");
-      }
-
-      const data = await response.json();
-      console.log("Cancel condition response:", data);
-      await fetchAppointmentRequests(currentPage);
-    } catch (err) {
-      console.error("Error checking cancel condition:", err);
-    } finally {
-      setIsRejecting(false);
-    }
-  };
-  const handleProcessPayment = async (requestId: number) => {
-    setIsProcessingPayment(true);
-
-    try {
-      const request = requests.find((req) => req.id === requestId);
-      if (!request || !request.appointmentId) {
-        throw new Error("Request not found or invalid appointment ID");
-      }
-
-      // Kiểm tra số dư trước khi thực hiện thanh toán
-      if (balance < (request.totalPrice || 0)) {
-        const isRedirect = await InsufficientBalancePopup({
-          finalPrice: request.totalPrice || 0,
-        });
-        if (isRedirect) {
-          router.push(`/${localActive}/wallet`);
-        }
-        return;
-      }
-
-      // ... (phần chuẩn bị thông tin và xác nhận thanh toán)
-      const tableInfo = {
-        tableId: request.tableId,
-        roomName: request.table.roomName,
-        gameType:
-          request.table.gameTypeId === 1
-            ? "Cờ Vua"
-            : request.table.gameTypeId === 2
-              ? "Cờ Tướng"
-              : "Cờ Vây",
-        roomType: request.table.roomType,
-        startTime: request.startTime,
-        endTime: request.endTime,
-        totalPrice: request.totalPrice || 0,
-        opponentName:
-          request.fromUserNavigation.fullName ||
-          request.fromUserNavigation.username,
-        opponentRank: getRankLevelText(request.fromUserNavigation.ranking),
-      };
-
-      // Hiển thị popup xác nhận thanh toán
-      const isConfirmed = await ConfirmPaymentPopup({
-        tableInfo,
-        currentBalance: balance,
-      });
-
-      if (!isConfirmed) {
-        setIsProcessingPayment(false);
-        return;
-      }
-      const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/payments/booking-request-payment",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            fromUser: request.fromUser,
-            toUser: request.toUser,
-            tableId: request.tableId,
-            appointmentId: request.appointmentId,
-          }),
-        }
-      );
-
-      const result = await response.json();
-
-      // Kiểm tra kết quả trả về từ server
-      if (!response.ok || !result.success) {
-        // Xử lý riêng trường hợp số dư không đủ
-        if (result.message === "Balance is not enough") {
-          const isRedirect = await InsufficientBalancePopup({
-            finalPrice: request.totalPrice || 0,
-          });
-          if (isRedirect) {
-            router.push(`/${localActive}/wallet`);
-          }
-          return;
-        }
-
-        throw new Error(result.message || "Payment processing failed");
-      }
-
-      // Cập nhật state và hiển thị thông báo thành công
-      dispatch(fetchWallet(userId));
-      await fetchAppointmentRequests(currentPage);
-
-      await MySwal.fire({
-        title: "Thành công!",
-        text: `Thanh toán ${(request.totalPrice || 0).toLocaleString()}đ thành công.`,
-        icon: "success",
-        confirmButtonText: "OK",
-      });
-    } catch (error) {
-      console.error("Payment error:", error);
-
-      // Chỉ hiển thị thông báo lỗi nếu không phải lỗi số dư
-      if (
-        !(
-          error instanceof Error &&
-          error.message.includes("Balance is not enough")
-        )
-      ) {
-        await MySwal.fire({
-          title: "Lỗi",
-          text:
-            error instanceof Error
-              ? error.message
-              : "Đã xảy ra lỗi không xác định",
-          icon: "error",
-          confirmButtonText: "OK",
-        });
-      }
-    } finally {
-      setIsProcessingPayment(false);
-    }
-  };
-  // Thêm hàm này vào component của bạn
   const calculateTimeRemaining = (expireAt: string) => {
     const now = new Date();
     const expireDate = new Date(expireAt);
@@ -396,6 +223,7 @@ const AppointmentRequestsPage = () => {
       return `Hết hạn sau ${seconds} giây`;
     }
   };
+
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString("vi-VN", {
@@ -405,9 +233,10 @@ const AppointmentRequestsPage = () => {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
-      hour12: false, // dùng định dạng 24 giờ
+      hour12: false,
     });
   };
+
   const formatDateTimeWithoutHour = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString("vi-VN", {
@@ -449,7 +278,7 @@ const AppointmentRequestsPage = () => {
           bg: "bg-blue-100",
           text: "text-blue-700",
           border: "border-blue-500",
-          display: "Hoàn Thành Thanh Toán",
+          display: "Đã Chấp Nhận",
           icon: <CheckCircle className="w-4 h-4 mr-1" />,
         };
       case "payment_required":
@@ -473,7 +302,7 @@ const AppointmentRequestsPage = () => {
           bg: "bg-yellow-100",
           text: "text-yellow-600",
           border: "border-yellow-500",
-          display: "Chờ Đối Phương Tạo Cuộc Hẹn",
+          display: "Chờ Tạo Cuộc Hẹn",
           icon: <Clock className="w-4 h-4 mr-1" />,
         };
       case "expired":
@@ -601,10 +430,10 @@ const AppointmentRequestsPage = () => {
           />
           <div className="min-h-[400px] relative z-30 h-full max-w-7xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
             <h2 className="sm:text-5xl text-3xl font-bold mb-6">
-              Lời Mời Đã Nhận
+              Lời Mời Đã Gửi
             </h2>
             <p className="sm:text-xl text-lg text-center text-gray-200">
-              Xem lại các lời mời đánh cờ bạn đã nhận
+              Xem lại các lời mời đánh cờ bạn đã gửi đi
             </p>
           </div>
         </div>
@@ -612,7 +441,7 @@ const AppointmentRequestsPage = () => {
         <div className="min-h-[calc(100vh-200px)] bg-gray-50 p-4 text-black">
           <div className="container mx-auto px-2 py-4">
             <div className="flex justify-between items-center mb-4">
-              <h1 className="text-2xl font-bold">Lời Mời Đã Nhận</h1>
+              <h1 className="text-2xl font-bold">Lời Mời Đã Gửi</h1>
               <Button
                 onClick={handleRefresh}
                 className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600"
@@ -640,7 +469,7 @@ const AppointmentRequestsPage = () => {
 
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-semibold">
-                    Thông Tin Chi Tiết Của Lời Mời Đánh Cờ
+                    Thông Tin Chi Tiết Lời Mời
                   </h2>
                   <span
                     className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedRequest.status).bg} ${getStatusColor(selectedRequest.status).text}`}
@@ -652,13 +481,13 @@ const AppointmentRequestsPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h3 className="text-lg mb-2 font-bold">
-                      <strong>Thông Tin Người Gửi</strong>
+                      <strong>Thông Tin Người Nhận</strong>
                     </h3>
                     <div className="flex items-center space-x-3 mb-4">
                       <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                        {selectedRequest.fromUserNavigation.avatarUrl ? (
+                        {selectedRequest.toUserNavigation?.avatarUrl ? (
                           <img
-                            src={selectedRequest.fromUserNavigation.avatarUrl}
+                            src={selectedRequest.toUserNavigation.avatarUrl}
                             alt="Avatar"
                             className="w-full h-full object-cover"
                           />
@@ -668,13 +497,13 @@ const AppointmentRequestsPage = () => {
                       </div>
                       <div>
                         <h4 className="font-bold">
-                          {selectedRequest.fromUserNavigation.username ||
-                            selectedRequest.fromUserNavigation.username}
+                          {selectedRequest.toUserNavigation?.username ||
+                            "Người dùng ẩn danh"}
                         </h4>
                         <p className="text-gray-600 text-sm">
                           <strong>Trình Độ:</strong>{" "}
                           {getRankLevelText(
-                            selectedRequest.fromUserNavigation.ranking
+                            selectedRequest.toUserNavigation?.ranking || 0
                           )}
                         </p>
                       </div>
@@ -684,19 +513,20 @@ const AppointmentRequestsPage = () => {
                         <span className="font-medium">
                           <strong>Email:</strong>
                         </span>{" "}
-                        {selectedRequest.fromUserNavigation.email}
+                        {selectedRequest.toUserNavigation?.email ||
+                          "Không có thông tin"}
                       </p>
                       <p>
                         <span className="font-medium">
                           <strong>Số Điện Thoại:</strong>
                         </span>{" "}
-                        {selectedRequest.fromUserNavigation.phone || "N/A"}
+                        {selectedRequest.toUserNavigation?.phone || "N/A"}
                       </p>
                       <p>
                         <span className="font-medium">
                           <strong>Giới Thiệu:</strong>
                         </span>{" "}
-                        {selectedRequest.fromUserNavigation.bio ||
+                        {selectedRequest.toUserNavigation?.bio ||
                           "Không đề cập"}
                       </p>
                     </div>
@@ -736,13 +566,13 @@ const AppointmentRequestsPage = () => {
                         <span className="font-medium">
                           <strong>Số Phòng:</strong>
                         </span>{" "}
-                        {selectedRequest.table?.roomId}
+                        {selectedRequest.table?.roomId || "N/A"}
                       </p>
                       <p>
                         <span className="font-medium">
                           <strong>Số Bàn:</strong>
                         </span>{" "}
-                        {selectedRequest.tableId}
+                        {selectedRequest.tableId || "N/A"}
                       </p>
                       {selectedRequest.totalPrice && (
                         <p>
@@ -801,60 +631,23 @@ const AppointmentRequestsPage = () => {
                 </div>
 
                 <div className="flex justify-end space-x-3">
-                  {/* {selectedRequest.status === "pending" &&
-                    !isExpired(selectedRequest.expireAt) && (
-                      <>
-                        <Button
-                          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 flex items-center justify-center min-w-[180px]"
-                          onClick={() =>
-                            handleAcceptRequest(selectedRequest.id)
-                          }
-                          disabled={isAccepting}
-                        >
-                          {isAccepting ? (
-                            <>
-                              <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                              Processing...
-                            </>
-                          ) : (
-                            <strong>Chấp Nhận</strong>
-                          )}
-                        </Button>
-                        <Button
-                          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 flex items-center justify-center min-w-[100px]"
-                          onClick={() =>
-                            checkCancelCondition(selectedRequest.id)
-                          }
-                          disabled={isRejecting}
-                        >
-                          {isRejecting ? (
-                            <>
-                              <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                              Processing...
-                            </>
-                          ) : (
-                            <strong>Từ Chối</strong>
-                          )}
-                        </Button>
-                      </>
-                    )} */}
-
-                  {(selectedRequest.status === "payment_required" ||
-                    selectedRequest.status === "await_appointment_creation") &&
-                    selectedRequest.appointmentId &&
+                  {selectedRequest.status === "pending" &&
                     !isExpired(selectedRequest.expireAt) && (
                       <Button
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 flex items-center justify-center min-w-[150px]"
-                        onClick={() => handleProcessPayment(selectedRequest.id)}
-                        disabled={isProcessingPayment}
+                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 flex items-center justify-center min-w-[150px]"
+                        disabled={isCancelling}
+                        onClick={() => {
+                          setCurrentCancellingId(selectedRequest.id);
+                          setShowCancelConfirm(true);
+                        }}
                       >
-                        {isProcessingPayment ? (
+                        {isCancelling ? (
                           <>
                             <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                            Processing...
+                            Đang xử lý...
                           </>
                         ) : (
-                          <strong>Thanh Toán Ngay</strong>
+                          <strong>Hủy Lời Mời</strong>
                         )}
                       </Button>
                     )}
@@ -866,12 +659,10 @@ const AppointmentRequestsPage = () => {
                   <Clock className="w-8 h-8 text-gray-400" />
                 </div>
                 <h2 className="text-lg font-medium text-gray-600">
-                  <strong>No appointment requests</strong>
+                  <strong>Không có lời mời nào</strong>
                 </h2>
                 <p className="text-gray-500 mt-1 text-sm">
-                  <strong>
-                    You don't have any chess appointment requests yet
-                  </strong>
+                  <strong>Bạn chưa gửi lời mời đánh cờ nào</strong>
                 </p>
               </div>
             ) : (
@@ -881,8 +672,7 @@ const AppointmentRequestsPage = () => {
                     <div
                       key={request.id}
                       className={`bg-white rounded-md shadow-sm p-4 border-l-4 ${
-                        request.status === "accepted" ||
-                        request.status === "payment_required"
+                        request.status === "accepted"
                           ? "border-green-500"
                           : request.status === "rejected"
                             ? "border-red-500"
@@ -895,9 +685,9 @@ const AppointmentRequestsPage = () => {
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                            {request.fromUserNavigation.avatarUrl ? (
+                            {request.toUserNavigation?.avatarUrl ? (
                               <img
-                                src={request.fromUserNavigation.avatarUrl}
+                                src={request.toUserNavigation.avatarUrl}
                                 alt="Avatar"
                                 className="w-full h-full object-cover"
                               />
@@ -907,14 +697,14 @@ const AppointmentRequestsPage = () => {
                           </div>
                           <div>
                             <h3 className="font-bold text-base">
-                              Người Gửi:{" "}
-                              {request.fromUserNavigation.username ||
-                                request.fromUserNavigation.username}
+                              Người Nhận:{" "}
+                              {request.toUserNavigation?.username ||
+                                "Người dùng ẩn danh"}
                             </h3>
                             <p className="text-gray-600 text-sm">
                               <strong>Trình Độ:</strong>{" "}
                               {getRankLevelText(
-                                request.fromUserNavigation.ranking
+                                request.toUserNavigation?.ranking || 0
                               )}
                             </p>
                           </div>
@@ -951,7 +741,7 @@ const AppointmentRequestsPage = () => {
                           {request.status === "accepted" ? (
                             <span className="text-blue-700 flex items-center text-sm">
                               <CheckCircle className="w-4 h-4 mr-1" />
-                              <strong>Hoàn Thành Thanh Toán</strong>
+                              <strong>Đã Chấp Nhận</strong>
                             </span>
                           ) : request.status === "payment_required" ? (
                             <span className="text-indigo-700 flex items-center text-sm">
@@ -977,7 +767,7 @@ const AppointmentRequestsPage = () => {
                             "await_appointment_creation" ? (
                             <span className="text-yellow-600 flex items-center text-sm">
                               <Clock className="w-4 h-4 mr-1" />
-                              <strong>Chờ Đối Phương Tạo Cuộc Hẹn</strong>
+                              <strong>Chờ Tạo Cuộc Hẹn</strong>
                             </span>
                           ) : (
                             <span className="text-yellow-700 flex items-center text-sm">
@@ -988,64 +778,6 @@ const AppointmentRequestsPage = () => {
                         </div>
 
                         <div className="flex space-x-2">
-                          {request.status === "pending" &&
-                            !isExpired(request.expireAt) && (
-                              <>
-                                <Button
-                                  className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[100px]"
-                                  onClick={() =>
-                                    handleAcceptRequest(request.id)
-                                  }
-                                  disabled={isAccepting}
-                                >
-                                  {isAccepting ? (
-                                    <>
-                                      <Loader2 className="animate-spin mr-1 h-3 w-3" />
-                                      Processing...
-                                    </>
-                                  ) : (
-                                    "Chấp Nhận"
-                                  )}
-                                </Button>
-                                <Button
-                                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[80px]"
-                                  onClick={() =>
-                                    checkCancelCondition(request.id)
-                                  }
-                                  disabled={isRejecting}
-                                >
-                                  {isRejecting ? (
-                                    <>
-                                      <Loader2 className="animate-spin mr-1 h-3 w-3" />
-                                      Processing...
-                                    </>
-                                  ) : (
-                                    "Từ Chối"
-                                  )}
-                                </Button>
-                              </>
-                            )}
-
-                          {(request.status === "await_appointment_creation" ||
-                            request.status === "payment_required") &&
-                            request.appointmentId &&
-                            !isExpired(request.expireAt) && (
-                              <Button
-                                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[100px]"
-                                onClick={() => handleProcessPayment(request.id)}
-                                disabled={isProcessingPayment}
-                              >
-                                {isProcessingPayment ? (
-                                  <>
-                                    <Loader2 className="animate-spin mr-1 h-3 w-3" />
-                                    Processing...
-                                  </>
-                                ) : (
-                                  "Thanh Toán Ngay"
-                                )}
-                              </Button>
-                            )}
-
                           <Button
                             className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-sm"
                             onClick={() => handleViewDetails(request)}
@@ -1089,4 +821,4 @@ const AppointmentRequestsPage = () => {
   );
 };
 
-export default AppointmentRequestsPage;
+export default AppointmentSendRequestsPage;

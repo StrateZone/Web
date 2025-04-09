@@ -301,7 +301,11 @@ function Page() {
           display: "Sắp diễn ra",
         };
       case "expired":
-        return { bg: "bg-gray-100", text: "text-gray-800", display: "Hết hạn" };
+        return {
+          bg: "bg-gray-100",
+          text: "text-gray-800",
+          display: "Hết hạn",
+        };
       case "completed":
         return {
           bg: "bg-purple-100",
@@ -309,15 +313,29 @@ function Page() {
           display: "Hoàn thành",
         };
       case "cancelled":
-        return { bg: "bg-red-100", text: "text-red-800", display: "Đã hủy" };
+        return {
+          bg: "bg-red-100",
+          text: "text-red-800",
+          display: "Đã hủy",
+        };
       case "refunded":
         return {
           bg: "bg-indigo-100",
           text: "text-indigo-800",
           display: "Đã hoàn tiền",
         };
+      case "incompleted":
+        return {
+          bg: "bg-orange-100",
+          text: "text-orange-800",
+          display: "Chưa hoàn thành",
+        };
       default:
-        return { bg: "bg-gray-100", text: "text-gray-800", display: status };
+        return {
+          bg: "bg-gray-100",
+          text: "text-gray-800",
+          display: status,
+        };
     }
   };
 
@@ -341,10 +359,10 @@ function Page() {
             />
             <div className="min-h-[400px] relative z-30 h-full max-w-7xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
               <h2 className="sm:text-5xl text-3xl font-bold mb-6">
-                Cửa hàng cờ StrateZone
+                Lịch Sử Đặt Bàn Tại StrateZone
               </h2>
               <p className="sm:text-xl text-lg text-center text-gray-200">
-                Nâng tầm chiến thuật - Trang bị như một kiện tướng!
+                Xem lại các lần đặt bàn gần đây của bạn tại StrateZone
               </p>
             </div>
           </div>

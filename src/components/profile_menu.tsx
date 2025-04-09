@@ -13,65 +13,177 @@ import {
   ChevronDownIcon,
   LifebuoyIcon,
   PowerIcon,
+  ClockIcon,
 } from "@heroicons/react/24/solid";
 import { useRouter } from "next/navigation";
-import { Wallet, Calendar, Mail } from "lucide-react";
+import { Wallet, Calendar, HelpCircle, User, Inbox, Send } from "lucide-react";
 import { useLocale } from "next-intl";
 
-export default function ProfileMenu() {
+const menuConfig = [
+  {
+    label: "Tài khoản",
+    icon: UserCircleIcon,
+    items: [
+      { label: "Thông tin cá nhân", icon: User, path: "profile" },
+      // { label: "Cài đặt tài khoản", icon: CogIcon, path: "settings" },
+      { label: "Ví tiền", icon: Wallet, path: "wallet" },
+    ],
+  },
+  {
+    label: "Lời Mời Và Lịch Sử",
+    icon: Calendar,
+    items: [
+      {
+        label: "Lịch sử đặt bàn",
+        icon: ClockIcon,
+        path: "appointment_history",
+      },
+      {
+        label: "Lời Mời Đã Nhận",
+        icon: Inbox,
+        path: "chess_appointment/invitation_list",
+      },
+      {
+        label: "Lời Mời Đã Gửi",
+        icon: Send,
+        path: "chess_appointment/send_invitation_list",
+      },
+    ],
+  },
+  // {
+  //   label: "Hỗ trợ",
+  //   icon: LifebuoyIcon,
+  //   items: [
+  //     { label: "Trung tâm trợ giúp", icon: HelpCircle, path: "help-center" },
+  //     { label: "Liên hệ hỗ trợ", icon: LifebuoyIcon, path: "contact-support" },
+  //   ],
+  // },
+  {
+    label: "Đăng xuất",
+    icon: PowerIcon,
+    isLogout: true,
+    path: "#",
+  },
+];
+
+const useProfileMenu = () => {
   const router = useRouter();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const localActive = useLocale();
 
-  const closeMenu = () => setIsMenuOpen(false);
-
   const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("authData");
-    localStorage.removeItem("chessBookings");
-
-    router.push("/"); // Điều hướng về trang chủ sau khi logout
+    ["accessToken", "refreshToken", "authData", "chessBookings"].forEach(
+      (item) => localStorage.removeItem(item)
+    );
+    router.push("/");
   };
 
-  const profileMenuItems = [
-    {
-      label: "Thông Tin Cá Nhân",
-      icon: UserCircleIcon,
-      onClick: () => router.push(`/${localActive}/profile`),
-    },
-    {
-      label: "Ví Tiền",
-      icon: Wallet,
-      onClick: () => router.push(`/${localActive}/wallet`),
-    },
-    {
-      label: "Lịch Sử Đặt Bàn",
-      icon: Calendar,
-      onClick: () => router.push(`/${localActive}/appointment_history`),
-    },
+  const getMenuConfig = () =>
+    menuConfig.map((item) => ({
+      ...item,
+      onClick: item.isLogout ? handleLogout : undefined,
+      items: item.items?.map((subItem) => ({
+        ...subItem,
+        onClick: () => router.push(`/${localActive}/${subItem.path}`),
+      })),
+    }));
 
-    {
-      label: "Lời Mởi Đánh Cờ",
-      icon: Mail,
-      onClick: () =>
-        router.push(`/${localActive}/chess_appointment/invitation_list`),
-    },
-    {
-      label: "Help",
-      icon: LifebuoyIcon,
-    },
-    {
-      label: "Đăng Xuất",
-      icon: PowerIcon,
-      onClick: handleLogout,
-    },
-  ];
-  const authData = JSON.parse(localStorage.getItem("authData") || "{}");
-  const userInfo = authData.userInfo || {}; // Fallback to empty object
+  return { getMenuConfig };
+};
 
-  // Safe access to avatarUrl with fallback
-  const avatarUrl = userInfo.avatarUrl || "/default-avatar.png";
+type SubMenuItemProps = {
+  item: {
+    label: string;
+    icon?: React.ElementType;
+    onClick?: () => void;
+  };
+  onClose: () => void;
+};
+
+const SubMenuItem = ({ item, onClose }: SubMenuItemProps) => {
+  return (
+    <MenuItem
+      onClick={() => {
+        onClose();
+        item.onClick?.();
+      }}
+      className="flex items-center gap-2 rounded pl-8"
+    >
+      {item.icon &&
+        React.createElement(item.icon, {
+          className: "h-4 w-4",
+          strokeWidth: 2,
+        })}
+      <Typography as="span" variant="small" className="font-normal">
+        {item.label}
+      </Typography>
+    </MenuItem>
+  );
+};
+
+type MenuItemType = {
+  label: string;
+  icon?: React.ElementType;
+  isLogout?: boolean;
+  onClick?: () => void;
+  items?: {
+    label: string;
+    icon?: React.ElementType;
+    onClick?: () => void;
+  }[];
+};
+
+const SubMenu = ({
+  menu,
+  onClose,
+}: {
+  menu: MenuItemType;
+  onClose: () => void;
+}) => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <MenuItem
+        className={`flex items-center justify-between ${menu.isLogout ? "hover:bg-red-500/10" : ""}`}
+        onClick={menu.isLogout ? menu.onClick : () => setOpen(!open)}
+      >
+        <div className="flex items-center gap-2">
+          {menu.icon &&
+            React.createElement(menu.icon, {
+              className: `h-4 w-4 ${menu.isLogout ? "text-red-500" : ""}`,
+            })}
+          <Typography
+            as="span"
+            variant="small"
+            className="font-normal"
+            color={menu.isLogout ? "red" : "inherit"}
+          >
+            {menu.label}
+          </Typography>
+        </div>
+        {!menu.isLogout && (
+          <ChevronDownIcon
+            className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        )}
+      </MenuItem>
+
+      {open &&
+        menu.items?.map((item) => (
+          <SubMenuItem key={item.label} item={item} onClose={onClose} />
+        ))}
+    </>
+  );
+};
+
+export default function ProfileMenu() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { getMenuConfig } = useProfileMenu();
+  const menuConfig = getMenuConfig();
+  const avatarUrl =
+    JSON.parse(localStorage.getItem("authData") || "{}")?.userInfo?.avatarUrl ||
+    "/default-avatar.png";
+
   return (
     <Menu open={isMenuOpen} handler={setIsMenuOpen} placement="bottom-end">
       <MenuHandler>
@@ -89,43 +201,18 @@ export default function ProfileMenu() {
           />
           <ChevronDownIcon
             strokeWidth={2.5}
-            className={`h-3 w-3 transition-transform ${
-              isMenuOpen ? "rotate-180" : ""
-            }`}
+            className={`h-3 w-3 transition-transform ${isMenuOpen ? "rotate-180" : ""}`}
           />
         </Button>
       </MenuHandler>
-      <MenuList className="p-1">
-        {profileMenuItems.map(({ label, icon, onClick }, key) => {
-          const isLastItem = key === profileMenuItems.length - 1;
-          return (
-            <MenuItem
-              key={label}
-              onClick={() => {
-                closeMenu();
-                if (onClick) onClick(); // Gọi hàm xử lý
-              }}
-              className={`flex items-center gap-2 rounded ${
-                isLastItem
-                  ? "hover:bg-red-500/10 focus:bg-red-500/10 active:bg-red-500/10"
-                  : ""
-              }`}
-            >
-              {React.createElement(icon, {
-                className: `h-4 w-4 ${isLastItem ? "text-red-500" : ""}`,
-                strokeWidth: 2,
-              })}
-              <Typography
-                as="span"
-                variant="small"
-                className="font-normal"
-                color={isLastItem ? "red" : "inherit"}
-              >
-                {label}
-              </Typography>
-            </MenuItem>
-          );
-        })}
+      <MenuList className="p-1 w-64 max-h-[80vh] overflow-y-auto">
+        {menuConfig.map((menu) => (
+          <SubMenu
+            key={menu.label}
+            menu={menu}
+            onClose={() => setIsMenuOpen(false)}
+          />
+        ))}
       </MenuList>
     </Menu>
   );
