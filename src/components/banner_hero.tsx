@@ -16,7 +16,7 @@ export default function BannerHero() {
       <div className="grid min-h-screen px-8">
         <div className="container relative z-10 my-auto mx-auto grid place-items-center text-center">
           <Typography variant="h1" color="white" className="lg:max-w-3xl">
-            StrateZone: Nơi đam mê gặp chiến lược
+            StrateZone: Nơi đam mê gặp gỡ chiến lược
           </Typography>
           <Typography
             variant="lead"

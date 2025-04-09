@@ -38,8 +38,16 @@ const menuConfig = [
         icon: ClockIcon,
         path: "appointment_history",
       },
-      { label: "Lời Mời Đã Nhận", icon: Inbox, path: "chess-invitations" },
-      { label: "Lời Mời Đã Gửi", icon: Send, path: "chess-invitations" },
+      {
+        label: "Lời Mời Đã Nhận",
+        icon: Inbox,
+        path: "chess_appointment/invitation_list",
+      },
+      {
+        label: "Lời Mời Đã Gửi",
+        icon: Send,
+        path: "chess_appointment/send_invitation_list",
+      },
     ],
   },
   // {

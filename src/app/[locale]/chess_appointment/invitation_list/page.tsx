@@ -367,7 +367,35 @@ const AppointmentRequestsPage = () => {
       setIsProcessingPayment(false);
     }
   };
+  // Thêm hàm này vào component của bạn
+  const calculateTimeRemaining = (expireAt: string) => {
+    const now = new Date();
+    const expireDate = new Date(expireAt);
+    const diffInMs = expireDate.getTime() - now.getTime();
 
+    if (diffInMs <= 0) {
+      return "Đã hết hạn";
+    }
+
+    const diffInSeconds = Math.floor(diffInMs / 1000);
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+
+    const hours = diffInHours % 24;
+    const minutes = diffInMinutes % 60;
+    const seconds = diffInSeconds % 60;
+
+    if (diffInDays > 0) {
+      return `Hết hạn sau ${diffInDays} ngày ${hours} giờ`;
+    } else if (diffInHours > 0) {
+      return `Hết hạn sau ${diffInHours} giờ ${minutes} phút`;
+    } else if (diffInMinutes > 0) {
+      return `Hết hạn sau ${minutes} phút ${seconds} giây`;
+    } else {
+      return `Hết hạn sau ${seconds} giây`;
+    }
+  };
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString("vi-VN", {
@@ -448,8 +476,15 @@ const AppointmentRequestsPage = () => {
           display: "Chờ Đối Phương Tạo Cuộc Hẹn",
           icon: <Clock className="w-4 h-4 mr-1" />,
         };
-      case "cancelled":
       case "expired":
+        return {
+          bg: "bg-orange-100",
+          text: "text-orange-600",
+          border: "border-orange-500",
+          display: "Đã Hết Hạn",
+          icon: <Clock className="w-4 h-4 mr-1" />,
+        };
+      case "cancelled":
         return {
           bg: "bg-gray-100",
           text: "text-gray-600",
@@ -566,10 +601,10 @@ const AppointmentRequestsPage = () => {
           />
           <div className="min-h-[400px] relative z-30 h-full max-w-7xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
             <h2 className="sm:text-5xl text-3xl font-bold mb-6">
-              <strong>Chess Appointment Requests</strong>
+              Lời Mời Đã Nhận
             </h2>
             <p className="sm:text-xl text-lg text-center text-gray-200">
-              <strong>Manage your chess game invitations</strong>
+              Xem lại các lời mời đánh cờ bạn đã nhận
             </p>
           </div>
         </div>
@@ -577,7 +612,7 @@ const AppointmentRequestsPage = () => {
         <div className="min-h-[calc(100vh-200px)] bg-gray-50 p-4 text-black">
           <div className="container mx-auto px-2 py-4">
             <div className="flex justify-between items-center mb-4">
-              <h1 className="text-2xl font-bold">Lời Mời Đánh Cờ</h1>
+              <h1 className="text-2xl font-bold">Lời Mời Đã Nhận</h1>
               <Button
                 onClick={handleRefresh}
                 className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600"
@@ -633,7 +668,7 @@ const AppointmentRequestsPage = () => {
                       </div>
                       <div>
                         <h4 className="font-bold">
-                          {selectedRequest.fromUserNavigation.fullName ||
+                          {selectedRequest.fromUserNavigation.username ||
                             selectedRequest.fromUserNavigation.username}
                         </h4>
                         <p className="text-gray-600 text-sm">
@@ -872,7 +907,8 @@ const AppointmentRequestsPage = () => {
                           </div>
                           <div>
                             <h3 className="font-bold text-base">
-                              {request.fromUserNavigation.fullName ||
+                              Người Gửi:{" "}
+                              {request.fromUserNavigation.username ||
                                 request.fromUserNavigation.username}
                             </h3>
                             <p className="text-gray-600 text-sm">
@@ -903,6 +939,10 @@ const AppointmentRequestsPage = () => {
                             <strong>Số Tiền Cần Trả</strong>{" "}
                             {request.totalPrice?.toLocaleString()} VND
                           </p>
+                          <p className="text-gray-600 text-sm">
+                            <strong>Lời mời hết hạn sau:</strong>{" "}
+                            {calculateTimeRemaining(request.expireAt)}
+                          </p>
                         </div>
                       </div>
 
@@ -923,17 +963,21 @@ const AppointmentRequestsPage = () => {
                               <XCircle className="w-4 h-4 mr-1" />
                               <strong>Đã Từ Chối</strong>
                             </span>
+                          ) : request.status === "expired" ? (
+                            <span className="text-orange-600 flex items-center text-sm">
+                              <Clock className="w-4 h-4 mr-1" />
+                              <strong>Đã Hết Hạn</strong>
+                            </span>
+                          ) : request.status === "cancelled" ? (
+                            <span className="text-gray-600 flex items-center text-sm">
+                              <XCircle className="w-4 h-4 mr-1" />
+                              <strong>Đã Hủy</strong>
+                            </span>
                           ) : request.status ===
                             "await_appointment_creation" ? (
                             <span className="text-yellow-600 flex items-center text-sm">
                               <Clock className="w-4 h-4 mr-1" />
                               <strong>Chờ Đối Phương Tạo Cuộc Hẹn</strong>
-                            </span>
-                          ) : isExpired(request.expireAt) ||
-                            request.status === "cancelled" ? (
-                            <span className="text-gray-600 flex items-center text-sm">
-                              <XCircle className="w-4 h-4 mr-1" />
-                              <strong>Đã Hủy</strong>
                             </span>
                           ) : (
                             <span className="text-yellow-700 flex items-center text-sm">

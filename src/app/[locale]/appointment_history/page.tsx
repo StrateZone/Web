@@ -328,7 +328,7 @@ function Page() {
         return {
           bg: "bg-orange-100",
           text: "text-orange-800",
-          display: "Chưa hoàn tất",
+          display: "Chưa hoàn thành",
         };
       default:
         return {
@@ -359,10 +359,10 @@ function Page() {
             />
             <div className="min-h-[400px] relative z-30 h-full max-w-7xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
               <h2 className="sm:text-5xl text-3xl font-bold mb-6">
-                Cửa hàng cờ StrateZone
+                Lịch Sử Đặt Bàn Tại StrateZone
               </h2>
               <p className="sm:text-xl text-lg text-center text-gray-200">
-                Nâng tầm chiến thuật - Trang bị như một kiện tướng!
+                Xem lại các lần đặt bàn gần đây của bạn tại StrateZone
               </p>
             </div>
           </div>

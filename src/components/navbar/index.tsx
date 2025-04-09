@@ -225,7 +225,11 @@ export function Navbar() {
           <div className="hidden items-center gap-6 lg:flex">
             <div className="flex items-center gap-4">
               <div className="flex items-center bg-gray-100 px-3 py-1 rounded-md">
-                <FaWallet className="text-blue-500 mr-2" size={16} />
+                <FaWallet
+                  onClick={() => router.push(`/${locale}/wallet`)}
+                  className="text-blue-500 mr-2  cursor-pointer "
+                  size={16}
+                />
                 {walletLoading ? (
                   <div className="animate-pulse h-4 w-20 bg-gray-300 rounded"></div>
                 ) : (

@@ -26,9 +26,6 @@ const NotificationsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [expandedNotifications, setExpandedNotifications] = useState<number[]>(
-    []
-  );
   const { locale } = useParams();
   const router = useRouter();
 
@@ -142,17 +139,6 @@ const NotificationsPage = () => {
     }
   };
 
-  const toggleExpand = (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setExpandedNotifications((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  };
-
-  const isLongContent = (content: string) => content.length > 100;
-  const truncateContent = (content: string) =>
-    content.length > 100 ? `${content.substring(0, 100)}...` : content;
-
   const handleNotificationClick = async (notification: Notification) => {
     if (notification.status === 1) {
       await markAsRead(notification.id);
@@ -172,7 +158,7 @@ const NotificationsPage = () => {
         router.push(`/${locale}/appointment_history`);
         break;
       case 3:
-        router.push(`/${locale}/invitation_list`);
+        router.push(`/${locale}chess_appointment/invitation_list`);
         break;
       case 4:
         router.push(`/${locale}/chess_appointment/send_invitation_list`);
@@ -251,21 +237,9 @@ const NotificationsPage = () => {
                       )}
                     </div>
                     <div className="mt-2">
-                      <Typography className="text-gray-700">
-                        {expandedNotifications.includes(notification.id)
-                          ? notification.content
-                          : truncateContent(notification.content)}
+                      <Typography className="text-gray-700 whitespace-pre-line">
+                        {notification.content}
                       </Typography>
-                      {isLongContent(notification.content) && (
-                        <button
-                          onClick={(e) => toggleExpand(notification.id, e)}
-                          className="text-blue-500 text-sm mt-1 hover:underline focus:outline-none"
-                        >
-                          {expandedNotifications.includes(notification.id)
-                            ? "Thu gọn"
-                            : "Xem thêm"}
-                        </button>
-                      )}
                     </div>
                     <Typography className="mt-2 text-sm text-gray-500">
                       {new Date(notification.createdAt).toLocaleString()}

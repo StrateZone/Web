@@ -220,9 +220,11 @@ function WalletPage() {
           className="absolute inset-0 w-full h-full object-cover z-10"
         />
         <div className="min-h-[350px] relative z-30 h-full max-w-6xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
-          <h2 className="sm:text-4xl text-2xl font-bold mb-6">Ví StrateZone</h2>
+          <h2 className="sm:text-4xl text-2xl font-bold mb-6">
+            Ví Điện Tử StrateZone
+          </h2>
           <p className="sm:text-lg text-base text-center text-gray-200">
-            Quản lý tài khoản trong hệ thống
+            Nạp tiền - Thanh toán - Thi đấu không gián đoạn
           </p>
         </div>
       </div>

@@ -181,9 +181,9 @@ const NotificationDropdown = () => {
     }
   };
 
-  const isLongContent = (content: string) => content.length > 100;
+  const isLongContent = (content: string) => content.length > 50;
   const truncateContent = (content: string) =>
-    content.length > 100 ? `${content.substring(0, 100)}...` : content;
+    content.length > 50 ? `${content.substring(0, 50)}...` : content;
 
   return (
     <div className="relative">
