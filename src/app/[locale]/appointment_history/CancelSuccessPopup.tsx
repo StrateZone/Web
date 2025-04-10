@@ -36,7 +36,7 @@ export const SuccessCancelPopup = async (
       actions: "flex justify-center gap-3 mt-4",
       popup: "rounded-xl border border-gray-200 py-5 px-6 max-w-sm",
     },
-    icon: false,
+    icon: undefined,
     focusConfirm: false,
     allowOutsideClick: false,
     showClass: {
