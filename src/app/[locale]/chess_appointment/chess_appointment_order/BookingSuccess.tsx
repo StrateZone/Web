@@ -27,7 +27,7 @@ export const SuccessBookingPopup = async (): Promise<boolean> => {
       actions: "flex justify-center gap-4 mt-5",
       popup: "rounded-xl border border-gray-200 py-6 px-7 max-w-md",
     },
-    icon: false, // Disable default icon
+    // icon removed as it is not valid
     focusConfirm: false,
     showClass: {
       popup: "animate__animated animate__fadeIn animate__faster",

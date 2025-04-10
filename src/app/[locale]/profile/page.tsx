@@ -61,7 +61,7 @@ function ProfilePage() {
                 headers: {
                   Authorization: `Bearer ${accessToken}`,
                 },
-              }
+              },
             );
 
             // Update state and localStorage
@@ -87,7 +87,7 @@ function ProfilePage() {
               JSON.stringify({
                 ...authData,
                 userInfo,
-              })
+              }),
             );
           }
         } catch (error) {
@@ -103,7 +103,7 @@ function ProfilePage() {
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value } = e.target;
     setUserData((prev) => ({
@@ -188,7 +188,7 @@ function ProfilePage() {
                 Authorization: `Bearer ${accessToken}`,
                 "Content-Type": "multipart/form-data",
               },
-            }
+            },
           );
 
           // Assuming API returns the URL in data.url
@@ -218,7 +218,7 @@ function ProfilePage() {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       // Update localStorage with new data
@@ -233,7 +233,7 @@ function ProfilePage() {
         JSON.stringify({
           ...authData,
           userInfo: updatedUserInfo,
-        })
+        }),
       );
 
       // Update state
@@ -351,7 +351,7 @@ function ProfilePage() {
                           ? item.transform(
                               userData[
                                 item.field as keyof typeof userData
-                              ] as string
+                              ] as string,
                             )
                           : (userData[
                               item.field as keyof typeof userData

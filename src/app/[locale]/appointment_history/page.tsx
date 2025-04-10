@@ -106,7 +106,7 @@ function Page() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [refundInfo, setRefundInfo] = useState<RefundInfo | null>(null);
   const [currentCancellingId, setCurrentCancellingId] = useState<number | null>(
-    null
+    null,
   );
 
   const authDataString = localStorage.getItem("authData");
@@ -114,7 +114,7 @@ function Page() {
   const userId = authData.userId;
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading: walletLoading } = useSelector(
-    (state: RootState) => state.wallet
+    (state: RootState) => state.wallet,
   );
   // Fetch data from API
   const fetchData = async () => {
@@ -122,7 +122,7 @@ function Page() {
     setError(null);
     try {
       const apiUrl = new URL(
-        `https://backend-production-ac5e.up.railway.app/api/appointments/users/${userId}`
+        `https://backend-production-ac5e.up.railway.app/api/appointments/users/${userId}`,
       );
       apiUrl.searchParams.append("page-number", currentPage.toString());
       apiUrl.searchParams.append("page-size", pageSize.toString());
@@ -145,7 +145,7 @@ function Page() {
       setHasNext(result.hasNext);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định"
+        err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định",
       );
     } finally {
       setIsLoading(false);
@@ -203,7 +203,7 @@ function Page() {
       const currentTime = toLocalISOString(new Date()); // Sử dụng hàm này
 
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`
+        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`,
       );
 
       if (!response.ok) {
@@ -224,7 +224,7 @@ function Page() {
       setShowCancelConfirm(true);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Lỗi khi kiểm tra điều kiện hủy"
+        err instanceof Error ? err.message : "Lỗi khi kiểm tra điều kiện hủy",
       );
     } finally {
       setIsLoading(false);
@@ -247,7 +247,7 @@ function Page() {
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
       const responseData = await response.json();
       console.log("API Response:", responseData);
@@ -488,7 +488,7 @@ function Page() {
                             </td>
                             <td className="py-2 px-4 border text-center">
                               {new Date(
-                                tableAppointment.scheduleTime
+                                tableAppointment.scheduleTime,
                               ).toLocaleDateString("vi-VN")}
                             </td>
                             <td className="py-2 px-4 border text-center">
@@ -518,7 +518,7 @@ function Page() {
                               )}
                             </td>
                           </tr>
-                        )
+                        ),
                       )}
                     </tbody>
                   </table>

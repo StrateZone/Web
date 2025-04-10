@@ -57,7 +57,7 @@ const OpponentRecommendationModal = ({
       const formattedEndTime = new Date(endDate).toISOString();
 
       const url = new URL(
-        `https://backend-production-ac5e.up.railway.app/api/users/by-ranking/random/${userId}/tables/${tableId}`
+        `https://backend-production-ac5e.up.railway.app/api/users/by-ranking/random/${userId}/tables/${tableId}`,
       );
 
       url.searchParams.append("StartTime", formattedStartTime);
@@ -76,12 +76,12 @@ const OpponentRecommendationModal = ({
           (b) =>
             b.tableId === tableId &&
             b.startDate === startDate &&
-            b.endDate === endDate
+            b.endDate === endDate,
         );
 
         if (currentBooking?.invitedUsers) {
           alreadyInvitedIds = currentBooking.invitedUsers.map(
-            (user) => user.userId
+            (user) => user.userId,
           );
         }
       }
@@ -122,7 +122,7 @@ const OpponentRecommendationModal = ({
       setOpponents(allOpponents);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "An unknown error occurred"
+        err instanceof Error ? err.message : "An unknown error occurred",
       );
     } finally {
       setLoading(false);
@@ -186,7 +186,7 @@ const OpponentRecommendationModal = ({
         (b) =>
           b.tableId === tableId &&
           b.startDate === startDate &&
-          b.endDate === endDate
+          b.endDate === endDate,
       );
 
       if (!currentBooking) {
@@ -203,7 +203,7 @@ const OpponentRecommendationModal = ({
 
       // 4. Kiểm tra nếu đã mời người này rồi
       const isAlreadyInvited = currentBooking.invitedUsers?.some(
-        (u) => u.userId === opponent.userId
+        (u) => u.userId === opponent.userId,
       );
 
       if (isAlreadyInvited) {
@@ -213,7 +213,7 @@ const OpponentRecommendationModal = ({
 
       // 5. Cập nhật trạng thái UI
       const updatedOpponents = opponents.map((o) =>
-        o.userId === opponent.userId ? { ...o, isInvited: true } : o
+        o.userId === opponent.userId ? { ...o, isInvited: true } : o,
       );
       setOpponents(updatedOpponents);
 
@@ -314,7 +314,7 @@ const OpponentRecommendationModal = ({
     ];
 
     return Object.entries(grouped).sort(
-      ([a], [b]) => rankingOrder.indexOf(a) - rankingOrder.indexOf(b)
+      ([a], [b]) => rankingOrder.indexOf(a) - rankingOrder.indexOf(b),
     );
   };
 
@@ -360,7 +360,7 @@ const OpponentRecommendationModal = ({
                   <span className="font-bold">
                     {translateRanking(
                       JSON.parse(localStorage.getItem("authData") || "{}")
-                        .ranking || "basic"
+                        .ranking || "basic",
                     )}
                   </span>{" "}
                 </p>
@@ -400,7 +400,7 @@ const OpponentRecommendationModal = ({
                             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                               <div
                                 className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${getRankingColor(
-                                  opponent.ranking
+                                  opponent.ranking,
                                 )}`}
                               >
                                 {translateRanking(opponent.ranking)}

@@ -51,7 +51,7 @@ export default function OTPVerificationPage() {
       const verifyResponse = await axios.post(
         verifyUrl,
         { email, otp: otpCode },
-        { headers: { "Content-Type": "application/json" } }
+        { headers: { "Content-Type": "application/json" } },
       );
 
       if (!verifyResponse.data.success) {
@@ -100,7 +100,7 @@ export default function OTPVerificationPage() {
         {},
         {
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
 
       // Start countdown

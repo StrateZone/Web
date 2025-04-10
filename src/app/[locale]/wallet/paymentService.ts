@@ -12,7 +12,7 @@ export const paymentService = {
   }) => {
     const response = await axios.post(
       `${API_URL}/zalo-pay/create-payment`,
-      data
+      data,
     );
     return response.data;
   },

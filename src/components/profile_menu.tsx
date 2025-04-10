@@ -72,7 +72,7 @@ const useProfileMenu = () => {
 
   const handleLogout = () => {
     ["accessToken", "refreshToken", "authData", "chessBookings"].forEach(
-      (item) => localStorage.removeItem(item)
+      (item) => localStorage.removeItem(item),
     );
     router.push("/");
   };

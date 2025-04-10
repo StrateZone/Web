@@ -54,7 +54,7 @@ export const ConfirmPaymentPopup = async ({
             }</li>
             <li><strong>Ngày:</strong> ${formatDate(tableInfo.startTime)}</li>
             <li><strong>Thời gian:</strong> ${formatTime(
-              tableInfo.startTime
+              tableInfo.startTime,
             )} - ${formatTime(tableInfo.endTime)}</li>
           </ul>
         </div>

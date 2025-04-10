@@ -42,7 +42,7 @@ export default function RegisterPage() {
   const handleDisplayNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDisplayName(e.target.value);
     setDisplayNameError(
-      e.target.value ? "" : "Tên hiển thị không được để trống"
+      e.target.value ? "" : "Tên hiển thị không được để trống",
     );
   };
 
@@ -55,7 +55,7 @@ export default function RegisterPage() {
 
     setPhoneNumber(input);
     setPhoneNumberError(
-      phoneRegex.test(input) ? "" : "Số điện thoại phải có 10 chữ số"
+      phoneRegex.test(input) ? "" : "Số điện thoại phải có 10 chữ số",
     );
   };
 
@@ -76,10 +76,10 @@ export default function RegisterPage() {
     if (!email || !displayName || !phoneNumber || !fullName || !gender) {
       setEmailError(email ? "" : "Email không được để trống");
       setDisplayNameError(
-        displayName ? "" : "Tên hiển thị không được để trống"
+        displayName ? "" : "Tên hiển thị không được để trống",
       );
       setPhoneNumberError(
-        phoneNumber ? "" : "Số điện thoại không được để trống"
+        phoneNumber ? "" : "Số điện thoại không được để trống",
       );
       setFullNameError(fullName ? "" : "Họ và tên không được để trống");
       setGenderError(gender ? "" : "Vui lòng chọn giới tính");
@@ -95,10 +95,10 @@ export default function RegisterPage() {
     if (!email || !displayName || !phoneNumber || !fullName || !gender) {
       setEmailError(email ? "" : "Email không được để trống");
       setDisplayNameError(
-        displayName ? "" : "Tên hiển thị không được để trống"
+        displayName ? "" : "Tên hiển thị không được để trống",
       );
       setPhoneNumberError(
-        phoneNumber ? "" : "Số điện thoại không được để trống"
+        phoneNumber ? "" : "Số điện thoại không được để trống",
       );
       setFullNameError(fullName ? "" : "Họ và tên không được để trống");
       setGenderError(gender ? "" : "Vui lòng chọn giới tính");
@@ -119,12 +119,12 @@ export default function RegisterPage() {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (response.status === 200) {
         router.push(
-          `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`
+          `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`,
         );
       } else {
         console.log("Response từ API:", response); // Log dữ liệu trả về từ API
