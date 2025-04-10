@@ -4,12 +4,12 @@ import { User } from "lucide-react";
 import Link from "next/link";
 import { useLocale } from "next-intl";
 import { Input, Button } from "@material-tailwind/react";
-import axios from "axios"; // Import axios
+import axios from "axios";
 
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
 import { useRouter } from "next/navigation";
-import { toast } from "react-toastify"; // Import toast
+import { toast } from "react-toastify";
 
 export default function LoginPage() {
   const localActive = useLocale();
@@ -19,7 +19,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
 
-  //Validate Input không đúng định dạng or để trống
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
     validateEmail(e.target.value);
@@ -35,31 +34,30 @@ export default function LoginPage() {
     }
   };
 
-  // API Login gọi OTP
   const handleLogin = async () => {
     if (!emailError && email) {
-      //xu ly ben trong luon ko ca`n tach ra
+      setLoading(true);
       try {
         const response = await axios.post(
-          `https://backend-production-ac5e.up.railway.app/api/auth/send-otp?email=${encodeURIComponent(email)}`
+          `https://backend-production-ac5e.up.railway.app/api/auth/send-otp?email=${encodeURIComponent(email)}`,
         );
 
-        console.log("API Response:", response.data); // Kiểm tra dữ liệu trả về
-
-        // Kiểm tra nếu API trả về lỗi dù HTTP status vẫn là 200
         if (
           response.data?.success === false ||
           response.data?.statusCode === 404
         ) {
           toast.error("Tài khoản không tồn tại. Vui lòng kiểm tra lại email.");
-          return; // Dừng lại nếu tài khoản không tồn tại
+          return;
         }
 
         router.push(
-          `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`
+          `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`,
         );
       } catch (error) {
         console.log(error);
+        toast.error("Có lỗi xảy ra khi gửi OTP. Vui lòng thử lại sau.");
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -110,11 +108,18 @@ export default function LoginPage() {
             </div>
             <div className="flex flex-col gap-3 mt-4">
               <Button
-                className="w-full font-bold bg-black text-white py-3 rounded border-[0.5px]"
+                className="w-full font-bold bg-black text-white py-3 rounded border-[0.5px] flex items-center justify-center min-h-12"
                 onClick={handleLogin}
-                disabled={loading}
+                disabled={loading || !!emailError || !email}
               >
-                {loading ? "Đang gửi OTP..." : "Đăng nhập"}
+                {loading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    <span>Đang gửi OTP...</span>
+                  </div>
+                ) : (
+                  "Đăng nhập"
+                )}
               </Button>
             </div>
             <div className="text-center text-sm mt-4">

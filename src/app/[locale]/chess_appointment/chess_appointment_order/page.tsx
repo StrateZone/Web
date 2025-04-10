@@ -65,6 +65,7 @@ const TableBookingPage = () => {
   const [coupon, setCoupon] = useState("");
   const [discount, setDiscount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [localLoading, setLocalLoading] = useState<Record<string, boolean>>({});
   const localActive = useLocale();
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [chessBookings, setChessBookings] = useState<ChessBooking[]>([]);
@@ -74,13 +75,16 @@ const TableBookingPage = () => {
   const [selectedStartDate, setSelectedStartDate] = useState<string>("");
   const [selectedEndDate, setSelectedEndDate] = useState<string>("");
 
-  const handleCancelInvitation = (
+  const handleCancelInvitation = async (
     tableId: number,
     startDate: string,
-    endDate: string
+    endDate: string,
   ) => {
+    if (isLoading) return;
+
+    const bookingKey = `${tableId}-${startDate}-${endDate}`;
     try {
-      setIsLoading(true);
+      setLocalLoading((prev) => ({ ...prev, [bookingKey]: true }));
 
       const updatedBookings = chessBookings.map((booking) => {
         if (
@@ -92,7 +96,7 @@ const TableBookingPage = () => {
             ...booking,
             hasInvitations: false,
             invitedUsers: [],
-            totalPrice: booking.originalPrice || booking.totalPrice * 2, // Khôi phục giá gốc
+            totalPrice: booking.originalPrice || booking.totalPrice * 2,
             originalPrice: undefined,
           };
         }
@@ -103,13 +107,13 @@ const TableBookingPage = () => {
       localStorage.setItem("chessBookings", JSON.stringify(updatedBookings));
 
       toast.info(
-        `Đã hủy tất cả lời mời cho bàn số ${tableId} (${formatTime(startDate)} - ${formatTime(endDate)})`
+        `Đã hủy tất cả lời mời cho bàn số ${tableId} (${formatTime(startDate)} - ${formatTime(endDate)})`,
       );
     } catch (error) {
       console.error("Error canceling invitations:", error);
       toast.error("Có lỗi xảy ra khi hủy lời mời");
     } finally {
-      setIsLoading(false);
+      setLocalLoading((prev) => ({ ...prev, [bookingKey]: false }));
     }
   };
 
@@ -130,7 +134,7 @@ const TableBookingPage = () => {
       if (booking.tableId === tableId) {
         const existingInvites = booking.invitedUsers || [];
         const isAlreadyInvited = existingInvites.some(
-          (u) => u.userId === opponent.userId
+          (u) => u.userId === opponent.userId,
         );
 
         if (isAlreadyInvited) {
@@ -140,7 +144,6 @@ const TableBookingPage = () => {
         const newInvitedUsers = [...existingInvites, invitedUser];
         const hasInvitations = newInvitedUsers.length > 0;
 
-        // Chỉ giảm giá nếu đây là lời mời đầu tiên
         const shouldApplyDiscount = existingInvites.length === 0;
 
         return {
@@ -165,15 +168,20 @@ const TableBookingPage = () => {
   const removeTable = async (
     tableId: number,
     startDate: string,
-    endDate: string
+    endDate: string,
   ) => {
+    if (isLoading) return;
+
+    const bookingKey = `${tableId}-${startDate}-${endDate}`;
     try {
+      setLocalLoading((prev) => ({ ...prev, [bookingKey]: true }));
+
       // Check if there are any invited users
       const booking = chessBookings.find(
         (b) =>
           b.tableId === tableId &&
           b.startDate === startDate &&
-          b.endDate === endDate
+          b.endDate === endDate,
       );
 
       if (booking?.invitedUsers && booking.invitedUsers.length > 0) {
@@ -190,7 +198,7 @@ const TableBookingPage = () => {
             booking.tableId === tableId &&
             booking.startDate === startDate &&
             booking.endDate === endDate
-          )
+          ),
       );
 
       setChessBookings(updatedBookings);
@@ -198,6 +206,8 @@ const TableBookingPage = () => {
     } catch (error) {
       console.error("Error removing table:", error);
       toast.error("Có lỗi xảy ra khi xóa bàn");
+    } finally {
+      setLocalLoading((prev) => ({ ...prev, [bookingKey]: false }));
     }
   };
 
@@ -252,7 +262,7 @@ const TableBookingPage = () => {
 
   const totalPrice = chessBookings.reduce(
     (sum, booking) => sum + booking.totalPrice,
-    0
+    0,
   );
   const finalPrice = totalPrice - discount;
 
@@ -265,18 +275,20 @@ const TableBookingPage = () => {
     startDate: string;
     endDate: string;
   }) => {
+    if (isLoading) return;
     router.push(
       `/${locale}/chess_appointment/${bookingInfo.id}?startTime=${encodeURIComponent(
-        bookingInfo.startDate
-      )}&endTime=${encodeURIComponent(bookingInfo.endDate)}`
+        bookingInfo.startDate,
+      )}&endTime=${encodeURIComponent(bookingInfo.endDate)}`,
     );
   };
 
   const inviteFriend = (
     tableId: number,
     startDate: string,
-    endDate: string
+    endDate: string,
   ) => {
+    if (isLoading) return;
     setSelectedTableId(tableId);
     setSelectedStartDate(startDate);
     setSelectedEndDate(endDate);
@@ -292,7 +304,7 @@ const TableBookingPage = () => {
     const now = new Date();
     const closeToNowBookings = chessBookings.filter(
       (booking) =>
-        new Date(booking.startDate).getTime() - now.getTime() < 90 * 60 * 1000
+        new Date(booking.startDate).getTime() - now.getTime() < 90 * 60 * 1000,
     );
 
     if (closeToNowBookings.length > 0) {
@@ -346,7 +358,7 @@ const TableBookingPage = () => {
             "Content-Type": "application/json-patch+json",
           },
           body: JSON.stringify(requestData),
-        }
+        },
       );
 
       const responseText = await response.text();
@@ -393,7 +405,7 @@ const TableBookingPage = () => {
           });
 
           const validBookings = chessBookings.filter(
-            (booking) => new Date(booking.startDate) > now
+            (booking) => new Date(booking.startDate) > now,
           );
           setChessBookings(validBookings);
           localStorage.setItem("chessBookings", JSON.stringify(validBookings));
@@ -405,7 +417,7 @@ const TableBookingPage = () => {
                 tableId: t.table_id,
                 startTime: formatTime(t.start_time),
                 endTime: formatTime(t.end_time),
-              })
+              }),
             );
 
             await UnavailableTablesPopup({ unavailableTables });
@@ -415,14 +427,14 @@ const TableBookingPage = () => {
                 (unavailable: UnavailableTable) =>
                   booking.tableId === unavailable.table_id &&
                   booking.startDate === unavailable.start_time &&
-                  booking.endDate === unavailable.end_time
+                  booking.endDate === unavailable.end_time,
               );
             });
 
             setChessBookings(updatedBookings);
             localStorage.setItem(
               "chessBookings",
-              JSON.stringify(updatedBookings)
+              JSON.stringify(updatedBookings),
             );
           } catch (parseError) {
             console.error("Error parsing unavailable tables:", parseError);
@@ -434,6 +446,29 @@ const TableBookingPage = () => {
     }
   };
 
+  const Spinner = ({ size = 5 }: { size?: number }) => (
+    <svg
+      className={`animate-spin h-${size} w-${size}`}
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      ></circle>
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+      ></path>
+    </svg>
+  );
+
   return (
     <div className="text-base">
       <Navbar />
@@ -444,8 +479,8 @@ const TableBookingPage = () => {
           alt="Banner Image"
           className="absolute inset-0 w-full h-full object-cover z-10"
         />
-        <div className="min-h-[400px] relative z-30 h-full max-w-7xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
-          <h2 className="sm:text-5xl text-3xl font-bold mb-6">
+        <div className="min-h-[300px] relative z-30 h-full max-w-7xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
+          <h2 className="sm:text-4xl text-2xl font-bold mb-6">
             Đặt Bàn - Thi Đấu Cùng Bạn Bè
           </h2>
           <p className="sm:text-xl text-lg text-center text-gray-200">
@@ -489,207 +524,238 @@ const TableBookingPage = () => {
                   </p>
                 </div>
               ) : (
-                chessBookings.map((booking) => (
-                  <div
-                    key={`${booking.tableId}-${booking.startDate}-${booking.endDate}`}
-                    className="border-2 p-4 rounded-lg flex items-center relative"
-                  >
-                    <div className="flex-1 grid grid-cols-2 gap-4 text-base">
-                      <div>
-                        <div className="col-span-2 mb-2">
-                          <p
-                            className="text-blue-500 text-sm italic cursor-pointer hover:underline"
-                            onClick={() => {
-                              viewBookingDetail({
-                                id: booking.tableId,
-                                startDate: booking.startDate,
-                                endDate: booking.endDate,
-                              });
-                            }}
-                          >
-                            🔍 Bấm vào để xem chi tiết bàn
-                          </p>
-                        </div>
-                        <p>
-                          <span className="font-bold text-lg ">Loại Cờ: </span>
-                          {GAME_TYPE_TRANSLATIONS[
-                            booking.gameType.typeName.toLowerCase()
-                          ] || booking.gameType.typeName}{" "}
-                        </p>
-                        <p>
-                          <span className="font-bold text-lg ">
-                            Loại Phòng:{" "}
-                          </span>
-                          {translateRoomType(booking.roomType)}
-                        </p>
-                        <p>
-                          <span className="font-bold text-lg ">Mã Bàn: </span>
-                          {booking.tableId}
-                        </p>
-                        <p>
-                          <span className="font-bold text-lg ">Phòng Số: </span>
-                          {booking.roomId}
-                        </p>
-                        <p>
-                          <span className="font-bold text-lg ">
-                            Tổng Thời Gian Thuê Bàn:{" "}
-                          </span>
-                          {formatDuration(booking.durationInHours)}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p>
-                          <span className="font-bold text-lg ">Ngày Đặt: </span>
-                          {formatDate(booking.startDate)}
-                        </p>
-                        <p>
-                          <span className="font-bold text-lg ">
-                            Giờ Bắt Đầu:{" "}
-                          </span>
-                          {formatTime(booking.startDate)}
-                        </p>
-                        <p>
-                          <span className="font-bold text-lg ">
-                            Giờ Kết thúc:{" "}
-                          </span>
-                          {formatTime(booking.endDate)}
-                        </p>
+                chessBookings.map((booking) => {
+                  const bookingKey = `${booking.tableId}-${booking.startDate}-${booking.endDate}`;
+                  const isLoadingLocal = localLoading[bookingKey] || false;
+
+                  return (
+                    <div
+                      key={bookingKey}
+                      className="border-2 p-4 rounded-lg flex items-center relative"
+                    >
+                      <div className="flex-1 grid grid-cols-2 gap-4 text-base">
                         <div>
-                          <p className="font-medium text-base">
+                          <div className="col-span-2 mb-2">
+                            <p
+                              className={`text-blue-500 text-sm italic cursor-pointer hover:underline ${
+                                isLoading ? "opacity-50 cursor-not-allowed" : ""
+                              }`}
+                              onClick={() => {
+                                if (!isLoading) {
+                                  viewBookingDetail({
+                                    id: booking.tableId,
+                                    startDate: booking.startDate,
+                                    endDate: booking.endDate,
+                                  });
+                                }
+                              }}
+                            >
+                              🔍 Bấm vào để xem chi tiết bàn
+                            </p>
+                          </div>
+                          <p>
                             <span className="font-bold text-lg ">
-                              Giá Thuê Theo Giờ:{" "}
+                              Loại Cờ:{" "}
                             </span>
-                            {(
-                              booking.roomTypePrice + booking.gameTypePrice
-                            ).toLocaleString("vi-VN")}
-                            đ
+                            {GAME_TYPE_TRANSLATIONS[
+                              booking.gameType.typeName.toLowerCase()
+                            ] || booking.gameType.typeName}{" "}
+                          </p>
+                          <p>
+                            <span className="font-bold text-lg ">
+                              Loại Phòng:{" "}
+                            </span>
+                            {translateRoomType(booking.roomType)}
+                          </p>
+                          <p>
+                            <span className="font-bold text-lg ">Mã Bàn: </span>
+                            {booking.tableId}
+                          </p>
+                          <p>
+                            <span className="font-bold text-lg ">
+                              Phòng Số:{" "}
+                            </span>
+                            {booking.roomId}
+                          </p>
+                          <p>
+                            <span className="font-bold text-lg ">
+                              Tổng Thời Gian Thuê Bàn:{" "}
+                            </span>
+                            {formatDuration(booking.durationInHours)}
                           </p>
                         </div>
-                        <p className="mt-2">
-                          <span className="font-bold text-lg">Tổng: </span>
-                          {booking.totalPrice.toLocaleString()}đ
-                          {booking.hasInvitations ? (
-                            <span className="text-green-600 ml-2">
-                              (Thanh Toán Trước 50%)
+                        <div className="text-right">
+                          <p>
+                            <span className="font-bold text-lg ">
+                              Ngày Đặt:{" "}
                             </span>
-                          ) : (
-                            booking.originalPrice && (
-                              <span className="text-gray-500 ml-2 line-through">
-                                {booking.originalPrice.toLocaleString()}đ
+                            {formatDate(booking.startDate)}
+                          </p>
+                          <p>
+                            <span className="font-bold text-lg ">
+                              Giờ Bắt Đầu:{" "}
+                            </span>
+                            {formatTime(booking.startDate)}
+                          </p>
+                          <p>
+                            <span className="font-bold text-lg ">
+                              Giờ Kết thúc:{" "}
+                            </span>
+                            {formatTime(booking.endDate)}
+                          </p>
+                          <div>
+                            <p className="font-medium text-base">
+                              <span className="font-bold text-lg ">
+                                Giá Thuê Theo Giờ:{" "}
                               </span>
-                            )
+                              {(
+                                booking.roomTypePrice + booking.gameTypePrice
+                              ).toLocaleString("vi-VN")}
+                              đ
+                            </p>
+                          </div>
+                          <p className="mt-2">
+                            <span className="font-bold text-lg">Tổng: </span>
+                            {booking.totalPrice.toLocaleString()}đ
+                            {booking.hasInvitations ? (
+                              <span className="text-green-600 ml-2">
+                                (Thanh Toán Trước 50%)
+                              </span>
+                            ) : (
+                              booking.originalPrice && (
+                                <span className="text-gray-500 ml-2 line-through">
+                                  {booking.originalPrice.toLocaleString()}đ
+                                </span>
+                              )
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Phần hiển thị avatar người được mời */}
+                      <div className="absolute bottom-2 right-2 flex items-center">
+                        {booking.invitedUsers &&
+                          booking.invitedUsers.length > 0 && (
+                            <div className="flex -space-x-2 mr-2">
+                              {booking.invitedUsers.map((user) => (
+                                <div
+                                  key={user.userId}
+                                  className="relative w-8 h-8 rounded-full border-2 border-white bg-gray-200 overflow-hidden"
+                                  title={user.username}
+                                >
+                                  {user.avatarUrl ? (
+                                    <img
+                                      src={user.avatarUrl}
+                                      alt={user.username}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).src =
+                                          "/default-avatar.png";
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-blue-500 text-white text-xs font-bold">
+                                      {user.username.charAt(0).toUpperCase()}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           )}
-                        </p>
+                      </div>
+
+                      <div className="flex items-center ml-4 space-x-3">
+                        <button
+                          onClick={() =>
+                            !isLoading &&
+                            inviteFriend(
+                              booking.tableId,
+                              booking.startDate,
+                              booking.endDate,
+                            )
+                          }
+                          className={`text-blue-500 hover:text-blue-700 p-2 ${
+                            isLoading || isLoadingLocal
+                              ? "opacity-50 cursor-not-allowed"
+                              : ""
+                          }`}
+                          title="Mời bạn vào bàn này"
+                          disabled={isLoadingLocal || isLoading}
+                        >
+                          {isLoadingLocal ? (
+                            <Spinner size={4} />
+                          ) : (
+                            <UserPlus size={24} />
+                          )}
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            !isLoading &&
+                            handleCancelInvitation(
+                              booking.tableId,
+                              booking.startDate,
+                              booking.endDate,
+                            )
+                          }
+                          className={`p-2 ${
+                            !booking.hasInvitations ||
+                            isLoading ||
+                            isLoadingLocal
+                              ? "text-gray-400 hover:text-gray-400 cursor-not-allowed"
+                              : "text-red-500 hover:text-red-700"
+                          }`}
+                          title={
+                            !booking.hasInvitations
+                              ? "Chưa mời ai"
+                              : isLoading || isLoadingLocal
+                                ? "Đang xử lý..."
+                                : "Hủy Mời Bạn"
+                          }
+                          disabled={
+                            !booking.hasInvitations ||
+                            isLoadingLocal ||
+                            isLoading
+                          }
+                        >
+                          {isLoadingLocal ? (
+                            <Spinner size={4} />
+                          ) : (
+                            <UserX size={24} />
+                          )}
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            !isLoading &&
+                            removeTable(
+                              booking.tableId,
+                              booking.startDate,
+                              booking.endDate,
+                            )
+                          }
+                          className={`text-red-500 hover:text-red-700 p-2 ${
+                            isLoading || isLoadingLocal
+                              ? "opacity-50 cursor-not-allowed"
+                              : ""
+                          }`}
+                          title={
+                            isLoading || isLoadingLocal
+                              ? "Đang xử lý..."
+                              : "Xóa bàn này"
+                          }
+                          disabled={isLoadingLocal || isLoading}
+                        >
+                          {isLoadingLocal ? (
+                            <Spinner size={4} />
+                          ) : (
+                            <X size={24} />
+                          )}
+                        </button>
                       </div>
                     </div>
-
-                    {/* Phần hiển thị avatar người được mời */}
-                    <div className="absolute bottom-2 right-2 flex items-center">
-                      {booking.invitedUsers &&
-                        booking.invitedUsers.length > 0 && (
-                          <div className="flex -space-x-2 mr-2">
-                            {booking.invitedUsers.map((user) => (
-                              <div
-                                key={user.userId}
-                                className="relative w-8 h-8 rounded-full border-2 border-white bg-gray-200 overflow-hidden"
-                                title={user.username}
-                              >
-                                {user.avatarUrl ? (
-                                  <img
-                                    src={user.avatarUrl}
-                                    alt={user.username}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).src =
-                                        "/default-avatar.png";
-                                    }}
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center bg-blue-500 text-white text-xs font-bold">
-                                    {user.username.charAt(0).toUpperCase()}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                    </div>
-
-                    <div className="flex items-center ml-4 space-x-3">
-                      <button
-                        onClick={() =>
-                          inviteFriend(
-                            booking.tableId,
-                            booking.startDate,
-                            booking.endDate
-                          )
-                        }
-                        className="text-blue-500 hover:text-blue-700 p-2"
-                        title="Mời bạn vào bàn này"
-                      >
-                        <UserPlus size={24} />
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          handleCancelInvitation(
-                            booking.tableId,
-                            booking.startDate,
-                            booking.endDate
-                          )
-                        }
-                        className={`p-2 ${
-                          !booking.hasInvitations
-                            ? "text-gray-400 hover:text-gray-400 cursor-not-allowed"
-                            : "text-red-500 hover:text-red-700"
-                        }`}
-                        title={
-                          !booking.hasInvitations
-                            ? "Chưa mời ai"
-                            : "Hủy Mời Bạn"
-                        }
-                        disabled={!booking.hasInvitations || isLoading}
-                      >
-                        {isLoading ? (
-                          <svg
-                            className="animate-spin h-5 w-5"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
-                          </svg>
-                        ) : (
-                          <UserX size={24} />
-                        )}
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          removeTable(
-                            booking.tableId,
-                            booking.startDate,
-                            booking.endDate
-                          )
-                        }
-                        className="text-red-500 hover:text-red-700 p-2"
-                        title="Xóa bàn này"
-                      >
-                        <X size={24} />
-                      </button>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
 
@@ -707,27 +773,8 @@ const TableBookingPage = () => {
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center">
-                    <svg
-                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Đang xử lý...
+                    <Spinner size={5} />
+                    <span className="ml-2">Đang xử lý...</span>
                   </div>
                 ) : (
                   "Xác nhận đặt bàn"
@@ -750,7 +797,7 @@ const TableBookingPage = () => {
           startDate={selectedStartDate}
           endDate={selectedEndDate}
           tableId={selectedTableId}
-          open={showOpponentModal} // ✅ Truyền open
+          open={showOpponentModal}
           onClose={() => setShowOpponentModal(false)}
           onInviteSuccess={(opponent) =>
             handleInviteSuccess(opponent, selectedTableId)

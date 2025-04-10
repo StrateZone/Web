@@ -7,9 +7,10 @@ import { fetchWallet } from "@/app/[locale]/wallet/walletSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/app/store";
 import CancelConfirmationModal from "./CancelConfirmationModal";
-import { SuccessCancelPopup } from "../chess_appointment/chess_appointment_order/CancelSuccessPopup";
+import { SuccessCancelPopup } from "./CancelSuccessPopup";
 import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
+import Banner from "@/components/banner/banner";
 interface GameType {
   typeId: number;
   typeName: string;
@@ -105,7 +106,7 @@ function Page() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [refundInfo, setRefundInfo] = useState<RefundInfo | null>(null);
   const [currentCancellingId, setCurrentCancellingId] = useState<number | null>(
-    null
+    null,
   );
 
   const authDataString = localStorage.getItem("authData");
@@ -113,7 +114,7 @@ function Page() {
   const userId = authData.userId;
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading: walletLoading } = useSelector(
-    (state: RootState) => state.wallet
+    (state: RootState) => state.wallet,
   );
   // Fetch data from API
   const fetchData = async () => {
@@ -121,7 +122,7 @@ function Page() {
     setError(null);
     try {
       const apiUrl = new URL(
-        `https://backend-production-ac5e.up.railway.app/api/appointments/users/${userId}`
+        `https://backend-production-ac5e.up.railway.app/api/appointments/users/${userId}`,
       );
       apiUrl.searchParams.append("page-number", currentPage.toString());
       apiUrl.searchParams.append("page-size", pageSize.toString());
@@ -144,7 +145,7 @@ function Page() {
       setHasNext(result.hasNext);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định"
+        err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định",
       );
     } finally {
       setIsLoading(false);
@@ -202,7 +203,7 @@ function Page() {
       const currentTime = toLocalISOString(new Date()); // Sử dụng hàm này
 
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`
+        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`,
       );
 
       if (!response.ok) {
@@ -223,7 +224,7 @@ function Page() {
       setShowCancelConfirm(true);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Lỗi khi kiểm tra điều kiện hủy"
+        err instanceof Error ? err.message : "Lỗi khi kiểm tra điều kiện hủy",
       );
     } finally {
       setIsLoading(false);
@@ -246,7 +247,7 @@ function Page() {
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
       const responseData = await response.json();
       console.log("API Response:", responseData);
@@ -350,22 +351,10 @@ function Page() {
         <Navbar />
         <div className="text-black">
           {/* Background Banner */}
-          <div className="relative font-sans">
-            <div className="absolute inset-0 w-full h-full bg-gray-900/60 opacity-60 z-20"></div>
-            <img
-              src="https://png.pngtree.com/background/20230524/original/pngtree-the-game-of-chess-picture-image_2710450.jpg"
-              alt="Banner Image"
-              className="absolute inset-0 w-full h-full object-cover z-10"
-            />
-            <div className="min-h-[400px] relative z-30 h-full max-w-7xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
-              <h2 className="sm:text-5xl text-3xl font-bold mb-6">
-                Lịch Sử Đặt Bàn Tại StrateZone
-              </h2>
-              <p className="sm:text-xl text-lg text-center text-gray-200">
-                Xem lại các lần đặt bàn gần đây của bạn tại StrateZone
-              </p>
-            </div>
-          </div>
+          <Banner
+            title="Lịch Sử Đặt Bàn Tại StrateZone"
+            subtitle="Xem lại các lần đặt bàn gần đây của bạn tại StrateZone"
+          />
 
           <div className="container mx-auto px-4 py-8 flex-grow">
             <h1 className="text-3xl font-bold mb-8">Lịch Sử Đặt Bàn</h1>
@@ -499,7 +488,7 @@ function Page() {
                             </td>
                             <td className="py-2 px-4 border text-center">
                               {new Date(
-                                tableAppointment.scheduleTime
+                                tableAppointment.scheduleTime,
                               ).toLocaleDateString("vi-VN")}
                             </td>
                             <td className="py-2 px-4 border text-center">
@@ -529,7 +518,7 @@ function Page() {
                               )}
                             </td>
                           </tr>
-                        )
+                        ),
                       )}
                     </tbody>
                   </table>

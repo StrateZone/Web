@@ -15,7 +15,7 @@ import {
 import { useParams, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import CancelConfirmationModal from "../../appointment_history/CancelConfirmationModal";
-import { SuccessCancelPopup } from "../chess_appointment_order/CancelSuccessPopup";
+import { SuccessCancelPopup } from "../../appointment_history/CancelSuccessPopup";
 import { DefaultPagination } from "@/components/pagination";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/app/store";
@@ -96,6 +96,7 @@ interface AppointmentRequest {
 
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
+import Banner from "@/components/banner/banner";
 
 const MySwal = withReactContent(Swal);
 
@@ -114,7 +115,7 @@ const AppointmentSendRequestsPage = () => {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [refundInfo, setRefundInfo] = useState<any>(null);
   const [currentCancellingId, setCurrentCancellingId] = useState<number | null>(
-    null
+    null,
   );
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -124,7 +125,7 @@ const AppointmentSendRequestsPage = () => {
   const [hasNext, setHasNext] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading: walletLoading } = useSelector(
-    (state: RootState) => state.wallet
+    (state: RootState) => state.wallet,
   );
   const getUserId = () => {
     const authDataString = localStorage.getItem("authData");
@@ -154,7 +155,7 @@ const AppointmentSendRequestsPage = () => {
         }
 
         const apiUrl = new URL(
-          `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/from/${userId}`
+          `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/from/${userId}`,
         );
         apiUrl.searchParams.append("page-number", page.toString());
         apiUrl.searchParams.append("page-size", pageSize.toString());
@@ -184,7 +185,7 @@ const AppointmentSendRequestsPage = () => {
         setIsLoading(false);
       }
     },
-    [locale, pageSize, router]
+    [locale, pageSize, router],
   );
 
   const handleRefresh = () => {
@@ -351,13 +352,13 @@ const AppointmentSendRequestsPage = () => {
 
     setRequests((prev) =>
       prev.map((req) =>
-        req.id === currentCancellingId ? { ...req, status: "cancelled" } : req
-      )
+        req.id === currentCancellingId ? { ...req, status: "cancelled" } : req,
+      ),
     );
 
     if (selectedRequest?.id === currentCancellingId) {
       setSelectedRequest((prev) =>
-        prev ? { ...prev, status: "cancelled" } : null
+        prev ? { ...prev, status: "cancelled" } : null,
       );
     }
 
@@ -369,7 +370,7 @@ const AppointmentSendRequestsPage = () => {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -381,7 +382,7 @@ const AppointmentSendRequestsPage = () => {
       setSelectedRequest(null);
 
       const isConfirmed = await SuccessCancelPopup(
-        refundInfo?.refundAmount || 0
+        refundInfo?.refundAmount || 0,
       );
 
       if (isConfirmed) {
@@ -420,28 +421,18 @@ const AppointmentSendRequestsPage = () => {
   return (
     <div>
       <div>
-        <Navbar></Navbar>
-        <div className="relative ">
-          <div className="absolute inset-0 w-full h-full bg-gray-900/60 opacity-60 z-20"></div>
-          <img
-            src="https://png.pngtree.com/background/20230524/original/pngtree-the-game-of-chess-picture-image_2710450.jpg"
-            alt="Banner Image"
-            className="absolute inset-0 w-full h-full object-cover z-10"
-          />
-          <div className="min-h-[400px] relative z-30 h-full max-w-7xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
-            <h2 className="sm:text-5xl text-3xl font-bold mb-6">
-              Lời Mời Đã Gửi
-            </h2>
-            <p className="sm:text-xl text-lg text-center text-gray-200">
-              Xem lại các lời mời đánh cờ bạn đã gửi đi
-            </p>
-          </div>
-        </div>
+        <Navbar />
+        <Banner
+          title="Lời Mời Đã Gửi"
+          subtitle="Xem lại các lời mời đánh cờ bạn đã gửi đi"
+        />
 
         <div className="min-h-[calc(100vh-200px)] bg-gray-50 p-4 text-black">
           <div className="container mx-auto px-2 py-4">
             <div className="flex justify-between items-center mb-4">
-              <h1 className="text-2xl font-bold">Lời Mời Đã Gửi</h1>
+              <h1 className="text-2xl font-bold">
+                Những Lời Mời Của Bạn Đã Gửi Đi Cho Người Khác
+              </h1>
               <Button
                 onClick={handleRefresh}
                 className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600"
@@ -503,7 +494,7 @@ const AppointmentSendRequestsPage = () => {
                         <p className="text-gray-600 text-sm">
                           <strong>Trình Độ:</strong>{" "}
                           {getRankLevelText(
-                            selectedRequest.toUserNavigation?.ranking || 0
+                            selectedRequest.toUserNavigation?.ranking || 0,
                           )}
                         </p>
                       </div>
@@ -596,7 +587,7 @@ const AppointmentSendRequestsPage = () => {
                         <strong>Ngày Chơi:</strong>
                       </span>{" "}
                       {new Date(selectedRequest.startTime).toLocaleDateString(
-                        "vi-VN"
+                        "vi-VN",
                       )}
                     </p>
                     <p>
@@ -605,7 +596,7 @@ const AppointmentSendRequestsPage = () => {
                       </span>{" "}
                       {formatTimeRange(
                         selectedRequest.startTime,
-                        selectedRequest.endTime
+                        selectedRequest.endTime,
                       )}
                     </p>
                     <p>
@@ -630,28 +621,7 @@ const AppointmentSendRequestsPage = () => {
                   </div>
                 </div>
 
-                <div className="flex justify-end space-x-3">
-                  {selectedRequest.status === "pending" &&
-                    !isExpired(selectedRequest.expireAt) && (
-                      <Button
-                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 flex items-center justify-center min-w-[150px]"
-                        disabled={isCancelling}
-                        onClick={() => {
-                          setCurrentCancellingId(selectedRequest.id);
-                          setShowCancelConfirm(true);
-                        }}
-                      >
-                        {isCancelling ? (
-                          <>
-                            <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                            Đang xử lý...
-                          </>
-                        ) : (
-                          <strong>Hủy Lời Mời</strong>
-                        )}
-                      </Button>
-                    )}
-                </div>
+                <div className="flex justify-end space-x-3"></div>
               </div>
             ) : requests.length === 0 ? (
               <div className="text-center py-8">
@@ -697,14 +667,14 @@ const AppointmentSendRequestsPage = () => {
                           </div>
                           <div>
                             <h3 className="font-bold text-base">
-                              Người Nhận:{" "}
+                              Người Nhận: @
                               {request.toUserNavigation?.username ||
                                 "Người dùng ẩn danh"}
                             </h3>
                             <p className="text-gray-600 text-sm">
                               <strong>Trình Độ:</strong>{" "}
                               {getRankLevelText(
-                                request.toUserNavigation?.ranking || 0
+                                request.toUserNavigation?.ranking || 0,
                               )}
                             </p>
                           </div>
@@ -722,7 +692,7 @@ const AppointmentSendRequestsPage = () => {
                             <strong>Giờ Bắt Đầu Và Kết Thúc</strong>{" "}
                             {formatTimeRange(
                               request.startTime,
-                              request.endTime
+                              request.endTime,
                             )}
                           </p>
                           <p className="text-gray-600 text-sm">

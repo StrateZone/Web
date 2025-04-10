@@ -9,6 +9,7 @@ import { FaWallet } from "react-icons/fa";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 import { Button } from "@material-tailwind/react";
 import { DefaultPagination } from "@/components/pagination";
+import Banner from "@/components/banner/banner";
 
 interface Transaction {
   id: number;
@@ -27,12 +28,12 @@ function WalletPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [errorTransactions, setErrorTransactions] = useState<string | null>(
-    null
+    null,
   );
 
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading, error } = useSelector(
-    (state: RootState) => state.wallet
+    (state: RootState) => state.wallet,
   );
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -58,13 +59,13 @@ function WalletPage() {
   const fetchTransactions = async (
     userId: number,
     page: number,
-    size: number
+    size: number,
   ) => {
     setLoadingTransactions(true);
     setErrorTransactions(null);
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/transactions/users/${userId}?page-number=${page}&page-size=${size}`
+        `https://backend-production-ac5e.up.railway.app/api/transactions/users/${userId}?page-number=${page}&page-size=${size}`,
       );
 
       if (!response.ok) {
@@ -81,7 +82,7 @@ function WalletPage() {
     } catch (error) {
       console.error("Error fetching transactions:", error);
       setErrorTransactions(
-        "Không thể tải lịch sử giao dịch. Vui lòng thử lại sau."
+        "Không thể tải lịch sử giao dịch. Vui lòng thử lại sau.",
       );
     } finally {
       setLoadingTransactions(false);
@@ -108,7 +109,7 @@ function WalletPage() {
       }
       return content.replace(
         "Refund on booking cancellation",
-        "Hoàn tiền đặt bàn"
+        "Hoàn tiền đặt bàn",
       );
     }
 
@@ -182,7 +183,7 @@ function WalletPage() {
             description: `Nạp tiền vào ví ${amount} VND`,
             returnUrl: `${window.location.origin}/wallet?success=true`,
           }),
-        }
+        },
       );
 
       const data = await response.json();
@@ -211,23 +212,10 @@ function WalletPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      {/* Banner */}
-      <div className="relative font-sans">
-        <div className="absolute inset-0 w-full h-full bg-gray-900/60 opacity-60 z-20"></div>
-        <img
-          src="https://png.pngtree.com/background/20230524/original/pngtree-the-game-of-chess-picture-image_2710450.jpg"
-          alt="Banner Image"
-          className="absolute inset-0 w-full h-full object-cover z-10"
-        />
-        <div className="min-h-[350px] relative z-30 h-full max-w-6xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
-          <h2 className="sm:text-4xl text-2xl font-bold mb-6">
-            Ví Điện Tử StrateZone
-          </h2>
-          <p className="sm:text-lg text-base text-center text-gray-200">
-            Nạp tiền - Thanh toán - Thi đấu không gián đoạn
-          </p>
-        </div>
-      </div>
+      <Banner
+        title="Ví Điện Tử StrateZone"
+        subtitle="Nạp tiền - Thanh toán - Thi đấu không gián đoạn"
+      />
       {/* Main Content */}
       <div className="flex-grow flex text-black">
         <div className="w-full max-w-2xl p-6 bg-white shadow-sm rounded-lg mt-6 mb-10 ml-6">

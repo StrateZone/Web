@@ -8,6 +8,7 @@ import { FaShoppingCart } from "react-icons/fa";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { CircularProgress } from "@mui/material";
+import Banner from "@/components/banner/banner";
 
 interface ChessBooking {
   durationInHours: number;
@@ -115,7 +116,7 @@ const TableDetailsPage = () => {
               startTime: startTime ? decodeURIComponent(startTime) : undefined,
               endTime: endTime ? decodeURIComponent(endTime) : undefined,
             },
-          }
+          },
         );
 
         const data = response.data;
@@ -224,7 +225,7 @@ const TableDetailsPage = () => {
 
       if (isAlreadyBooked) {
         const existingBookings = localBookings.filter(
-          (b) => b.tableId === chessBooking.tableId
+          (b) => b.tableId === chessBooking.tableId,
         );
 
         const bookingDetails = existingBookings
@@ -244,7 +245,7 @@ const TableDetailsPage = () => {
           .join(", ");
 
         toast.warning(
-          `Bàn số ${chessBooking.tableId} đã được đặt trong khung giờ: ${bookingDetails}`
+          `Bàn số ${chessBooking.tableId} đã được đặt trong khung giờ: ${bookingDetails}`,
         );
         return;
       }
@@ -299,8 +300,8 @@ const TableDetailsPage = () => {
                 (m) =>
                   m.tableId === booking.tableId &&
                   m.startDate === booking.startDate &&
-                  m.endDate === booking.endDate
-              )
+                  m.endDate === booking.endDate,
+              ),
           ),
           mergedBooking,
         ];
@@ -402,22 +403,10 @@ const TableDetailsPage = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      <div className="relative font-sans flex-grow">
-        <div className="absolute inset-0 w-full h-full bg-gray-900/60 opacity-60 z-20"></div>
-        <img
-          src="https://png.pngtree.com/background/20230524/original/pngtree-the-game-of-chess-picture-image_2710450.jpg"
-          alt="Banner Image"
-          className="absolute inset-0 w-full h-full object-cover z-10"
-        />
-        <div className="min-h-[300px] relative z-30 h-full max-w-6xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
-          <h2 className="sm:text-3xl text-xl font-bold mb-4">
-            Chi tiết bàn cờ – Lựa chọn của bạn
-          </h2>
-          <p className="sm:text-base text-sm text-center text-gray-200">
-            Không gian hoàn hảo cho những nước đi đỉnh cao
-          </p>
-        </div>
-      </div>
+      <Banner
+        title="Chi tiết bàn cờ – Lựa chọn của bạn"
+        subtitle="Không gian hoàn hảo cho những nước đi đỉnh cao"
+      />
       <div className="bg-gray-50 py-10 px-5 sm:px-6 lg:px-8 flex-grow">
         <div className="max-w-5xl mx-auto">
           <div className="mb-4">
@@ -427,13 +416,13 @@ const TableDetailsPage = () => {
             {isBooked(
               chessBooking.tableId,
               chessBooking.startDate,
-              chessBooking.endDate
+              chessBooking.endDate,
             ) && (
               <div className="mt-2 text-center text-sm text-green-600">
                 {(() => {
                   const localBooking = getLocalBooking(
                     chessBooking.tableId,
-                    new Date(startDate)
+                    new Date(startDate),
                   );
                   if (localBooking) {
                     return (
@@ -507,18 +496,6 @@ const TableDetailsPage = () => {
                 </div>
                 <div className="border-t border-b border-gray-200 py-4 my-4">
                   <div className="grid grid-cols-2 gap-4">
-                    {/* <div>
-                      <p className="text-base text-gray-500">Giá Của Loại Cờ</p>
-                      <p className="font-medium text-lg">
-                        {chessBooking.gameTypePrice.toLocaleString("vi-VN")}đ
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-base text-gray-500">Giá Phòng</p>
-                      <p className="font-medium text-lg">
-                        {chessBooking.roomTypePrice.toLocaleString("vi-VN")}đ
-                      </p>
-                    </div> */}
                     <div>
                       <p className="text-base text-gray-500">
                         Giá Thuê Theo Giờ
@@ -583,7 +560,7 @@ const TableDetailsPage = () => {
                       isBooked(
                         chessBooking.tableId,
                         chessBooking.startDate,
-                        chessBooking.endDate
+                        chessBooking.endDate,
                       ) || addingToCart
                         ? "opacity-70 cursor-not-allowed"
                         : "hover:shadow-md transition-shadow"
@@ -592,7 +569,7 @@ const TableDetailsPage = () => {
                       isBooked(
                         chessBooking.tableId,
                         chessBooking.startDate,
-                        chessBooking.endDate
+                        chessBooking.endDate,
                       ) || addingToCart
                     }
                     onClick={handleAddToCart}
@@ -609,7 +586,7 @@ const TableDetailsPage = () => {
                     ) : isBooked(
                         chessBooking.tableId,
                         chessBooking.startDate,
-                        chessBooking.endDate
+                        chessBooking.endDate,
                       ) ? (
                       "Đã thêm vào danh sách"
                     ) : (
