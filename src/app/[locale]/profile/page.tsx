@@ -1,4 +1,5 @@
 "use client";
+import Banner from "@/components/banner/banner";
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
 import axios from "axios";
@@ -279,21 +280,10 @@ function ProfilePage() {
   return (
     <div>
       <Navbar />
-      {/* Banner */}
-      <div className="relative font-sans">
-        <div className="absolute inset-0 w-full h-full bg-gray-900/60 opacity-60 z-20"></div>
-        <img
-          src="https://png.pngtree.com/background/20230524/original/pngtree-the-game-of-chess-picture-image_2710450.jpg"
-          alt="Banner Image"
-          className="absolute inset-0 w-full h-full object-cover z-10"
-        />
-        <div className="min-h-[350px] relative z-30 h-full max-w-6xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
-          <h2 className="sm:text-4xl text-2xl font-bold mb-6">Hồ Sơ Cá Nhân</h2>
-          <p className="sm:text-lg text-base text-center text-gray-200">
-            Quản lý thông tin tài khoản của bạn
-          </p>
-        </div>
-      </div>
+      <Banner
+        title="Hồ Sơ Cá Nhân"
+        subtitle="Quản lý thông tin tài khoản của bạn"
+      />
 
       {/* Profile Content */}
       <div className="max-w-6xl mx-auto p-6 text-black">

@@ -7,9 +7,10 @@ import { fetchWallet } from "@/app/[locale]/wallet/walletSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/app/store";
 import CancelConfirmationModal from "./CancelConfirmationModal";
-import { SuccessCancelPopup } from "../chess_appointment/chess_appointment_order/CancelSuccessPopup";
+import { SuccessCancelPopup } from "./CancelSuccessPopup";
 import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
+import Banner from "@/components/banner/banner";
 interface GameType {
   typeId: number;
   typeName: string;
@@ -350,22 +351,10 @@ function Page() {
         <Navbar />
         <div className="text-black">
           {/* Background Banner */}
-          <div className="relative font-sans">
-            <div className="absolute inset-0 w-full h-full bg-gray-900/60 opacity-60 z-20"></div>
-            <img
-              src="https://png.pngtree.com/background/20230524/original/pngtree-the-game-of-chess-picture-image_2710450.jpg"
-              alt="Banner Image"
-              className="absolute inset-0 w-full h-full object-cover z-10"
-            />
-            <div className="min-h-[400px] relative z-30 h-full max-w-7xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
-              <h2 className="sm:text-5xl text-3xl font-bold mb-6">
-                Lịch Sử Đặt Bàn Tại StrateZone
-              </h2>
-              <p className="sm:text-xl text-lg text-center text-gray-200">
-                Xem lại các lần đặt bàn gần đây của bạn tại StrateZone
-              </p>
-            </div>
-          </div>
+          <Banner
+            title="Lịch Sử Đặt Bàn Tại StrateZone"
+            subtitle="Xem lại các lần đặt bàn gần đây của bạn tại StrateZone"
+          />
 
           <div className="container mx-auto px-4 py-8 flex-grow">
             <h1 className="text-3xl font-bold mb-8">Lịch Sử Đặt Bàn</h1>

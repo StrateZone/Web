@@ -81,15 +81,16 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
           <span className="font-medium">**Thời gian hủy của bạn là**:</span>{" "}
           <strong>{formatDate(refundInfo.cancellationTime)}</strong>
         </p>
-        <p>
-          <span className="font-medium">**Hạn chót hủy đơn**:</span>{" "}
-          <strong>{formatDate(refundInfo.cancellation_Block_TimeGate)}</strong>
-        </p>
+
         <p>
           <span className="font-medium">**Hạn hoàn tiền một phần**:</span>{" "}
           <strong>
             {formatDate(refundInfo.cancellation_PartialRefund_TimeGate)}
           </strong>
+        </p>
+        <p>
+          <span className="font-medium">**Hạn chót hủy đơn**:</span>{" "}
+          <strong>{formatDate(refundInfo.cancellation_Block_TimeGate)}</strong>
         </p>
       </>
     );

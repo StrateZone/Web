@@ -24,17 +24,17 @@ const menuConfig = [
     label: "Tài khoản",
     icon: UserCircleIcon,
     items: [
-      { label: "Thông tin cá nhân", icon: User, path: "profile" },
+      { label: "Thông Tin Cá Nhân", icon: User, path: "profile" },
       // { label: "Cài đặt tài khoản", icon: CogIcon, path: "settings" },
-      { label: "Ví tiền", icon: Wallet, path: "wallet" },
+      { label: "Ví Tiền", icon: Wallet, path: "wallet" },
     ],
   },
   {
-    label: "Lời Mời Và Lịch Sử",
+    label: "Lời Mời Và Lịch Sử Đặt Bàn",
     icon: Calendar,
     items: [
       {
-        label: "Lịch sử đặt bàn",
+        label: "Lịch Sử Đặt Bàn",
         icon: ClockIcon,
         path: "appointment_history",
       },
@@ -155,7 +155,7 @@ const SubMenu = ({
           <Typography
             as="span"
             variant="small"
-            className="font-normal"
+            className="font-bold"
             color={menu.isLogout ? "red" : "inherit"}
           >
             {menu.label}
@@ -205,7 +205,7 @@ export default function ProfileMenu() {
           />
         </Button>
       </MenuHandler>
-      <MenuList className="p-1 w-64 max-h-[80vh] overflow-y-auto">
+      <MenuList className="p-1 w-72 max-h-[80vh] overflow-y-auto">
         {menuConfig.map((menu) => (
           <SubMenu
             key={menu.label}
