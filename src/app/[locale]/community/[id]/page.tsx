@@ -54,17 +54,17 @@ interface Comment {
   likeId: number | null;
 }
 
-interface PageProps {
+interface MyPageProps {
   params: {
     id: string;
-    locale?: string;
+    locale: string; // Make locale required if it's always present, or keep optional if not
   };
   searchParams?: {
     [key: string]: string | string[] | undefined;
   };
 }
 
-function PostDetailPage({ params }: PageProps) {
+function PostDetailPage({ params }: MyPageProps) {
   const [thread, setThread] = useState<Thread | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
