@@ -70,8 +70,10 @@ function PostDetailPage({ params }: PageProps) {
   const [loading, setLoading] = useState(true);
   const [commentContent, setCommentContent] = useState("");
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
-  const authDataString = localStorage.getItem("authData");
-  const parsedAuthData = JSON.parse(authDataString || "{}");
+
+  const authDataString =
+    typeof window !== "undefined" ? localStorage.getItem("authData") : null;
+  const parsedAuthData = authDataString ? JSON.parse(authDataString) : {};
   const userInfo = parsedAuthData.userInfo || {};
   const userId = userInfo.userId;
   const fullName = userInfo.fullName;
