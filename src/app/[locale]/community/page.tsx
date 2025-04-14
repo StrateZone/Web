@@ -74,7 +74,10 @@ export default function ComunityPage() {
         let url = `https://backend-production-ac5e.up.railway.app/api/threads/filter/statuses-and-tags?statuses=published&page-number=${currentPage}&page-size=${pageSize}`;
 
         if (selectedTags.length > 0) {
-          url += `&TagIds=${selectedTags.join(",")}`;
+          // Add each tagId as a separate parameter
+          selectedTags.forEach((tagId) => {
+            url += `&TagIds=${tagId}`;
+          });
         }
 
         const response = await fetch(url);

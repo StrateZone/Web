@@ -54,7 +54,14 @@ interface Comment {
   likeId: number | null;
 }
 
-function PostDetailPage({ params }: { params: { id: string } }) {
+interface PageProps {
+  params: {
+    id: string;
+    locale?: string; // Add locale since your path is [locale]/community/[id]
+  };
+}
+
+function PostDetailPage({ params }: PageProps) {
   const [thread, setThread] = useState<Thread | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -538,11 +545,11 @@ function PostDetailPage({ params }: { params: { id: string } }) {
         </div>
 
         {thread.thumbnailUrl && (
-          <div className="w-full  overflow-hidden">
+          <div className="w-full overflow-hidden">
             <img
               src={thread.thumbnailUrl}
               alt={thread.title}
-              className="w-8/12 h-96 object-cover" // ví dụ chiều cao 16rem
+              className="w-8/12 h-96 object-cover"
               loading="lazy"
               onError={(e) => {
                 (e.target as HTMLImageElement).src = "/default-thumbnail.jpg";
@@ -579,7 +586,7 @@ function PostDetailPage({ params }: { params: { id: string } }) {
               onChange={(e) => setCommentContent(e.target.value)}
               placeholder="Viết bình luận của bạn..."
             />
-            <Button className="py-1 " type="submit">
+            <Button className="py-1" type="submit">
               Bình luận
             </Button>
           </form>
