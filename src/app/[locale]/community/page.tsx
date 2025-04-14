@@ -271,7 +271,7 @@ export default function ComunityPage() {
                   <Chip
                     key={tag.tagId}
                     value={`${tag.tagName} (${tag.postCount || 0})`}
-                    onClick={() => toggleTag(tag.tagId)}
+                    onClose={() => toggleTag(tag.tagId)}
                     variant={
                       selectedTags.includes(tag.tagId) ? "filled" : "outlined"
                     }
