@@ -62,7 +62,6 @@ function PostDetailPage() {
   const [thread, setThread] = useState<Thread | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [commentContent, setCommentContent] = useState("");
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
 
   const authDataString =
@@ -72,6 +71,8 @@ function PostDetailPage() {
   const userId = userInfo.userId;
   const fullName = userInfo.fullName;
   const avatarUrl = userInfo.avatarUrl || "";
+  const [mainCommentContent, setMainCommentContent] = useState("");
+  const [replyCommentContent, setReplyCommentContent] = useState("");
 
   const [currentUser] = useState({
     userId: userId,
@@ -129,9 +130,9 @@ function PostDetailPage() {
     fetchData();
   }, [id]);
 
-  const handleSubmitComment = async (e: React.FormEvent) => {
+  const handleSubmitMainComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentContent.trim()) return;
+    if (!mainCommentContent.trim()) return;
 
     try {
       const response = await fetch(
@@ -144,8 +145,8 @@ function PostDetailPage() {
           body: JSON.stringify({
             threadId: parseInt(id),
             userId: currentUser.userId,
-            content: commentContent,
-            replyTo: replyingTo,
+            content: mainCommentContent,
+            replyTo: null,
           }),
         }
       );
@@ -153,7 +154,6 @@ function PostDetailPage() {
       if (response.ok) {
         const newComment = await response.json();
 
-        // Add like status to the new comment
         const commentWithLike = {
           ...newComment,
           user: currentUser,
@@ -163,51 +163,91 @@ function PostDetailPage() {
           likeId: null,
         };
 
-        if (newComment.replyTo) {
-          setComments((prevComments) =>
-            prevComments.map((comment) => {
-              if (comment.commentId === newComment.replyTo) {
-                return {
-                  ...comment,
-                  inverseReplyToNavigation: [
-                    ...comment.inverseReplyToNavigation,
-                    commentWithLike,
-                  ],
-                };
-              }
-              const updatedInverseReplies =
-                comment.inverseReplyToNavigation.map((reply) => {
-                  if (reply.commentId === newComment.replyTo) {
-                    return {
-                      ...reply,
-                      inverseReplyToNavigation: [
-                        ...reply.inverseReplyToNavigation,
-                        commentWithLike,
-                      ],
-                    };
-                  }
-                  return reply;
-                });
-
-              if (updatedInverseReplies !== comment.inverseReplyToNavigation) {
-                return {
-                  ...comment,
-                  inverseReplyToNavigation: updatedInverseReplies,
-                };
-              }
-              return comment;
-            })
-          );
-        } else {
-          setComments((prevComments) => [commentWithLike, ...prevComments]);
-        }
-
-        setCommentContent("");
-        setReplyingTo(null);
+        setComments((prevComments) => [commentWithLike, ...prevComments]);
+        setMainCommentContent("");
         toast.success("Bình luận đã được đăng");
       }
     } catch (error) {
       console.error("Error posting comment:", error);
+      toast.error("Có lỗi xảy ra khi đăng bình luận");
+    }
+  };
+
+  const handleSubmitReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyCommentContent.trim() || !replyingTo) return;
+
+    try {
+      const response = await fetch(
+        "https://backend-production-ac5e.up.railway.app/api/comments",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            threadId: parseInt(id),
+            userId: currentUser.userId,
+            content: replyCommentContent,
+            replyTo: replyingTo,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const newComment = await response.json();
+
+        const commentWithLike = {
+          ...newComment,
+          user: currentUser,
+          inverseReplyToNavigation: [],
+          likesCount: 0,
+          isLiked: false,
+          likeId: null,
+        };
+
+        setComments((prevComments) =>
+          prevComments.map((comment) => {
+            if (comment.commentId === replyingTo) {
+              return {
+                ...comment,
+                inverseReplyToNavigation: [
+                  ...comment.inverseReplyToNavigation,
+                  commentWithLike,
+                ],
+              };
+            }
+            const updatedInverseReplies = comment.inverseReplyToNavigation.map(
+              (reply) => {
+                if (reply.commentId === replyingTo) {
+                  return {
+                    ...reply,
+                    inverseReplyToNavigation: [
+                      ...reply.inverseReplyToNavigation,
+                      commentWithLike,
+                    ],
+                  };
+                }
+                return reply;
+              }
+            );
+
+            if (updatedInverseReplies !== comment.inverseReplyToNavigation) {
+              return {
+                ...comment,
+                inverseReplyToNavigation: updatedInverseReplies,
+              };
+            }
+            return comment;
+          })
+        );
+
+        setReplyCommentContent("");
+        setReplyingTo(null);
+        toast.success("Bình luận đã được đăng");
+      }
+    } catch (error) {
+      console.error("Error posting reply:", error);
       toast.error("Có lỗi xảy ra khi đăng bình luận");
     }
   };
@@ -414,14 +454,15 @@ function PostDetailPage() {
             </div>
 
             {replyingTo === comment.commentId && (
-              <form onSubmit={handleSubmitComment} className="mt-3 flex gap-2">
+              <form onSubmit={handleSubmitReply} className="mt-3 flex gap-2">
                 <input
                   type="text"
-                  value={commentContent}
-                  onChange={(e) => setCommentContent(e.target.value)}
+                  value={replyCommentContent}
+                  onChange={(e) => setReplyCommentContent(e.target.value)}
                   placeholder="Viết trả lời..."
                   className="border p-2 rounded flex-1"
                 />
+
                 <button
                   type="submit"
                   className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition"
@@ -566,7 +607,7 @@ function PostDetailPage() {
 
           {/* Main comment form */}
           <form
-            onSubmit={handleSubmitComment}
+            onSubmit={handleSubmitMainComment}
             className="flex items-center gap-2 mt-4"
           >
             <Image
@@ -576,12 +617,15 @@ function PostDetailPage() {
               alt={currentUser.fullName}
               className="rounded-full w-10 h-10 object-cover"
             />
+
             <Input
               type="text"
-              value={commentContent}
-              onChange={(e) => setCommentContent(e.target.value)}
+              value={mainCommentContent}
+              onChange={(e) => setMainCommentContent(e.target.value)}
               placeholder="Viết bình luận của bạn..."
+              crossOrigin="anonymous"
             />
+
             <Button className="py-1" type="submit">
               Bình luận
             </Button>
