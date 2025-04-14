@@ -101,6 +101,7 @@ interface AppointmentRequest {
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import Banner from "@/components/banner/banner";
+import { AlreadyRejectedPopup } from "./AcceptedByOtherPopup";
 
 const MySwal = withReactContent(Swal);
 
@@ -120,7 +121,7 @@ const AppointmentRequestsPage = () => {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [refundInfo, setRefundInfo] = useState<any>(null);
   const [currentCancellingId, setCurrentCancellingId] = useState<number | null>(
-    null,
+    null
   );
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -130,7 +131,7 @@ const AppointmentRequestsPage = () => {
   const [hasNext, setHasNext] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading: walletLoading } = useSelector(
-    (state: RootState) => state.wallet,
+    (state: RootState) => state.wallet
   );
   const getUserId = () => {
     const authDataString = localStorage.getItem("authData");
@@ -160,7 +161,7 @@ const AppointmentRequestsPage = () => {
         }
 
         const apiUrl = new URL(
-          `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/to/${userId}`,
+          `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/to/${userId}`
         );
         apiUrl.searchParams.append("page-number", page.toString());
         apiUrl.searchParams.append("page-size", pageSize.toString());
@@ -190,7 +191,7 @@ const AppointmentRequestsPage = () => {
         setIsLoading(false);
       }
     },
-    [locale, pageSize, router],
+    [locale, pageSize, router]
   );
 
   const handleRefresh = () => {
@@ -211,7 +212,7 @@ const AppointmentRequestsPage = () => {
           headers: {
             accept: "*/*",
           },
-        },
+        }
       );
 
       if (!response.ok) {
@@ -229,7 +230,6 @@ const AppointmentRequestsPage = () => {
   };
   const handleProcessPayment = async (requestId: number) => {
     setIsProcessingPayment(true);
-
     try {
       const request = requests.find((req) => req.id === requestId);
       if (!request || !request.appointmentId) {
@@ -239,7 +239,8 @@ const AppointmentRequestsPage = () => {
       // Kiểm tra số dư trước khi thực hiện thanh toán
       if (balance < (request.totalPrice || 0)) {
         const isRedirect = await InsufficientBalancePopup({
-          finalPrice: request.totalPrice || 0,
+          finalPrice:
+            requests.find((req) => req.id === requestId)?.totalPrice || 0,
         });
         if (isRedirect) {
           router.push(`/${localActive}/wallet`);
@@ -290,7 +291,7 @@ const AppointmentRequestsPage = () => {
             tableId: request.tableId,
             appointmentId: request.appointmentId,
           }),
-        },
+        }
       );
 
       const result = await response.json();
@@ -310,7 +311,6 @@ const AppointmentRequestsPage = () => {
 
         throw new Error(result.message || "Payment processing failed");
       }
-
       // Cập nhật state và hiển thị thông báo thành công
       dispatch(fetchWallet(userId));
       await fetchAppointmentRequests(currentPage);
@@ -321,25 +321,32 @@ const AppointmentRequestsPage = () => {
         icon: "success",
         confirmButtonText: "OK",
       });
-    } catch (error) {
-      console.error("Payment error:", error);
+    } catch (error: any) {
+      const errorMessage =
+        error.message || error.response?.data?.message || JSON.stringify(error);
 
-      // Chỉ hiển thị thông báo lỗi nếu không phải lỗi số dư
-      if (
-        !(
-          error instanceof Error &&
-          error.message.includes("Balance is not enough")
-        )
-      ) {
+      if (errorMessage.includes("already rejected")) {
+        const request = requests.find((req) => req.id === requestId);
+        if (request) {
+          await AlreadyRejectedPopup({
+            opponentName:
+              request.fromUserNavigation.username ||
+              request.fromUserNavigation.fullName,
+            tableId: request.tableId,
+            startTime: request.startTime,
+            endTime: request.endTime,
+          });
+        }
+      } else {
+        console.error("Unexpected payment error:", error);
         await MySwal.fire({
           title: "Lỗi",
           text:
-            error instanceof Error
-              ? error.message
-              : "Đã xảy ra lỗi không xác định",
+            typeof errorMessage === "string" ? errorMessage : "Có lỗi xảy ra",
           icon: "error",
           confirmButtonText: "OK",
         });
+        await fetchAppointmentRequests(currentPage);
       }
     } finally {
       setIsProcessingPayment(false);
@@ -489,66 +496,6 @@ const AppointmentRequestsPage = () => {
     setSelectedRequest(null);
   };
 
-  const confirmCancelRequest = async () => {
-    if (!currentCancellingId) return;
-
-    setIsCancelling(true);
-    const previousRequests = [...requests];
-    const previousSelectedRequest = selectedRequest
-      ? { ...selectedRequest }
-      : null;
-
-    setRequests((prev) =>
-      prev.map((req) =>
-        req.id === currentCancellingId ? { ...req, status: "cancelled" } : req,
-      ),
-    );
-
-    if (selectedRequest?.id === currentCancellingId) {
-      setSelectedRequest((prev) =>
-        prev ? { ...prev, status: "cancelled" } : null,
-      );
-    }
-
-    try {
-      const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/cancel/${currentCancellingId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to cancel request");
-      }
-
-      setShowCancelConfirm(false);
-      setCurrentCancellingId(null);
-      setSelectedRequest(null);
-
-      const isConfirmed = await SuccessCancelPopup(
-        refundInfo?.refundAmount || 0,
-      );
-
-      if (isConfirmed) {
-        router.push(`/${localActive}/appointment_history`);
-      } else {
-        router.push(`/${localActive}/chess_appointment/chess_category`);
-      }
-    } catch (err) {
-      setRequests(previousRequests);
-      if (previousSelectedRequest) {
-        setSelectedRequest(previousSelectedRequest);
-      }
-      console.error("Error canceling request:", err);
-    } finally {
-      setIsCancelling(false);
-    }
-  };
-
   const getRankLevelText = (level: number): string => {
     switch (level) {
       case 0:
@@ -577,7 +524,7 @@ const AppointmentRequestsPage = () => {
       const currentTime = toLocalISOString(new Date()); // Sử dụng hàm này
 
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`,
+        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`
       );
 
       if (!response.ok) {
@@ -598,60 +545,12 @@ const AppointmentRequestsPage = () => {
       setShowCancelConfirm(true);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Lỗi khi kiểm tra điều kiện hủy",
+        err instanceof Error ? err.message : "Lỗi khi kiểm tra điều kiện hủy"
       );
     } finally {
       setIsLoading(false);
     }
   };
-  // const confirmCancelAppointment = async () => {
-  //   const authData = JSON.parse(localStorage.getItem("authData") || "{}");
-  //   const userId = authData.userId;
-
-  //   if (!currentCancellingId || !userId) {
-  //     console.error("Missing currentCancellingId or userId");
-  //     return;
-  //   }
-
-  //   try {
-  //     setIsLoading(true);
-  //     const response = await fetch(
-  //       `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel/${currentCancellingId}/users/${userId}`,
-  //       {
-  //         method: "PUT",
-  //         headers: { "Content-Type": "application/json" },
-  //       }
-  //     );
-  //     const responseData = await response.json();
-  //     console.log("API Response:", responseData);
-  //     if (!response.ok) throw new Error("Hủy đơn đặt không thành công");
-
-  //     // ✅ Cập nhật lại số dư ví
-  //     dispatch(fetchWallet(userId));
-
-  //     // Cập nhật UI trước khi hiển thị popup
-  //     await fetchAppointmentRequests();
-  //     setShowCancelConfirm(false);
-  //     setCurrentCancellingId(null);
-  //     if (selectedRequest) setSelectedRequest(null);
-
-  //     // Hiển thị popup với số tiền hoàn lại
-  //     const refundAmount = responseData.price;
-  //     const isConfirmed = await SuccessCancelPopup(refundAmount);
-
-  //     // Điều hướng dựa trên lựa chọn
-  //     if (isConfirmed) {
-  //       router.push(`/${localActive}/chess_appointment/invitation_list`); // Điều chỉnh route theo nhu cầu
-  //     } else {
-  //       // Nếu người dùng chọn "Đặt bàn mới"
-  //       router.push(`/${localActive}/chess_appointment/chess_category`);
-  //     }
-  //   } catch (err) {
-  //     setError(err instanceof Error ? err.message : "Lỗi không xác định");
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
   const confirmCancelAppointment = async () => {
     const authData = JSON.parse(localStorage.getItem("authData") || "{}");
     const userId = authData.userId;
@@ -669,7 +568,7 @@ const AppointmentRequestsPage = () => {
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-        },
+        }
       );
 
       const responseData = await response.json();
@@ -784,7 +683,7 @@ const AppointmentRequestsPage = () => {
                         <p className="text-gray-600 text-sm">
                           <strong>Trình Độ:</strong>{" "}
                           {getRankLevelText(
-                            selectedRequest.fromUserNavigation.ranking,
+                            selectedRequest.fromUserNavigation.ranking
                           )}
                         </p>
                       </div>
@@ -876,7 +775,7 @@ const AppointmentRequestsPage = () => {
                         <strong>Ngày Chơi:</strong>
                       </span>{" "}
                       {new Date(selectedRequest.startTime).toLocaleDateString(
-                        "vi-VN",
+                        "vi-VN"
                       )}
                     </p>
                     <p>
@@ -885,7 +784,7 @@ const AppointmentRequestsPage = () => {
                       </span>{" "}
                       {formatTimeRange(
                         selectedRequest.startTime,
-                        selectedRequest.endTime,
+                        selectedRequest.endTime
                       )}
                     </p>
                     <p>
@@ -911,44 +810,6 @@ const AppointmentRequestsPage = () => {
                 </div>
 
                 <div className="flex justify-end space-x-3">
-                  {/* {selectedRequest.status === "pending" &&
-                    !isExpired(selectedRequest.expireAt) && (
-                      <>
-                        <Button
-                          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 flex items-center justify-center min-w-[180px]"
-                          onClick={() =>
-                            handleAcceptRequest(selectedRequest.id)
-                          }
-                          disabled={isAccepting}
-                        >
-                          {isAccepting ? (
-                            <>
-                              <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                              Processing...
-                            </>
-                          ) : (
-                            <strong>Chấp Nhận</strong>
-                          )}
-                        </Button>
-                        <Button
-                          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 flex items-center justify-center min-w-[100px]"
-                          onClick={() =>
-                            checkCancelCondition(selectedRequest.id)
-                          }
-                          disabled={isRejecting}
-                        >
-                          {isRejecting ? (
-                            <>
-                              <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                              Processing...
-                            </>
-                          ) : (
-                            <strong>Từ Chối</strong>
-                          )}
-                        </Button>
-                      </>
-                    )} */}
-
                   {(selectedRequest.status === "payment_required" ||
                     selectedRequest.status === "await_appointment_creation") &&
                     selectedRequest.appointmentId &&
@@ -1024,7 +885,7 @@ const AppointmentRequestsPage = () => {
                             <p className="text-gray-600 text-sm">
                               <strong>Trình Độ:</strong>{" "}
                               {getRankLevelText(
-                                request.fromUserNavigation.ranking,
+                                request.fromUserNavigation.ranking
                               )}
                             </p>
                           </div>
@@ -1042,7 +903,7 @@ const AppointmentRequestsPage = () => {
                             <strong>Giờ Bắt Đầu Và Kết Thúc</strong>{" "}
                             {formatTimeRange(
                               request.startTime,
-                              request.endTime,
+                              request.endTime
                             )}
                           </p>
                           <p className="text-gray-600 text-sm">
@@ -1144,7 +1005,7 @@ const AppointmentRequestsPage = () => {
                                   disabled={isRejecting}
                                   onClick={() =>
                                     checkCancelCondition(
-                                      request.tablesAppointmentId!,
+                                      request.tablesAppointmentId!
                                     )
                                   }
                                 >

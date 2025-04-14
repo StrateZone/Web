@@ -1,10 +1,10 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { User } from "lucide-react";
 import Link from "next/link";
 import { useLocale } from "next-intl";
 import { Button, Input, Select, Option } from "@material-tailwind/react";
-import axios from "axios"; // Import axios
+import axios from "axios";
 import { useRouter } from "next/navigation";
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
@@ -12,6 +12,8 @@ import { toast } from "react-toastify";
 
 export default function RegisterPage() {
   const localActive = useLocale();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFormValid, setIsFormValid] = useState(false);
 
   // State lưu trữ dữ liệu input
   const [email, setEmail] = useState("");
@@ -32,6 +34,33 @@ export default function RegisterPage() {
   const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
   const phoneRegex = /^[0-9]{10}$/;
 
+  // Kiểm tra tính hợp lệ của form
+  useEffect(() => {
+    const isValid =
+      emailRegex.test(email) &&
+      displayName.trim() !== "" &&
+      phoneRegex.test(phoneNumber) &&
+      fullName.trim() !== "" &&
+      gender !== "" &&
+      !emailError &&
+      !displayNameError &&
+      !phoneNumberError &&
+      !fullNameError &&
+      !genderError;
+    setIsFormValid(isValid);
+  }, [
+    email,
+    displayName,
+    phoneNumber,
+    fullName,
+    gender,
+    emailError,
+    displayNameError,
+    phoneNumberError,
+    fullNameError,
+    genderError,
+  ]);
+
   // Xử lý nhập email
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
@@ -42,7 +71,7 @@ export default function RegisterPage() {
   const handleDisplayNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDisplayName(e.target.value);
     setDisplayNameError(
-      e.target.value ? "" : "Tên hiển thị không được để trống",
+      e.target.value ? "" : "Tên hiển thị không được để trống"
     );
   };
 
@@ -55,7 +84,7 @@ export default function RegisterPage() {
 
     setPhoneNumber(input);
     setPhoneNumberError(
-      phoneRegex.test(input) ? "" : "Số điện thoại phải có 10 chữ số",
+      phoneRegex.test(input) ? "" : "Số điện thoại phải có 10 chữ số"
     );
   };
 
@@ -71,40 +100,10 @@ export default function RegisterPage() {
     setGenderError(value ? "" : "Vui lòng chọn giới tính");
   };
 
-  // Xử lý khi nhấn nút Đăng ký
-  const handleSubmit = () => {
-    if (!email || !displayName || !phoneNumber || !fullName || !gender) {
-      setEmailError(email ? "" : "Email không được để trống");
-      setDisplayNameError(
-        displayName ? "" : "Tên hiển thị không được để trống",
-      );
-      setPhoneNumberError(
-        phoneNumber ? "" : "Số điện thoại không được để trống",
-      );
-      setFullNameError(fullName ? "" : "Họ và tên không được để trống");
-      setGenderError(gender ? "" : "Vui lòng chọn giới tính");
-      return;
-    }
-
-    alert("Đăng ký thành công!");
-  };
-  // noi api
-
   const handleFormSubmit = async () => {
-    // Kiểm tra lỗi đầu vào
-    if (!email || !displayName || !phoneNumber || !fullName || !gender) {
-      setEmailError(email ? "" : "Email không được để trống");
-      setDisplayNameError(
-        displayName ? "" : "Tên hiển thị không được để trống",
-      );
-      setPhoneNumberError(
-        phoneNumber ? "" : "Số điện thoại không được để trống",
-      );
-      setFullNameError(fullName ? "" : "Họ và tên không được để trống");
-      setGenderError(gender ? "" : "Vui lòng chọn giới tính");
-      return;
-    }
+    if (!isFormValid) return;
 
+    setIsLoading(true);
     try {
       const response = await axios.post(
         "https://backend-production-ac5e.up.railway.app/api/auth/register",
@@ -119,15 +118,15 @@ export default function RegisterPage() {
           headers: {
             "Content-Type": "application/json",
           },
-        },
+        }
       );
 
       if (response.status === 200) {
         router.push(
-          `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`,
+          `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`
         );
       } else {
-        console.log("Response từ API:", response); // Log dữ liệu trả về từ API
+        console.log("Response từ API:", response);
       }
     } catch (error: any) {
       if (error.response && error.response.data) {
@@ -145,6 +144,8 @@ export default function RegisterPage() {
       } else {
         toast.error("Lỗi máy chủ! Vui lòng thử lại sau.");
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -265,10 +266,37 @@ export default function RegisterPage() {
             {/* Nút đăng ký */}
             <div className="flex flex-col gap-3 mt-4">
               <Button
-                className="w-full font-bold bg-black text-white py-3 rounded border-[0.5px]"
+                className="w-full font-bold bg-black text-white py-3 rounded border-[0.5px] flex items-center justify-center"
                 onClick={handleFormSubmit}
+                disabled={isLoading || !isFormValid}
               >
-                Đăng Ký
+                {isLoading ? (
+                  <>
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Đang xử lý...
+                  </>
+                ) : (
+                  "Đăng Ký"
+                )}
               </Button>
             </div>
 
