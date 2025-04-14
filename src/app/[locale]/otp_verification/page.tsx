@@ -51,7 +51,7 @@ export default function OTPVerificationPage() {
       const verifyResponse = await axios.post(
         verifyUrl,
         { email, otp: otpCode },
-        { headers: { "Content-Type": "application/json" } },
+        { headers: { "Content-Type": "application/json" } }
       );
 
       if (!verifyResponse.data.success) {
@@ -77,11 +77,10 @@ export default function OTPVerificationPage() {
 
       router.push("/chess_appointment");
     } catch (error) {
-      console.error("Lỗi xác thực:", error);
-      if (axios.isAxiosError(error) && error.response?.data?.message) {
-        setError(error.response.data.message);
-      } else {
-        setError("Có lỗi xảy ra, vui lòng thử lại!");
+      if (error instanceof Error) {
+        if (error.message.includes("Invalid or expired OTP")) {
+          setError("Mã OTP không đúng hoặc đã hết hạn, vui lòng gửi lại.");
+        }
       }
     } finally {
       setVerifyLoading(false);
@@ -100,7 +99,7 @@ export default function OTPVerificationPage() {
         {},
         {
           headers: { "Content-Type": "application/json" },
-        },
+        }
       );
 
       // Start countdown
@@ -195,7 +194,7 @@ export default function OTPVerificationPage() {
 
             {/* Resend OTP Section */}
             <div className="text-center text-sm mt-3">
-              <p>
+              <p className="ml-28 flex items-center">
                 Bạn chưa nhận được mã OTP?
                 {isResendDisabled ? (
                   <span className="ml-2 text-gray-400">
@@ -205,13 +204,13 @@ export default function OTPVerificationPage() {
                   <button
                     onClick={handleResendOTP}
                     disabled={resendLoading}
-                    className="ml-2 font-semibold text-gray-200 cursor-pointer hover:text-gray-400 flex items-center justify-center"
+                    className="ml-2 font-semibold text-gray-200 hover:text-gray-400 inline-flex items-center text-light-blue-600"
                   >
                     {resendLoading ? (
-                      <div className="flex items-center gap-1">
-                        <span className="block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      <>
+                        <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin mr-1"></span>
                         <span>Đang gửi...</span>
-                      </div>
+                      </>
                     ) : (
                       "Gửi lại mã"
                     )}

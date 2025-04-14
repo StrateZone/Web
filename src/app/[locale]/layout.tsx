@@ -45,7 +45,12 @@ export default async function RootLayout({
         <ReduxProvider>
           <Layout>
             <NextIntlClientProvider messages={messages}>
-              <SessionProvider>{children} </SessionProvider>
+              {/* <SessionProvider>{children} </SessionProvider> */}
+              {process.env.NEXT_PUBLIC_ENABLE_AUTH === "true" ? (
+                <SessionProvider>{children}</SessionProvider>
+              ) : (
+                <>{children}</>
+              )}
             </NextIntlClientProvider>
           </Layout>
         </ReduxProvider>

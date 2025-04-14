@@ -11,7 +11,7 @@ export default function Footer() {
           STRATEZONE
         </div>
         <div className="text-sm text-gray-400 mt-16">
-          © {CURRENT_YEAR} Strate Zone. Cảm ơn bạn quý khách!
+          © {CURRENT_YEAR} Strate Zone. Cảm ơn quý khách!
         </div>
       </div>
     </footer>

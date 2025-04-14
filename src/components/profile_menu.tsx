@@ -11,12 +11,19 @@ import {
 import {
   UserCircleIcon,
   ChevronDownIcon,
-  LifebuoyIcon,
   PowerIcon,
   ClockIcon,
 } from "@heroicons/react/24/solid";
 import { useRouter } from "next/navigation";
-import { Wallet, Calendar, HelpCircle, User, Inbox, Send } from "lucide-react";
+import {
+  Wallet,
+  Calendar,
+  User,
+  Inbox,
+  Send,
+  Newspaper,
+  FileText,
+} from "lucide-react";
 import { useLocale } from "next-intl";
 
 const menuConfig = [
@@ -50,14 +57,18 @@ const menuConfig = [
       },
     ],
   },
-  // {
-  //   label: "Hỗ trợ",
-  //   icon: LifebuoyIcon,
-  //   items: [
-  //     { label: "Trung tâm trợ giúp", icon: HelpCircle, path: "help-center" },
-  //     { label: "Liên hệ hỗ trợ", icon: LifebuoyIcon, path: "contact-support" },
-  //   ],
-  // },
+  {
+    label: "Quản Lí Bài Viết",
+    icon: Newspaper,
+    items: [
+      {
+        label: "Lịch sử bài viết",
+        icon: FileText,
+        path: "community/post_history",
+      },
+      // { label: "Liên hệ hỗ trợ", icon: LifebuoyIcon, path: "contact-support" },
+    ],
+  },
   {
     label: "Đăng xuất",
     icon: PowerIcon,
@@ -72,7 +83,7 @@ const useProfileMenu = () => {
 
   const handleLogout = () => {
     ["accessToken", "refreshToken", "authData", "chessBookings"].forEach(
-      (item) => localStorage.removeItem(item),
+      (item) => localStorage.removeItem(item)
     );
     router.push("/");
   };
@@ -182,7 +193,7 @@ export default function ProfileMenu() {
   const menuConfig = getMenuConfig();
   const avatarUrl =
     JSON.parse(localStorage.getItem("authData") || "{}")?.userInfo?.avatarUrl ||
-    "/default-avatar.png";
+    "https://i.pinimg.com/736x/0f/68/94/0f6894e539589a50809e45833c8bb6c4.jpg";
 
   return (
     <Menu open={isMenuOpen} handler={setIsMenuOpen} placement="bottom-end">

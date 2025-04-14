@@ -11,6 +11,7 @@ import { SuccessCancelPopup } from "./CancelSuccessPopup";
 import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import Banner from "@/components/banner/banner";
+
 interface GameType {
   typeId: number;
   typeName: string;
@@ -46,6 +47,28 @@ interface TablesAppointment {
   table: Table;
 }
 
+interface User {
+  userId: number;
+  username: string;
+  email: string;
+  phone: string;
+  fullName: string;
+  avatarUrl: string;
+  skillLevel: string;
+  ranking: string;
+}
+
+interface AppointmentRequest {
+  id: number;
+  toUser: number;
+  status: string;
+  startTime: string;
+  endTime: string;
+  expireAt: string;
+  createdAt: string;
+  toUserNavigation: User;
+}
+
 interface Appointment {
   appointmentId: number;
   userId: number;
@@ -58,7 +81,7 @@ interface Appointment {
     email: string;
   };
   tablesAppointments: TablesAppointment[];
-  appointmentrequests: any[];
+  appointmentrequests: AppointmentRequest[];
 }
 
 interface ApiResponse {
@@ -77,6 +100,115 @@ interface RefundInfo {
   cancellationTime: string;
   cancellation_Block_TimeGate: string;
   cancellation_PartialRefund_TimeGate: string;
+}
+
+function OpponentDetailsPopup({
+  show,
+  onClose,
+  requests,
+}: {
+  show: boolean;
+  onClose: () => void;
+  requests: AppointmentRequest[];
+}) {
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-bold">Danh sách người chơi đã mời</h3>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {requests.length === 0 ? (
+            <p className="text-gray-500 py-4">Chưa có lời mời nào</p>
+          ) : (
+            <div className="space-y-4">
+              {requests.map((request) => (
+                <div
+                  key={request.id}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                >
+                  <div className="flex items-center space-x-3">
+                    <img
+                      src={
+                        request.toUserNavigation.avatarUrl ||
+                        "/default-avatar.png"
+                      }
+                      alt={request.toUserNavigation.fullName}
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                    <div>
+                      <p className="font-medium">
+                        {request.toUserNavigation.fullName}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {request.toUserNavigation.username}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Cấp độ: {request.toUserNavigation.skillLevel}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span
+                      className={`px-2 py-1 text-xs rounded ${
+                        request.status === "pending"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : request.status === "accepted"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {request.status === "pending"
+                        ? "Đang chờ"
+                        : request.status === "accepted"
+                          ? "Đã chấp nhận"
+                          : "Đã từ chối"}
+                    </span>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Thời gian:{" "}
+                      {new Date(request.startTime).toLocaleTimeString("vi-VN")}{" "}
+                      - {new Date(request.endTime).toLocaleTimeString("vi-VN")}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+            >
+              Đóng
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function Page() {
@@ -106,23 +238,28 @@ function Page() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [refundInfo, setRefundInfo] = useState<RefundInfo | null>(null);
   const [currentCancellingId, setCurrentCancellingId] = useState<number | null>(
-    null,
+    null
   );
+  const [showOpponentDetails, setShowOpponentDetails] = useState(false);
+  const [currentOpponentRequests, setCurrentOpponentRequests] = useState<
+    AppointmentRequest[]
+  >([]);
 
   const authDataString = localStorage.getItem("authData");
   const authData = JSON.parse(authDataString || "{}");
   const userId = authData.userId;
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading: walletLoading } = useSelector(
-    (state: RootState) => state.wallet,
+    (state: RootState) => state.wallet
   );
+
   // Fetch data from API
   const fetchData = async () => {
     setIsLoading(true);
     setError(null);
     try {
       const apiUrl = new URL(
-        `https://backend-production-ac5e.up.railway.app/api/appointments/users/${userId}`,
+        `https://backend-production-ac5e.up.railway.app/api/appointments/users/${userId}`
       );
       apiUrl.searchParams.append("page-number", currentPage.toString());
       apiUrl.searchParams.append("page-size", pageSize.toString());
@@ -145,7 +282,7 @@ function Page() {
       setHasNext(result.hasNext);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định",
+        err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định"
       );
     } finally {
       setIsLoading(false);
@@ -191,6 +328,7 @@ function Page() {
       setCurrentPage(newPage);
     }
   };
+
   function toLocalISOString(date: Date) {
     const tzOffset = date.getTimezoneOffset() * 60000;
     const localDate = new Date(date.getTime() - tzOffset);
@@ -200,10 +338,10 @@ function Page() {
   const checkCancelCondition = async (tablesAppointmentId: number) => {
     try {
       setIsLoading(true);
-      const currentTime = toLocalISOString(new Date()); // Sử dụng hàm này
+      const currentTime = toLocalISOString(new Date());
 
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`,
+        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`
       );
 
       if (!response.ok) {
@@ -224,7 +362,7 @@ function Page() {
       setShowCancelConfirm(true);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Lỗi khi kiểm tra điều kiện hủy",
+        err instanceof Error ? err.message : "Lỗi khi kiểm tra điều kiện hủy"
       );
     } finally {
       setIsLoading(false);
@@ -247,7 +385,7 @@ function Page() {
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-        },
+        }
       );
       const responseData = await response.json();
       console.log("API Response:", responseData);
@@ -268,9 +406,8 @@ function Page() {
 
       // Điều hướng dựa trên lựa chọn
       if (isConfirmed) {
-        router.push(`/${localActive}/appointment_history`); // Điều chỉnh route theo nhu cầu
+        router.push(`/${localActive}/appointment_history`);
       } else {
-        // Nếu người dùng chọn "Đặt bàn mới"
         router.push(`/${localActive}/chess_appointment/chess_category`);
       }
     } catch (err) {
@@ -343,6 +480,11 @@ function Page() {
   const handleOrderByChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setOrderBy(e.target.value);
     setCurrentPage(1);
+  };
+
+  const handleShowOpponentDetails = (requests: AppointmentRequest[]) => {
+    setCurrentOpponentRequests(requests);
+    setShowOpponentDetails(true);
   };
 
   return (
@@ -445,6 +587,7 @@ function Page() {
                         <th className="py-2 px-4 border">Ngày</th>
                         <th className="py-2 px-4 border">Tổng Giá</th>
                         <th className="py-2 px-4 border">Trạng thái</th>
+                        <th className="py-2 px-4 border">Đối Thủ</th>
                         <th className="py-2 px-4 border">Hành động</th>
                       </tr>
                     </thead>
@@ -488,7 +631,7 @@ function Page() {
                             </td>
                             <td className="py-2 px-4 border text-center">
                               {new Date(
-                                tableAppointment.scheduleTime,
+                                tableAppointment.scheduleTime
                               ).toLocaleDateString("vi-VN")}
                             </td>
                             <td className="py-2 px-4 border text-center">
@@ -505,6 +648,23 @@ function Page() {
                               </span>
                             </td>
                             <td className="py-2 px-4 border text-center">
+                              {/* Nút xem đối thủ - chỉ hiển thị nếu có lời mời */}
+                              {selectedAppointment.appointmentrequests.length >
+                                0 && (
+                                <button
+                                  onClick={() =>
+                                    handleShowOpponentDetails(
+                                      selectedAppointment.appointmentrequests
+                                    )
+                                  }
+                                  className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm"
+                                >
+                                  Xem đối thủ
+                                </button>
+                              )}
+                            </td>
+                            <td className="py-2 px-4 border text-center space-x-2">
+                              {/* Nút hủy - chỉ hiển thị với trạng thái phù hợp */}
                               {(tableAppointment.status === "confirmed" ||
                                 tableAppointment.status === "pending") && (
                                 <button
@@ -518,7 +678,7 @@ function Page() {
                               )}
                             </td>
                           </tr>
-                        ),
+                        )
                       )}
                     </tbody>
                   </table>
@@ -617,6 +777,13 @@ function Page() {
                 isLoading={isLoading}
               />
             }
+
+            {/* Opponent Details Popup */}
+            <OpponentDetailsPopup
+              show={showOpponentDetails}
+              onClose={() => setShowOpponentDetails(false)}
+              requests={currentOpponentRequests}
+            />
           </div>
         </div>
         <Footer />
