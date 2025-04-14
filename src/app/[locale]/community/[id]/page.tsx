@@ -57,7 +57,10 @@ interface Comment {
 interface PageProps {
   params: {
     id: string;
-    locale?: string; // Add locale since your path is [locale]/community/[id]
+    locale?: string;
+  };
+  searchParams?: {
+    [key: string]: string | string[] | undefined;
   };
 }
 
