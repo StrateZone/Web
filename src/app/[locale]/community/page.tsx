@@ -197,8 +197,18 @@ export default function ComunityPage() {
                     description={cleanAndTruncate(thread.content)}
                     dateTime={thread.createdAt}
                     likes={thread.likesCount || 0}
-                    threadData={{ likes: thread.likes || [] }}
-                    createdByNavigation={thread.createdByNavigation}
+                    threadData={{
+                      likes: (thread.likes || []).map((like) => ({
+                        ...like,
+                        threadId: thread.threadId,
+                      })),
+                    }}
+                    createdByNavigation={{
+                      ...thread.createdByNavigation,
+                      username: thread.createdByNavigation.fullName
+                        .replace(/\s+/g, "")
+                        .toLowerCase(), // Example username generation
+                    }}
                     tags={thread.threadsTags || []}
                   />
                 ))}
