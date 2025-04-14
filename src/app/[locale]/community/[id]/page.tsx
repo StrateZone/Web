@@ -8,6 +8,7 @@ import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { Button, Input } from "@material-tailwind/react";
 import { toast } from "react-toastify";
+import { useParams } from "next/navigation";
 
 interface Thread {
   threadId: number;
@@ -54,17 +55,10 @@ interface Comment {
   likeId: number | null;
 }
 
-interface MyPageProps {
-  params: {
-    id: string;
-    locale: string; // Make locale required if it's always present, or keep optional if not
-  };
-  searchParams?: {
-    [key: string]: string | string[] | undefined;
-  };
-}
+function PostDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
 
-function PostDetailPage({ params }: MyPageProps) {
   const [thread, setThread] = useState<Thread | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,14 +84,14 @@ function PostDetailPage({ params }: MyPageProps) {
       try {
         // Fetch thread data
         const threadResponse = await fetch(
-          `https://backend-production-ac5e.up.railway.app/api/threads/${params.id}`
+          `https://backend-production-ac5e.up.railway.app/api/threads/${id}`
         );
         const threadData = await threadResponse.json();
         setThread(threadData);
 
         // Fetch comments
         const commentsResponse = await fetch(
-          `https://backend-production-ac5e.up.railway.app/api/comments/thread/${params.id}`
+          `https://backend-production-ac5e.up.railway.app/api/comments/thread/${id}`
         );
         let commentsData = await commentsResponse.json();
 
@@ -133,7 +127,7 @@ function PostDetailPage({ params }: MyPageProps) {
     };
 
     fetchData();
-  }, [params.id]);
+  }, [id]);
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,7 +142,7 @@ function PostDetailPage({ params }: MyPageProps) {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            threadId: parseInt(params.id),
+            threadId: parseInt(id),
             userId: currentUser.userId,
             content: commentContent,
             replyTo: replyingTo,
@@ -181,7 +175,6 @@ function PostDetailPage({ params }: MyPageProps) {
                   ],
                 };
               }
-              // Handle nested replies
               const updatedInverseReplies =
                 comment.inverseReplyToNavigation.map((reply) => {
                   if (reply.commentId === newComment.replyTo) {
@@ -420,7 +413,6 @@ function PostDetailPage({ params }: MyPageProps) {
               </button>
             </div>
 
-            {/* Reply form when this comment is selected for reply */}
             {replyingTo === comment.commentId && (
               <form onSubmit={handleSubmitComment} className="mt-3 flex gap-2">
                 <input
@@ -448,7 +440,6 @@ function PostDetailPage({ params }: MyPageProps) {
           </div>
         </div>
 
-        {/* Render replies */}
         {comment.inverseReplyToNavigation.length > 0 && (
           <div className="border-l-2 border-gray-200 pl-2">
             {renderComments(comment.inverseReplyToNavigation, depth + 1)}
