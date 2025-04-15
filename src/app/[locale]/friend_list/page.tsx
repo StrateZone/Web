@@ -4,7 +4,6 @@ import Banner from "@/components/banner/banner";
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
 import React, { useState, useEffect, useCallback } from "react";
-import { User, FriendList } from "@/types";
 import { useRouter } from "next/navigation";
 
 type FriendRequest = {
@@ -59,16 +58,6 @@ export interface FriendList {
   friend: User; // Thông tin người bạn
 }
 
-// Kiểu dữ liệu cho FriendRequest nếu cần
-export interface FriendRequest {
-  id: number;
-  fromUser: number;
-  toUser: number;
-  status: "pending" | "accepted" | "rejected" | string;
-  createdAt: string; // Hoặc Date
-  fromUserNavigation: User; // Người gửi
-  toUserNavigation: User; // Người nhận
-}
 export default function FriendManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<User[]>([]);
