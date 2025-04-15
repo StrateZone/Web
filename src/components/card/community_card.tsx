@@ -8,6 +8,8 @@ import {
 } from "@material-tailwind/react";
 import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { HeartIcon, ChatBubbleOvalLeftIcon } from "@heroicons/react/24/outline";
+import { HeartIcon as HeartIconSolid } from "@heroicons/react/24/solid";
 
 export type CommunityCardProps = {
   theme: string;
@@ -16,6 +18,7 @@ export type CommunityCardProps = {
   thumbnailUrl?: string;
   dateTime?: string;
   likes?: number;
+  commentsCount?: number; // Thêm prop commentsCount
   threadId?: number;
   threadData?: {
     likes: Array<{
@@ -49,6 +52,7 @@ export default function CommunityCard({
   dateTime,
   thumbnailUrl,
   likes = 0,
+  commentsCount = 0, // Giá trị mặc định là 0
   threadId,
   threadData,
   createdByNavigation,
@@ -57,6 +61,7 @@ export default function CommunityCard({
   const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
+  const [userId, setUserId] = useState<number | null>(null);
 
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(likes);
@@ -67,25 +72,32 @@ export default function CommunityCard({
     fullName: "",
     avatarUrl: "",
   });
+  useEffect(() => {
+    const fetchUserId = () => {
+      const userData = localStorage.getItem("user");
+      if (userData) {
+        const user = JSON.parse(userData);
+        setUserId(user.id);
+      }
+    };
 
+    fetchUserId();
+  }, []);
   const buttonColors: { [key: string]: string } = {
     // Các loại cờ
-    "cờ vua": "bg-gray-900 text-white", // Màu tối cho cờ vua
-    "cờ tướng": "bg-red-700 text-white", // Màu đỏ truyền thống Trung Quốc
-    "cờ vây": "bg-yellow-600 text-black", // Màu vàng tượng trưng cho đá cờ vây
-
+    "cờ vua": "bg-gray-900 text-white",
+    "cờ tướng": "bg-red-700 text-white",
+    "cờ vây": "bg-yellow-600 text-black",
     // Loại nội dung
-    "chiến thuật": "bg-blue-600 text-white", // Màu xanh dương mạnh mẽ
-    gambit: "bg-indigo-600 text-white", // Màu chàm đậm
-    mẹo: "bg-purple-500 text-white", // Màu tím sáng
-    "thảo luận": "bg-green-600 text-white", // Màu xanh lá cây
-    "trò chuyện": "bg-teal-500 text-white", // Màu xanh ngọc
-    "ngoài lề": "bg-pink-500 text-white", // Màu hồng nhạt
-
+    "chiến thuật": "bg-blue-600 text-white",
+    gambit: "bg-indigo-600 text-white",
+    mẹo: "bg-purple-500 text-white",
+    "thảo luận": "bg-green-600 text-white",
+    "trò chuyện": "bg-teal-500 text-white",
+    "ngoài lề": "bg-pink-500 text-white",
     // Mức độ quan trọng
-    "thông báo": "bg-orange-500 text-white", // Màu cam cảnh báo
-    "quan trọng": "bg-red-600 text-white", // Màu đỏ nổi bật
-
+    "thông báo": "bg-orange-500 text-white",
+    "quan trọng": "bg-red-600 text-white",
     // Màu mặc định
     default: "bg-gray-500 text-white",
   };
@@ -229,35 +241,43 @@ export default function CommunityCard({
                 ))}
               </div>
 
-              <Button
-                variant="outlined"
-                className={`flex items-center gap-1 py-1 px-2 border-2 rounded text-sm ${
-                  isLiked ? "border-red-300 bg-red-50" : "border-gray-300"
-                }`}
-                onClick={handleButtonClick}
-                disabled={isLoading}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill={isLiked ? "currentColor" : "none"}
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  stroke="currentColor"
-                  className={`h-4 w-4 ${isLiked ? "text-red-500" : "text-red-500"}`}
+              <div className="flex gap-2">
+                {/* Like Button */}
+                <Button
+                  variant="outlined"
+                  className={`flex items-center gap-1 py-1 px-2 border-2 rounded text-sm ${
+                    isLiked ? "border-red-300 bg-red-50" : "border-gray-300"
+                  }`}
+                  onClick={handleButtonClick}
+                  disabled={isLoading}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                  />
-                </svg>
-                {likeCount}
-              </Button>
+                  {isLiked ? (
+                    <HeartIconSolid className="h-4 w-4 text-red-500" />
+                  ) : (
+                    <HeartIcon className="h-4 w-4 text-red-500" />
+                  )}
+                  <span className={isLiked ? "text-red-500" : "text-gray-600"}>
+                    {likeCount}
+                  </span>
+                </Button>
+                {/* Comment Button */}
+                <Button
+                  variant="outlined"
+                  className="flex items-center gap-1 py-1 px-2 border-2 border-gray-300 rounded text-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCardClick();
+                  }}
+                >
+                  <ChatBubbleOvalLeftIcon className="h-4 w-4 text-gray-600" />
+                  <span className="text-gray-600">{commentsCount}</span>
+                </Button>
+              </div>
             </div>
 
             <Typography
               variant="h5"
-              className="text-black font-bold mb-2 cursor-pointer hover:text-light-green-500"
+              className="text-black font-bold mb-2 cursor-pointer hover:text-light-green-500 transition-all duration-200 ease-in-out"
             >
               {title}
             </Typography>

@@ -225,7 +225,6 @@ export default function CreatePost() {
       );
 
       toast.success("Bài viết đã được đăng thành công!");
-      router.push(`/post/${threadId}`);
     } catch (err: any) {
       console.error("Lỗi khi đăng bài:", err);
 

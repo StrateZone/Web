@@ -16,7 +16,12 @@ import {
   BuildingStorefrontIcon,
   BellIcon,
 } from "@heroicons/react/24/solid";
-import { FaChessBoard, FaBookOpen, FaWallet } from "react-icons/fa";
+import {
+  FaChessBoard,
+  FaBookOpen,
+  FaWallet,
+  FaUserFriends,
+} from "react-icons/fa";
 import { useParams, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import Link from "next/link";
@@ -67,7 +72,7 @@ export function Navbar() {
 
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading: walletLoading } = useSelector(
-    (state: RootState) => state.wallet,
+    (state: RootState) => state.wallet
   );
 
   const getUserId = () => {
@@ -130,7 +135,7 @@ export function Navbar() {
   useEffect(() => {
     window.addEventListener(
       "resize",
-      () => window.innerWidth >= 960 && setOpen(false),
+      () => window.innerWidth >= 960 && setOpen(false)
     );
   }, []);
 
@@ -222,7 +227,7 @@ export function Navbar() {
           ))}
         </ul>
         {isLoggedIn ? (
-          <div className="hidden items-center gap-6 lg:flex">
+          <div className="hidden items-center gap-8 lg:flex">
             <div className="flex items-center gap-4">
               <div className="flex items-center bg-gray-100 px-3 py-1 rounded-md">
                 <FaWallet
@@ -251,15 +256,23 @@ export function Navbar() {
               </div>
             </div>
             {/* <BellIcon className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2" /> */}
+            <div className=" hover:bg-gray-200 focus:outline-none relative p-2 rounded-full">
+              <FaUserFriends
+                className="h-6 w-6 text-blue-700 cursor-pointer"
+                onClick={() => router.push(`/${locale}/friend_list`)}
+              />
+            </div>
             <NotificationDropdown />
-            <FaChess
-              onClick={() =>
-                router.push(
-                  `/${locale}/chess_appointment/chess_appointment_order`,
-                )
-              }
-              className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
-            />
+            <div className=" hover:bg-gray-200 focus:outline-none relative p-2 rounded-full">
+              <FaChess
+                onClick={() =>
+                  router.push(
+                    `/${locale}/chess_appointment/chess_appointment_order`
+                  )
+                }
+                className="h-6 w-6 text-yellow-700 cursor-pointer "
+              />
+            </div>
             <ShoppingCart className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2" />
             <ProfileMenu />
           </div>
@@ -268,7 +281,7 @@ export function Navbar() {
             <FaChess
               onClick={() =>
                 router.push(
-                  `/${locale}/chess_appointment/chess_appointment_order`,
+                  `/${locale}/chess_appointment/chess_appointment_order`
                 )
               }
               className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
