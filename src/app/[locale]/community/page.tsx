@@ -13,6 +13,7 @@ import Footer from "@/components/footer";
 import Banner from "@/components/banner/banner";
 import { useParams, useRouter } from "next/navigation";
 import { DefaultPagination } from "@/components/pagination";
+import { HeartIcon, ChatBubbleLeftIcon } from "@heroicons/react/24/outline";
 
 interface ThreadTag {
   id: number;
@@ -29,13 +30,16 @@ interface Thread {
   content: string;
   createdAt: string;
   likesCount: number;
+  commentsCount?: number;
   threadsTags?: ThreadTag[];
   createdByNavigation: {
     userId: number;
     fullName: string;
+    username: string;
     avatarUrl: string;
   };
   likes?: Array<{ id: number; userId: number | null }>;
+  comments?: Array<any>;
 }
 
 interface Tag {
@@ -66,6 +70,26 @@ export default function ComunityPage() {
   const [selectedTags, setSelectedTags] = useState<number[]>([]);
   const router = useRouter();
   const { locale } = useParams();
+  const [orderBy, setOrderBy] = useState<
+    "created-at-desc" | "popularity" | "friends"
+  >("created-at-desc");
+  const [userId, setUserId] = useState<number | null>(null);
+
+  const activeButtonClass = "bg-blue-100 font-semibold text-blue-800";
+  const inactiveButtonClass = "text-gray-700 hover:bg-gray-100";
+
+  useEffect(() => {
+    const fetchUserId = () => {
+      const userData = localStorage.getItem("authData");
+      console.log(userData);
+      if (userData) {
+        const user = JSON.parse(userData);
+        setUserId(user.userId);
+      }
+    };
+
+    fetchUserId();
+  }, []);
 
   useEffect(() => {
     const fetchThreads = async () => {
@@ -73,8 +97,13 @@ export default function ComunityPage() {
         setLoading(true);
         let url = `https://backend-production-ac5e.up.railway.app/api/threads/filter/statuses-and-tags?statuses=published&page-number=${currentPage}&page-size=${pageSize}`;
 
+        if (orderBy === "friends" && userId) {
+          url += `&order-by=${orderBy}&userId=${userId}`;
+        } else {
+          url += `&order-by=${orderBy}`;
+        }
+
         if (selectedTags.length > 0) {
-          // Add each tagId as a separate parameter
           selectedTags.forEach((tagId) => {
             url += `&TagIds=${tagId}`;
           });
@@ -83,7 +112,13 @@ export default function ComunityPage() {
         const response = await fetch(url);
         if (!response.ok) throw new Error("Failed to fetch threads");
         const data: PaginatedResponse = await response.json();
-        setThreads(data.pagedList || []);
+
+        const processedThreads = data.pagedList.map((thread) => ({
+          ...thread,
+          commentsCount: thread.comments?.length || 0,
+        }));
+
+        setThreads(processedThreads || []);
         setTotalPages(data.totalPages || 1);
       } catch (error) {
         console.error("Error fetching threads:", error);
@@ -112,7 +147,7 @@ export default function ComunityPage() {
 
     fetchThreads();
     fetchTags();
-  }, [currentPage, pageSize, selectedTags]);
+  }, [currentPage, pageSize, selectedTags, orderBy, userId]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -155,9 +190,36 @@ export default function ComunityPage() {
           <div className="w-full lg:w-3/4 px-4">
             <div className="flex flex-col md:flex-row justify-between gap-4">
               <ButtonGroup variant="text" className="flex md:flex-row flex-col">
-                <Button>Mới Nhất</Button>
-                <Button>Phổ Biến</Button>
-                <Button>Bài Viết Của Bạn Bè</Button>
+                <Button
+                  onClick={() => setOrderBy("created-at-desc")}
+                  className={
+                    orderBy === "created-at-desc"
+                      ? activeButtonClass
+                      : inactiveButtonClass
+                  }
+                >
+                  Mới Nhất
+                </Button>
+                <Button
+                  onClick={() => setOrderBy("popularity")}
+                  className={
+                    orderBy === "popularity"
+                      ? activeButtonClass
+                      : inactiveButtonClass
+                  }
+                >
+                  Phổ Biến
+                </Button>
+                <Button
+                  onClick={() => setOrderBy("friends")}
+                  className={
+                    orderBy === "friends"
+                      ? activeButtonClass
+                      : inactiveButtonClass
+                  }
+                >
+                  Bài Viết Của Bạn Bè
+                </Button>
               </ButtonGroup>
 
               <Button
@@ -197,18 +259,14 @@ export default function ComunityPage() {
                     description={cleanAndTruncate(thread.content)}
                     dateTime={thread.createdAt}
                     likes={thread.likesCount || 0}
+                    commentsCount={thread.commentsCount || 0}
                     threadData={{
                       likes: (thread.likes || []).map((like) => ({
                         ...like,
                         threadId: thread.threadId,
                       })),
                     }}
-                    createdByNavigation={{
-                      ...thread.createdByNavigation,
-                      username: thread.createdByNavigation.fullName
-                        .replace(/\s+/g, "")
-                        .toLowerCase(), // Example username generation
-                    }}
+                    createdByNavigation={thread.createdByNavigation}
                     tags={thread.threadsTags || []}
                   />
                 ))}
@@ -270,8 +328,8 @@ export default function ComunityPage() {
                 {tags?.map((tag) => (
                   <Chip
                     key={tag.tagId}
-                    value={`${tag.tagName} (${tag.postCount || 0})`}
-                    onClose={() => toggleTag(tag.tagId)}
+                    value={`${tag.tagName}`}
+                    onClick={() => toggleTag(tag.tagId)} // Bấm vào chip để chọn/bỏ
                     variant={
                       selectedTags.includes(tag.tagId) ? "filled" : "outlined"
                     }

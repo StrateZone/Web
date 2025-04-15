@@ -195,8 +195,8 @@ function BlogHistory() {
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <Banner
-        title="My Blog History"
-        subtitle="View and manage all your blog posts"
+        title="Lịch Sử Bài Viết"
+        subtitle="Xem lại và quản lý các bài viết bạn đã đăng, đang chờ duyệt hoặc bị từ chối"
       />
 
       <div className="container mx-auto px-4 py-8 flex-grow">
@@ -208,10 +208,10 @@ function BlogHistory() {
           <>
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-gray-800">
-                Your Blog Posts ({totalCount})
+                Những Bài Viết Của Bạn ({totalCount})
               </h2>
               <p className="text-gray-600">
-                All your submitted posts and their current status
+                Trạng thái của tất cả bài viết bạn đã tạo
               </p>
             </div>
 
