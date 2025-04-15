@@ -13,7 +13,6 @@ import Footer from "@/components/footer";
 import Banner from "@/components/banner/banner";
 import { useParams, useRouter } from "next/navigation";
 import { DefaultPagination } from "@/components/pagination";
-import { HeartIcon, ChatBubbleLeftIcon } from "@heroicons/react/24/outline";
 
 interface ThreadTag {
   id: number;
@@ -326,16 +325,20 @@ export default function ComunityPage() {
             ) : (
               <div className="flex flex-wrap gap-2">
                 {tags?.map((tag) => (
-                  <Chip
+                  <div
                     key={tag.tagId}
-                    value={`${tag.tagName}`}
-                    onClick={() => toggleTag(tag.tagId)} // Bấm vào chip để chọn/bỏ
-                    variant={
-                      selectedTags.includes(tag.tagId) ? "filled" : "outlined"
-                    }
-                    color={selectedTags.includes(tag.tagId) ? "blue" : "gray"}
-                    className="cursor-pointer hover:shadow-md transition-all"
-                  />
+                    onClick={() => toggleTag(tag.tagId)}
+                    className="cursor-pointer"
+                  >
+                    <Chip
+                      value={tag.tagName}
+                      variant={
+                        selectedTags.includes(tag.tagId) ? "filled" : "outlined"
+                      }
+                      color={selectedTags.includes(tag.tagId) ? "blue" : "gray"}
+                      className="hover:shadow-md transition-all"
+                    />
+                  </div>
                 ))}
               </div>
             )}
