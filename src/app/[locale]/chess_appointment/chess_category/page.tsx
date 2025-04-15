@@ -125,6 +125,7 @@ export default function ChessCategoryPage() {
     closeHour: "22:00",
   });
   const [isLoadingHours, setIsLoadingHours] = useState(false);
+
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
   const systemId = 1;
   const [rooms, setRooms] = useState<Room[]>([]);

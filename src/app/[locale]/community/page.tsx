@@ -13,6 +13,7 @@ import Footer from "@/components/footer";
 import Banner from "@/components/banner/banner";
 import { useParams, useRouter } from "next/navigation";
 import { DefaultPagination } from "@/components/pagination";
+import { HeartIcon, ChatBubbleLeftIcon } from "@heroicons/react/24/outline";
 
 interface ThreadTag {
   id: number;
