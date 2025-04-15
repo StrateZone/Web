@@ -16,7 +16,59 @@ type FriendRequest = {
   fromUserNavigation: User; // This is the sender
   toUserNavigation: User; // This is the receiver
 };
+// types.ts
 
+export interface User {
+  userId: number;
+  cartId: number | null;
+  username: string;
+  email: string;
+  phone: string;
+  fullName: string;
+  password: string;
+  status: "Active" | "Inactive" | string; // Có thể mở rộng thêm các trạng thái khác
+  address: string;
+  avatarUrl: string;
+  bio: string | null;
+  points: number;
+  userRole: number;
+  gender: number; // 0 có thể là Unknown, 1 Male, 2 Female...
+  skillLevel: number;
+  ranking: number;
+  createdAt: string; // Hoặc có thể dùng Date nếu bạn parse
+  updatedAt: string; // Hoặc có thể dùng Date nếu bạn parse
+  refreshToken: string;
+  refreshTokenExpiry: string; // Hoặc Date
+  otp: string | null;
+  otpExpiry: string | null; // Hoặc Date
+  wallet: null | {
+    // Nếu có thông tin chi tiết về wallet có thể thêm vào
+    walletId: number;
+    balance: number;
+    // ... các trường khác
+  };
+}
+
+export interface FriendList {
+  id: number;
+  userId: number;
+  friendId: number;
+  status: "accepted" | "pending" | "rejected" | string; // Có thể mở rộng
+  createdAt: string; // Hoặc Date
+  updatedAt: string; // Hoặc Date
+  friend: User; // Thông tin người bạn
+}
+
+// Kiểu dữ liệu cho FriendRequest nếu cần
+export interface FriendRequest {
+  id: number;
+  fromUser: number;
+  toUser: number;
+  status: "pending" | "accepted" | "rejected" | string;
+  createdAt: string; // Hoặc Date
+  fromUserNavigation: User; // Người gửi
+  toUserNavigation: User; // Người nhận
+}
 export default function FriendManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<User[]>([]);
