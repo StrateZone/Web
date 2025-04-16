@@ -470,7 +470,7 @@ export default function ChessCategoryPage() {
     setIsLoadingRooms(true);
     try {
       const response = await axios.get(
-        `${API_URL}/rooms/by-type?roomType=${type}`
+        `https://backend-production-ac5e.up.railway.app/api/rooms/by-type?roomType=${type}`
       );
       setRooms(response.data.pagedList || []);
       setSelectedRoomId(null); // Reset selected room when type changes
