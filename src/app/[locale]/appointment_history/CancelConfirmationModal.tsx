@@ -42,7 +42,7 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
   const renderRefundMessage = () => {
     if (
       refundInfo.message.includes(
-        "No refund. Reason: Cancellation on shared appointment will not be refund.",
+        "No refund. Reason: Cancellation on shared appointment will not be refund."
       )
     ) {
       return (
@@ -55,7 +55,7 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
 
     return (
       <>
-        <p className="font-medium">
+        <p className="font-medium text-black">
           {refundInfo.message.includes("100%") ? (
             <>
               Nếu hủy bàn này ở thời điểm hiện tại, bạn sẽ được hoàn tiền{" "}
@@ -74,23 +74,35 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
           )}
         </p>
         <p>
-          <span className="font-medium">**Số tiền nhận lại được**:</span>{" "}
-          <strong>{formatCurrency(refundInfo.refundAmount)}</strong>
+          <span className="font-medium text-black">
+            **Số tiền nhận lại được**:
+          </span>{" "}
+          <strong className="text-black">
+            {formatCurrency(refundInfo.refundAmount)}
+          </strong>
         </p>
         <p>
-          <span className="font-medium">**Thời gian hủy của bạn là**:</span>{" "}
-          <strong>{formatDate(refundInfo.cancellationTime)}</strong>
+          <span className="font-medium text-black">
+            **Thời gian hủy của bạn là**:
+          </span>{" "}
+          <strong className="text-black">
+            {formatDate(refundInfo.cancellationTime)}
+          </strong>
         </p>
 
         <p>
-          <span className="font-medium">**Hạn hoàn tiền một phần**:</span>{" "}
-          <strong>
+          <span className="font-medium text-black">
+            **Hạn hoàn tiền một phần**:
+          </span>{" "}
+          <strong className="text-black">
             {formatDate(refundInfo.cancellation_PartialRefund_TimeGate)}
           </strong>
         </p>
         <p>
-          <span className="font-medium">**Hạn chót hủy đơn**:</span>{" "}
-          <strong>{formatDate(refundInfo.cancellation_Block_TimeGate)}</strong>
+          <span className="font-medium text-black">**Hạn chót hủy đơn**:</span>{" "}
+          <strong className="text-black">
+            {formatDate(refundInfo.cancellation_Block_TimeGate)}
+          </strong>
         </p>
       </>
     );
@@ -99,14 +111,16 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 max-w-md w-full text-center">
-        <h3 className="text-xl font-bold mb-4">Xác Nhận Hủy Bàn Đã Đặt</h3>
+        <h3 className="text-xl font-bold mb-4 text-black">
+          Xác Nhận Hủy Bàn Đã Đặt
+        </h3>
 
         <div className="space-y-3 mb-4">{renderRefundMessage()}</div>
 
         <div className="flex justify-center space-x-3">
           <button
             onClick={onClose}
-            className={`px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 flex items-center justify-center min-w-[100px] ${
+            className={` text-black px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 flex items-center justify-center min-w-[100px] ${
               isLoading ? "opacity-50 cursor-not-allowed" : ""
             }`}
             disabled={isLoading}

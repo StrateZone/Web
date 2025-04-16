@@ -324,7 +324,12 @@ export default function ChessCategoryPage() {
           effectiveRoomType === ""
             ? ["basic", "premium", "openspaced"]
             : [effectiveRoomType],
-        // roomIds: selectedRoomId ? [selectedRoomId] : [],
+        RoomName: selectedRoomId
+          ? [
+              rooms.find((room) => room.roomId === selectedRoomId)?.roomName ||
+                "",
+            ]
+          : [],
         "page-number": pageNum,
         "page-size": 8,
       };
