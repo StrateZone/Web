@@ -5,7 +5,7 @@ import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@material-tailwind/react";
 import { toast } from "react-toastify";
 
@@ -26,6 +26,7 @@ export default function CreatePost() {
   const [isLoadingTags, setIsLoadingTags] = useState(true);
   const [error, setError] = useState("");
   const [userId, setUserId] = useState<number | null>(null);
+  const { locale } = useParams();
 
   const [touched, setTouched] = useState({
     title: false,
@@ -52,7 +53,7 @@ export default function CreatePost() {
     } catch (error) {
       console.error("Error parsing auth data:", error);
       alert("Dữ liệu xác thực không hợp lệ. Vui lòng đăng nhập lại.");
-      router.push("/login");
+      router.push(`/${locale}/login`);
     }
   }, [router]);
 
@@ -152,6 +153,97 @@ export default function CreatePost() {
     return response.data.url;
   };
 
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   setIsSubmitting(true);
+  //   setError("");
+  //   setTouched({
+  //     title: true,
+  //     tags: true,
+  //     thumbnail: true,
+  //     content: true,
+  //   });
+
+  //   if (!title.trim()) {
+  //     setError("Vui lòng nhập tiêu đề bài viết");
+  //     setIsSubmitting(false);
+  //     return;
+  //   }
+
+  //   if (selectedTagIds.length === 0) {
+  //     setError("Vui lòng chọn ít nhất một thể loại");
+  //     setIsSubmitting(false);
+  //     return;
+  //   }
+
+  //   if (!thumbnail) {
+  //     setError("Vui lòng chọn ảnh đại diện cho bài viết");
+  //     setIsSubmitting(false);
+  //     return;
+  //   }
+
+  //   if (!content.trim() || content.length < 500) {
+  //     setError("Nội dung bài viết phải có ít nhất 500 ký tự");
+  //     setIsSubmitting(false);
+  //     return;
+  //   }
+
+  //   try {
+  //     // 1. Create thread firstx
+  //     const threadResponse = await axios.post(
+  //       "https://backend-production-ac5e.up.railway.app/api/threads",
+  //       {
+  //         createdBy: userId,
+  //         title: title,
+  //         content: content,
+  //         tagIds: selectedTagIds,
+  //       },
+  //       {
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+  //         },
+  //       }
+  //     );
+
+  //     const threadId = threadResponse.data.threadId;
+
+  //     // 2. Upload image and update thread with image URL
+  //     const imageUrl = await uploadImage(threadId, thumbnail);
+
+  //     // 3. Update thread with the image URL
+  //     console.log(threadId);
+  //     await axios.post(
+  //       `https://backend-production-ac5e.up.railway.app/api/threads/${threadId}`,
+  //       {
+  //         thumbnailUrl: imageUrl,
+  //       },
+  //       {
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+  //         },
+  //       }
+  //     );
+
+  //     toast.success("Bài viết đã được đăng thành công!");
+  //   } catch (err: any) {
+  //     console.error("Lỗi khi đăng bài:", err);
+
+  //     let errorMessage = "Đã có lỗi xảy ra khi đăng bài. Vui lòng thử lại.";
+
+  //     if (err.response) {
+  //       errorMessage = err.response.data.message || errorMessage;
+  //     } else if (err.request) {
+  //       errorMessage =
+  //         "Không nhận được phản hồi từ server. Vui lòng kiểm tra kết nối.";
+  //     }
+
+  //     setError(errorMessage);
+  //   } finally {
+  //     setIsSubmitting(false);
+  //   }
+  // };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -163,6 +255,7 @@ export default function CreatePost() {
       content: true,
     });
 
+    // Validate form data
     if (!title.trim()) {
       setError("Vui lòng nhập tiêu đề bài viết");
       setIsSubmitting(false);
@@ -188,7 +281,7 @@ export default function CreatePost() {
     }
 
     try {
-      // 1. Create thread first
+      // 1. Tạo thread trước
       const threadResponse = await axios.post(
         "https://backend-production-ac5e.up.railway.app/api/threads",
         {
@@ -207,31 +300,45 @@ export default function CreatePost() {
 
       const threadId = threadResponse.data.threadId;
 
-      // 2. Upload image and update thread with image URL
-      const imageUrl = await uploadImage(threadId, thumbnail);
+      // 2. Upload hình ảnh (sử dụng API đặc biệt cho upload)
+      const formData = new FormData();
+      formData.append("Type", "thread");
+      formData.append("EntityId", threadId.toString());
+      formData.append("ImageFile", thumbnail);
+      formData.append("Width", "0");
+      formData.append("Height", "0");
 
-      // 3. Update thread with the image URL
-      await axios.patch(
-        `https://backend-production-ac5e.up.railway.app/api/threads/${threadId}`,
-        {
-          thumbnailUrl: imageUrl,
-        },
+      const uploadResponse = await axios.post(
+        "https://backend-production-ac5e.up.railway.app/api/images/upload",
+        formData,
         {
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type": "multipart/form-data",
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );
 
-      toast.success("Bài viết đã được đăng thành công!");
+      // 3. KHÔNG cần update thread lại vì API upload đã tự động liên kết ảnh với thread
+      // (Dựa vào response trước đó của bạn cho thấy threadId đã được gán vào ảnh)
+
+      toast.success("Bài viết đã được tạo thành công chờ Admin xét duyệt!");
+      router.push(`/${locale}/community/post_history/`);
+
+      // Có thể thêm chuyển hướng sau khi thành công
+      // router.push(`/thread/${threadId}`);
     } catch (err: any) {
       console.error("Lỗi khi đăng bài:", err);
 
       let errorMessage = "Đã có lỗi xảy ra khi đăng bài. Vui lòng thử lại.";
 
       if (err.response) {
-        errorMessage = err.response.data.message || errorMessage;
+        // Xử lý các loại lỗi cụ thể
+        if (err.response.status === 413) {
+          errorMessage = "Kích thước ảnh quá lớn";
+        } else if (err.response.data?.message) {
+          errorMessage = err.response.data.message;
+        }
       } else if (err.request) {
         errorMessage =
           "Không nhận được phản hồi từ server. Vui lòng kiểm tra kết nối.";
@@ -242,7 +349,6 @@ export default function CreatePost() {
       setIsSubmitting(false);
     }
   };
-
   return (
     <div className="min-h-screen flex flex-col text-black">
       <Navbar />

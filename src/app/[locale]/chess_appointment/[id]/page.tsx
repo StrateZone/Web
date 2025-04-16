@@ -162,11 +162,8 @@ const TableDetailsPage = () => {
         ];
       case "basic":
         return [
-          "Miễn phí nước uống cơ bản",
-          "Hỗ trợ tư vấn cờ cơ bản",
-          "Không gian yên tĩnh",
-          "Wifi miễn phí",
-          "Bàn cờ tiêu chuẩn",
+          "Giá cả phải chăng",
+          "Có nhiều bàn, phù hợp với người thích đông đúc",
         ];
       case "openspace":
         return [
@@ -461,9 +458,9 @@ const TableDetailsPage = () => {
                       <span className="text-black font-medium">
                         {chessBooking.tableId}
                       </span>{" "}
-                      - <span className="text-gray-700">Phòng Số:</span>{" "}
+                      - <span className="text-gray-700">Tên Phòng:</span>{" "}
                       <span className="text-black font-medium">
-                        {chessBooking.roomId}
+                        {chessBooking.roomName}
                       </span>
                     </span>
                     <p className="text-gray-700 text-base">

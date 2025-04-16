@@ -123,6 +123,15 @@ const AppointmentRequestsPage = () => {
   const [currentCancellingId, setCurrentCancellingId] = useState<number | null>(
     null
   );
+  const [processingRequestId, setProcessingRequestId] = useState<number | null>(
+    null
+  );
+  const [processingAcceptId, setProcessingAcceptId] = useState<number | null>(
+    null
+  );
+  const [processingCancelId, setProcessingCancelId] = useState<number | null>(
+    null
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
@@ -203,7 +212,7 @@ const AppointmentRequestsPage = () => {
   }, [fetchAppointmentRequests]);
 
   const rejectAppointment = async (requestId: number) => {
-    setIsRejecting(true);
+    setProcessingRequestId(requestId);
     try {
       const response = await fetch(
         `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/reject/${requestId}`,
@@ -225,11 +234,11 @@ const AppointmentRequestsPage = () => {
     } catch (err) {
       console.error("Error checking cancel condition:", err);
     } finally {
-      setIsRejecting(false);
+      setProcessingRequestId(null);
     }
   };
   const handleProcessPayment = async (requestId: number) => {
-    setIsProcessingPayment(true);
+    setProcessingAcceptId(requestId);
     try {
       const request = requests.find((req) => req.id === requestId);
       if (!request || !request.appointmentId) {
@@ -349,7 +358,7 @@ const AppointmentRequestsPage = () => {
         await fetchAppointmentRequests(currentPage);
       }
     } finally {
-      setIsProcessingPayment(false);
+      setProcessingAcceptId(null);
     }
   };
   // Thêm hàm này vào component của bạn
@@ -681,10 +690,8 @@ const AppointmentRequestsPage = () => {
                             selectedRequest.fromUserNavigation.username}
                         </h4>
                         <p className="text-gray-600 text-sm">
-                          <strong>Trình Độ:</strong>{" "}
-                          {getRankLevelText(
-                            selectedRequest.fromUserNavigation.ranking
-                          )}
+                          <strong>Họ Và Tên:</strong>{" "}
+                          {selectedRequest.fromUserNavigation.fullName}
                         </p>
                       </div>
                     </div>
@@ -743,13 +750,13 @@ const AppointmentRequestsPage = () => {
                       </p>
                       <p>
                         <span className="font-medium">
-                          <strong>Số Phòng:</strong>
+                          <strong>Tên Phòng:</strong>
                         </span>{" "}
-                        {selectedRequest.table?.roomId}
+                        {selectedRequest.table?.roomName}
                       </p>
                       <p>
                         <span className="font-medium">
-                          <strong>Số Bàn:</strong>
+                          <strong>Mã Bàn:</strong>
                         </span>{" "}
                         {selectedRequest.tableId}
                       </p>
@@ -808,28 +815,6 @@ const AppointmentRequestsPage = () => {
                     )}
                   </div>
                 </div>
-
-                <div className="flex justify-end space-x-3">
-                  {(selectedRequest.status === "payment_required" ||
-                    selectedRequest.status === "await_appointment_creation") &&
-                    selectedRequest.appointmentId &&
-                    !isExpired(selectedRequest.expireAt) && (
-                      <Button
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 flex items-center justify-center min-w-[150px]"
-                        onClick={() => handleProcessPayment(selectedRequest.id)}
-                        disabled={isProcessingPayment}
-                      >
-                        {isProcessingPayment ? (
-                          <>
-                            <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                            Processing...
-                          </>
-                        ) : (
-                          <strong>Thanh Toán Ngay</strong>
-                        )}
-                      </Button>
-                    )}
-                </div>
               </div>
             ) : requests.length === 0 ? (
               <div className="text-center py-8">
@@ -883,17 +868,15 @@ const AppointmentRequestsPage = () => {
                                 request.fromUserNavigation.username}
                             </h3>
                             <p className="text-gray-600 text-sm">
-                              <strong>Trình Độ:</strong>{" "}
-                              {getRankLevelText(
-                                request.fromUserNavigation.ranking
-                              )}
+                              <strong>Họ Và Tên:</strong>{" "}
+                              {request.fromUserNavigation.fullName}
                             </p>
                           </div>
                         </div>
 
                         <div className="text-center md:text-right">
                           <p className="font-medium text-sm">
-                            <strong>Số Bàn:</strong> {request.tableId}
+                            <strong>Mã Bàn:</strong> {request.tableId}
                           </p>
                           <p className="text-gray-600 text-sm">
                             <strong>Ngày Chơi Cờ:</strong>{" "}
@@ -967,12 +950,16 @@ const AppointmentRequestsPage = () => {
                                   onClick={() =>
                                     handleProcessPayment(request.id)
                                   }
-                                  disabled={isAccepting}
+                                  disabled={
+                                    processingAcceptId !== null || // Disable nếu có bất kỳ bàn nào đang xử lý
+                                    processingRequestId !== null || // Hoặc đang xử lý từ chối
+                                    isExpired(request.expireAt) // Hoặc đã hết hạn
+                                  }
                                 >
-                                  {isAccepting ? (
+                                  {processingAcceptId === request.id ? (
                                     <>
                                       <Loader2 className="animate-spin mr-1 h-3 w-3" />
-                                      Đang Xử Lý
+                                      Đang xử lý...
                                     </>
                                   ) : (
                                     "Chấp Nhận Và Thanh Toán"
@@ -981,9 +968,12 @@ const AppointmentRequestsPage = () => {
                                 <Button
                                   className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[80px]"
                                   onClick={() => rejectAppointment(request.id)}
-                                  disabled={isRejecting}
+                                  disabled={
+                                    processingRequestId !== null &&
+                                    processingRequestId !== request.id
+                                  }
                                 >
-                                  {isRejecting ? (
+                                  {processingRequestId === request.id ? (
                                     <>
                                       <Loader2 className="animate-spin mr-1 h-3 w-3" />
                                       Đang Xử Lý
@@ -995,10 +985,7 @@ const AppointmentRequestsPage = () => {
                               </>
                             )}
                           {request.status === "accepted" &&
-                            !isExpired(request.expireAt) &&
-                            (request.tablesAppointmentStatus === "confirmed" ||
-                              request.tablesAppointmentStatus ===
-                                "pending") && (
+                            !isExpired(request.expireAt) && (
                               <>
                                 <Button
                                   className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[80px]"

@@ -49,11 +49,13 @@ interface Comment {
   createdAt: string;
   user: {
     userId: number;
+    username: string;
     fullName: string;
     avatarUrl: string;
   } | null;
   replyToNavigation: {
     user: {
+      username: string;
       fullName: string;
     };
   } | null;
@@ -107,6 +109,7 @@ function PostDetailPage() {
 
   const [currentUser] = useState({
     userId: userInfo.userId,
+    username: userInfo.username,
     fullName: userInfo.fullName,
     avatarUrl: userInfo.avatarUrl || "",
   });
@@ -149,8 +152,15 @@ function PostDetailPage() {
             ...comment,
             user: comment.user || null,
             inverseReplyToNavigation: [],
-            isLiked: comment.isLiked || false,
-            likeId: comment.likeId || null,
+            isLiked:
+              comment.likes?.some(
+                (like: any) => like.userId === currentUser.userId
+              ) || false,
+            likeId:
+              comment.likes?.find(
+                (like: any) => like.userId === currentUser.userId
+              )?.id || null,
+            likesCount: comment.likes?.length || 0,
           };
 
           commentsMap.set(comment.commentId, formattedComment);
@@ -463,7 +473,7 @@ function PostDetailPage() {
     return commentList.map((comment) => (
       <div
         key={comment.commentId}
-        className={`mt-4 ${depth > 0 ? "ml-8" : ""}`}
+        className={`mt-4`} // Removed the ml-8 for nested comments
       >
         <div className="flex gap-3">
           <img
@@ -474,11 +484,11 @@ function PostDetailPage() {
           <div className="bg-gray-100 p-3 rounded w-full">
             <div className="flex items-center gap-2">
               <p className="font-medium">
-                {comment.user?.fullName || "Anonymous"}
+                {comment.user?.username || "Anonymous"}
               </p>
               {comment.replyToNavigation && (
                 <span className="text-sm text-gray-500">
-                  → {comment.replyToNavigation.user?.fullName}
+                  → @{comment.replyToNavigation.user?.username}
                 </span>
               )}
             </div>
@@ -533,7 +543,7 @@ function PostDetailPage() {
                   type="text"
                   value={replyCommentContent}
                   onChange={(e) => setReplyCommentContent(e.target.value)}
-                  placeholder="Viết trả lời..."
+                  placeholder={`Trả lời ${comment.user?.username || "người dùng"}...`}
                   className="border p-2 rounded flex-1"
                 />
 
@@ -555,9 +565,10 @@ function PostDetailPage() {
           </div>
         </div>
 
+        {/* Render replies without indentation */}
         {comment.inverseReplyToNavigation.length > 0 && (
-          <div className="border-l-2 border-gray-200 pl-2">
-            {renderComments(comment.inverseReplyToNavigation, depth + 1)}
+          <div className="pl-4">
+            {renderComments(comment.inverseReplyToNavigation)}
           </div>
         )}
       </div>

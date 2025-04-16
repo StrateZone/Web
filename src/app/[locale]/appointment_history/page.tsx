@@ -165,9 +165,9 @@ function OpponentDetailsPopup({
                       <p className="text-sm text-gray-500">
                         {request.toUserNavigation.username}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      {/* <p className="text-sm text-gray-500">
                         Cấp độ: {request.toUserNavigation.skillLevel}
-                      </p>
+                      </p> */}
                     </div>
                   </div>
                   <div className="flex flex-col items-end">
@@ -187,7 +187,7 @@ function OpponentDetailsPopup({
                           : "Đã từ chối"}
                     </span>
                     <p className="text-xs text-gray-500 mt-1">
-                      Thời gian:{" "}
+                      Thời gian chơi:{" "}
                       {new Date(request.startTime).toLocaleTimeString("vi-VN")}{" "}
                       - {new Date(request.endTime).toLocaleTimeString("vi-VN")}
                     </p>
@@ -577,10 +577,10 @@ function Page() {
                   <table className="min-w-full bg-white">
                     <thead>
                       <tr className="bg-gray-100">
-                        <th className="py-2 px-4 border">ID Bàn</th>
+                        <th className="py-2 px-4 border">Mã Bàn</th>
                         <th className="py-2 px-4 border">Loại Cờ</th>
                         <th className="py-2 px-4 border">Loại Phòng</th>
-                        <th className="py-2 px-4 border">Số Phòng</th>
+                        <th className="py-2 px-4 border">Tên Phòng</th>
                         <th className="py-2 px-4 border">
                           Giờ Bắt Đầu Và Kết Thúc
                         </th>
@@ -622,7 +622,7 @@ function Page() {
                                     : tableAppointment.table.roomType}
                             </td>
                             <td className="py-2 px-4 border text-center">
-                              {tableAppointment.table.roomId}
+                              {tableAppointment.table.roomName}
                             </td>
                             <td className="py-2 px-4 border text-center">
                               {formatTime(tableAppointment.scheduleTime)}
