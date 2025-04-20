@@ -624,7 +624,7 @@ export default function CreatePost() {
         );
 
         // Thêm màu sắc mặc định nếu API không trả về
-        const tagsWithColor = filteredTags.map((tag) => ({
+        const tagsWithColor = filteredTags.map((tag: Tag) => ({
           ...tag,
           tagColor: getTagColor(tag.tagName),
         }));
@@ -780,18 +780,18 @@ export default function CreatePost() {
 
       toast.success("Bài viết đã được tạo thành công chờ Admin xét duyệt!");
       router.push(`/${locale}/community/post_history/`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Lỗi khi đăng bài:", err);
 
       let errorMessage = "Đã có lỗi xảy ra khi đăng bài. Vui lòng thử lại.";
 
-      if (err.response) {
+      if (axios.isAxiosError(err) && err.response) {
         if (err.response.status === 413) {
           errorMessage = "Kích thước ảnh quá lớn";
         } else if (err.response.data?.message) {
           errorMessage = err.response.data.message;
         }
-      } else if (err.request) {
+      } else if (axios.isAxiosError(err) && err.request) {
         errorMessage =
           "Không nhận được phản hồi từ server. Vui lòng kiểm tra kết nối.";
       }
