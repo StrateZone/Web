@@ -416,20 +416,32 @@ function BlogHistory() {
   const router = useRouter();
   const pageSize = 4;
 
-  const buttonColors: { [key: string]: string } = {
-    "cờ vua": "bg-gray-900 text-white",
-    "cờ tướng": "bg-red-700 text-white",
-    "cờ vây": "bg-yellow-600 text-black",
-    "chiến thuật": "bg-blue-600 text-white",
-    gambit: "bg-indigo-600 text-white",
-    mẹo: "bg-purple-500 text-white",
-    "thảo luận": "bg-green-600 text-white",
-    "trò chuyện": "bg-teal-500 text-white",
-    "ngoài lề": "bg-pink-500 text-white",
-    "thông báo": "bg-orange-500 text-white",
-    "quan trọng": "bg-red-600 text-white",
-    default: "bg-gray-500 text-white",
-  };
+  function getTagColor(tagName: string): string {
+    const colorMap: Record<string, string> = {
+      "cờ vua": "#000000",
+      "cờ tướng": "#8B0000",
+      "cờ vây": "#343434",
+      "chiến thuật": "#6A0DAD",
+      gambit: "#DC143C",
+      mẹo: "#DAA520",
+      "thảo luận": "#3CB371",
+      "trò chuyện": "#87CEFA",
+      "ngoài lề": "#A9A9A9",
+      "thông báo": "#1E90FF",
+      "quan trọng": "#ff2200",
+    };
+    return colorMap[tagName.toLowerCase()] || "#6B7280";
+  }
+  function getContrastColor(hexColor: string) {
+    if (!hexColor || !hexColor.startsWith("#")) return "#FFFFFF";
+
+    const r = parseInt(hexColor.substr(1, 2), 16);
+    const g = parseInt(hexColor.substr(3, 2), 16);
+    const b = parseInt(hexColor.substr(5, 2), 16);
+
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.5 ? "#000000" : "#FFFFFF";
+  }
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("vi-VN", {
@@ -757,17 +769,51 @@ function BlogHistory() {
 
                         {thread.threadsTags.length > 0 && (
                           <div className="flex flex-wrap gap-2 mb-4">
-                            {thread.threadsTags.map((tag) => (
-                              <span
-                                key={tag.id}
-                                className={`rounded-full px-2 py-0.5 text-[0.65rem] leading-3 ${
-                                  buttonColors[tag.tag.tagName.toLowerCase()] ||
-                                  buttonColors.default
-                                }`}
-                              >
-                                {tag.tag.tagName}
-                              </span>
-                            ))}
+                            {thread.threadsTags.map((tag) => {
+                              const tagColor = getTagColor(tag.tag.tagName);
+                              const textColor = getContrastColor(tagColor);
+                              const isImportantTag = [
+                                "thông báo",
+                                "quan trọng",
+                              ].includes(tag.tag.tagName);
+
+                              return (
+                                <span
+                                  key={tag.id}
+                                  className={`rounded-full px-2 py-0.5 text-[0.65rem] leading-3 transition-all duration-200 ${
+                                    isImportantTag
+                                      ? "hover:scale-105"
+                                      : "hover:opacity-90"
+                                  }`}
+                                  style={{
+                                    backgroundColor: tagColor,
+                                    color: textColor,
+                                    transform: isImportantTag
+                                      ? "scale(1.02)"
+                                      : "none",
+                                    border: isImportantTag
+                                      ? "1px solid white"
+                                      : "none",
+                                    boxShadow: isImportantTag
+                                      ? `0 0 5px ${tagColor}`
+                                      : "none",
+                                  }}
+                                >
+                                  {isImportantTag && (
+                                    <span className="mr-1">
+                                      {tag.tag.tagName === "quan trọng"
+                                        ? "⚠️"
+                                        : "📢"}
+                                    </span>
+                                  )}
+                                  {tag.tag.tagName}
+                                  {isImportantTag &&
+                                    tag.tag.tagName === "quan trọng" && (
+                                      <span className="ml-1">⚠️</span>
+                                    )}
+                                </span>
+                              );
+                            })}
                           </div>
                         )}
 

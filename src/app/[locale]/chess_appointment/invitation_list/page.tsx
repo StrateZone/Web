@@ -84,8 +84,7 @@ interface AppointmentRequest {
     | "rejected"
     | "expired"
     | "cancelled"
-    | "payment_required"
-    | "await_appointment_creation";
+    | "accepted_by_others";
   startTime: string;
   tablesAppointmentStatus: string;
   endTime: string;
@@ -112,7 +111,6 @@ const AppointmentRequestsPage = () => {
   const [requests, setRequests] = useState<AppointmentRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAccepting, setIsAccepting] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -129,9 +127,7 @@ const AppointmentRequestsPage = () => {
   const [processingAcceptId, setProcessingAcceptId] = useState<number | null>(
     null
   );
-  const [processingCancelId, setProcessingCancelId] = useState<number | null>(
-    null
-  );
+
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
@@ -443,15 +439,7 @@ const AppointmentRequestsPage = () => {
           bg: "bg-blue-100",
           text: "text-blue-700",
           border: "border-blue-500",
-          display: "Hoàn Thành Thanh Toán",
-          icon: <CheckCircle className="w-4 h-4 mr-1" />,
-        };
-      case "payment_required":
-        return {
-          bg: "bg-indigo-100",
-          text: "text-indigo-700",
-          border: "border-indigo-500",
-          display: "Yêu Cầu Thanh Toán",
+          display: "Đã Chấp Nhận Lời Mời",
           icon: <CheckCircle className="w-4 h-4 mr-1" />,
         };
       case "rejected":
@@ -459,23 +447,15 @@ const AppointmentRequestsPage = () => {
           bg: "bg-red-100",
           text: "text-red-700",
           border: "border-red-500",
-          display: "Đã Từ Chối",
+          display: "Đã Từ Chối Lời Mời",
           icon: <XCircle className="w-4 h-4 mr-1" />,
-        };
-      case "await_appointment_creation":
-        return {
-          bg: "bg-yellow-100",
-          text: "text-yellow-600",
-          border: "border-yellow-500",
-          display: "Chờ Đối Phương Tạo Cuộc Hẹn",
-          icon: <Clock className="w-4 h-4 mr-1" />,
         };
       case "expired":
         return {
           bg: "bg-orange-100",
           text: "text-orange-600",
           border: "border-orange-500",
-          display: "Đã Hết Hạn",
+          display: "Lời Mời Đã Hết Hạn",
           icon: <Clock className="w-4 h-4 mr-1" />,
         };
       case "cancelled":
@@ -483,8 +463,16 @@ const AppointmentRequestsPage = () => {
           bg: "bg-gray-100",
           text: "text-gray-600",
           border: "border-gray-400",
-          display: "Đã Hủy",
+          display: "Lời Mời Đã Bị Hủy",
           icon: <XCircle className="w-4 h-4 mr-1" />,
+        };
+      case "accepted_by_others":
+        return {
+          bg: "bg-pink-100",
+          text: "text-pink-700",
+          border: "border-pink-500",
+          display: "Lời Mời Đã Được Người Khác Chấp Nhận",
+          icon: <CheckCircle className="w-4 h-4 mr-1" />,
         };
       default:
         return {
@@ -838,14 +826,12 @@ const AppointmentRequestsPage = () => {
                       key={request.id}
                       className={`bg-white rounded-md shadow-sm p-4 border-l-4 ${
                         request.status === "accepted" ||
-                        request.status === "payment_required"
-                          ? "border-green-500"
-                          : request.status === "rejected"
-                            ? "border-red-500"
-                            : isExpired(request.expireAt) ||
-                                request.status === "cancelled"
-                              ? "border-gray-400"
-                              : "border-blue-500"
+                        request.status === "rejected"
+                          ? "border-red-500"
+                          : isExpired(request.expireAt) ||
+                              request.status === "cancelled"
+                            ? "border-gray-400"
+                            : "border-blue-500"
                       }`}
                     >
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -905,33 +891,29 @@ const AppointmentRequestsPage = () => {
                           {request.status === "accepted" ? (
                             <span className="text-blue-700 flex items-center text-sm">
                               <CheckCircle className="w-4 h-4 mr-1" />
-                              <strong>Hoàn Thành Thanh Toán</strong>
+                              <strong>Đã Chấp Nhận Lời Mời</strong>
                             </span>
-                          ) : request.status === "payment_required" ? (
-                            <span className="text-indigo-700 flex items-center text-sm">
+                          ) : request.status === "accepted_by_others" ? (
+                            <span className="text-pink-700 flex items-center text-sm">
                               <CheckCircle className="w-4 h-4 mr-1" />
-                              <strong>Yêu Cầu Thanh Toán</strong>
+                              <strong>
+                                Lời Mời Đã Được Người Khác Chấp Nhận
+                              </strong>
                             </span>
                           ) : request.status === "rejected" ? (
                             <span className="text-red-700 flex items-center text-sm">
                               <XCircle className="w-4 h-4 mr-1" />
-                              <strong>Đã Từ Chối</strong>
+                              <strong>Đã Từ Chối Lời Mời</strong>
                             </span>
                           ) : request.status === "expired" ? (
                             <span className="text-orange-600 flex items-center text-sm">
                               <Clock className="w-4 h-4 mr-1" />
-                              <strong>Đã Hết Hạn</strong>
+                              <strong>Lời Mời Đã Hết Hạn</strong>
                             </span>
                           ) : request.status === "cancelled" ? (
                             <span className="text-gray-600 flex items-center text-sm">
                               <XCircle className="w-4 h-4 mr-1" />
-                              <strong>Đã Hủy</strong>
-                            </span>
-                          ) : request.status ===
-                            "await_appointment_creation" ? (
-                            <span className="text-yellow-600 flex items-center text-sm">
-                              <Clock className="w-4 h-4 mr-1" />
-                              <strong>Chờ Đối Phương Tạo Cuộc Hẹn</strong>
+                              <strong>Lời Mời Đã Bị Hủy</strong>
                             </span>
                           ) : (
                             <span className="text-yellow-700 flex items-center text-sm">
@@ -985,7 +967,8 @@ const AppointmentRequestsPage = () => {
                               </>
                             )}
                           {request.status === "accepted" &&
-                            !isExpired(request.expireAt) && (
+                            !isExpired(request.expireAt) &&
+                            request.tablesAppointmentStatus !== "incoming" && (
                               <>
                                 <Button
                                   className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[80px]"

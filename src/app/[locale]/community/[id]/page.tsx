@@ -28,6 +28,7 @@ interface Thread {
   threadsTags: {
     tag: {
       tagName: string;
+      tagColor?: string; // thêm dòng này
     };
   }[];
   likesCount: number;
@@ -82,16 +83,25 @@ interface RelatedThread {
   threadsTags: {
     tag: {
       tagName: string;
+      tagColor?: string; // Thêm dòng này
     };
   }[];
 }
+function getContrastColor(hexColor: string) {
+  if (!hexColor || !hexColor.startsWith("#")) return "#FFFFFF";
 
+  const r = parseInt(hexColor.substr(1, 2), 16);
+  const g = parseInt(hexColor.substr(3, 2), 16);
+  const b = parseInt(hexColor.substr(5, 2), 16);
+
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.5 ? "#000000" : "#FFFFFF";
+}
 function PostDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
   const { locale } = useParams();
-
   const [thread, setThread] = useState<Thread | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,7 +109,12 @@ function PostDetailPage() {
   const [isLoadingLike, setIsLoadingLike] = useState(false);
   const [isLoadingCommentLike, setIsLoadingCommentLike] = useState(false);
   const [relatedThreads, setRelatedThreads] = useState<RelatedThread[]>([]);
-
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      router.push("/login");
+    }
+  }, []);
   // Get user data from localStorage
   const authDataString =
     typeof window !== "undefined" ? localStorage.getItem("authData") : null;
@@ -477,7 +492,10 @@ function PostDetailPage() {
       >
         <div className="flex gap-3">
           <img
-            src={comment.user?.avatarUrl || "/default-avatar.png"}
+            src={
+              comment.user?.avatarUrl ||
+              "https://i.pinimg.com/736x/0f/68/94/0f6894e539589a50809e45833c8bb6c4.jpg"
+            }
             alt={comment.user?.fullName || "Anonymous"}
             className="rounded-full w-10 h-10 object-cover"
           />
@@ -585,7 +603,7 @@ function PostDetailPage() {
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <div className="flex-1 flex items-center justify-center">
-          <p>Loading...</p>
+          <p>Đang tải...</p>
         </div>
         <Footer />
       </div>
@@ -683,18 +701,43 @@ function PostDetailPage() {
               </div>
 
               <div className="flex flex-wrap gap-2 mt-1 mb-4">
-                {thread.threadsTags.map((tagItem) => (
-                  <Button
-                    key={tagItem.tag.tagName}
-                    className={`rounded-full px-2 py-0.5 text-[0.65rem] leading-3 ${
-                      buttonColors[tagItem.tag.tagName.toLowerCase()] ||
-                      buttonColors.default
-                    }`}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {tagItem.tag.tagName}
-                  </Button>
-                ))}
+                {thread.threadsTags.map((tagItem) => {
+                  const tagColor = tagItem.tag?.tagColor || "#6B7280"; // Màu mặc định
+                  const textColor = getContrastColor(tagColor);
+                  const isImportantTag = ["thông báo", "quan trọng"].includes(
+                    tagItem.tag?.tagName || ""
+                  );
+
+                  return (
+                    <Button
+                      key={tagItem.tag.tagName}
+                      className={`rounded-full px-2 py-0.5 text-[0.65rem] leading-3 transition-all duration-200 ${
+                        isImportantTag ? "hover:scale-105" : "hover:opacity-90"
+                      }`}
+                      style={{
+                        backgroundColor: tagColor,
+                        color: textColor,
+                        transform: isImportantTag ? "scale(1.02)" : "none",
+                        border: isImportantTag ? "1px solid white" : "none",
+                        boxShadow: isImportantTag
+                          ? `0 0 5px ${tagColor}`
+                          : "none",
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {isImportantTag && (
+                        <span className="mr-1">
+                          {tagItem.tag.tagName === "quan trọng" ? "⚠️" : "📢"}
+                        </span>
+                      )}
+                      {tagItem.tag.tagName}
+                      {isImportantTag &&
+                        tagItem.tag.tagName === "quan trọng" && (
+                          <span className="ml-1">⚠️</span>
+                        )}
+                    </Button>
+                  );
+                })}
               </div>
             </div>
 
@@ -763,7 +806,7 @@ function PostDetailPage() {
           </div>
 
           {/* Sidebar (right side) */}
-          <div className="w-full lg:w-1/4 px-6 mt-[500px]">
+          <div className="w-full lg:w-1/4 px-6 ">
             {" "}
             {/* hoặc bất kỳ giá trị nào bạn muốn */}
             <Typography variant="h5" className="mb-4 text-black">

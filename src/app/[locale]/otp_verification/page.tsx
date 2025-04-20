@@ -6,6 +6,8 @@ import axios from "axios";
 import Link from "next/link";
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
+import { toast } from "react-toastify";
+import { Mail } from "lucide-react";
 
 export default function OTPVerificationPage() {
   const router = useRouter();
@@ -75,6 +77,7 @@ export default function OTPVerificationPage() {
       localStorage.setItem("accessToken", userData.accessToken);
       localStorage.setItem("refreshToken", userData.refreshToken);
 
+      toast.success("Xác thực thành công!");
       router.push("/chess_appointment");
     } catch (error) {
       if (error instanceof Error) {
@@ -102,7 +105,8 @@ export default function OTPVerificationPage() {
         }
       );
 
-      // Start countdown
+      toast.success("Mã OTP mới đã được gửi!");
+
       const interval = setInterval(() => {
         setTimer((prev) => {
           if (prev === 1) {
@@ -115,7 +119,7 @@ export default function OTPVerificationPage() {
       }, 1000);
     } catch (error) {
       console.error("Lỗi khi gửi lại OTP:", error);
-      setError("Không thể gửi lại mã OTP, vui lòng thử lại sau!");
+      toast.error("Không thể gửi lại mã OTP, vui lòng thử lại sau!");
       setIsResendDisabled(false);
     } finally {
       setResendLoading(false);
@@ -143,90 +147,93 @@ export default function OTPVerificationPage() {
   };
 
   return (
-    <div>
-      <div className="relative min-h-screen w-full bg-[url('https://png.pngtree.com/background/20230611/original/pngtree-rain-storm-and-a-chess-board-picture-image_3129264.jpg')] bg-cover bg-center bg-repeat flex items-center justify-center">
+    <div className="flex flex-col min-h-screen">
+      <div className="relative flex-grow w-full bg-[url('https://png.pngtree.com/background/20230611/original/pngtree-rain-storm-and-a-chess-board-picture-image_3129264.jpg')] bg-cover bg-center bg-no-repeat flex items-center justify-center">
         <Navbar />
         <div className="absolute inset-0 bg-gray-900/60" />
-        <div
-          style={{ marginTop: "80px" }}
-          className="relative w-full max-w-screen-sm mx-auto border border-white bg-transparent bg-opacity-90 backdrop-blur-sm p-6 rounded-md shadow-md"
-        >
-          <div className="text-white text-center flex flex-col gap-3">
-            <h3 className="text-3xl font-bold text-white">Nhập mã OTP</h3>
-            <p className="text-sm text-gray-300">
-              Vui lòng nhập mã OTP gồm 6 chữ số đã được gửi đến email{" "}
-              <b>{email}</b>.
-            </p>
-
-            {/* Input OTP */}
-            <div className="flex justify-center space-x-4">
-              {otp.map((num, index) => (
-                <input
-                  key={index}
-                  id={`otp-${index}`}
-                  type="text"
-                  className="bg-zinc-900 border border-zinc-700 w-12 h-12 text-center text-lg font-bold rounded-lg outline-none text-black"
-                  value={num}
-                  onChange={(e) => handleOtpChange(index, e.target.value)}
-                  maxLength={1}
-                  onPaste={index === 0 ? handlePaste : undefined}
-                />
-              ))}
+        <div className="relative w-full max-w-md mx-auto my-32 px-4 sm:px-0">
+          <div className="bg-white bg-opacity-10 backdrop-blur-md rounded-xl shadow-xl p-8 border border-white border-opacity-20">
+            <div className="text-center mb-8">
+              <h3 className="text-3xl font-bold text-white mb-2">
+                Xác thực OTP
+              </h3>
+              <p className="text-gray-300">
+                Mã OTP đã được gửi đến{" "}
+                <span className="font-semibold">{email}</span>
+              </p>
             </div>
 
-            {error && <p className="text-red-500 text-sm">{error}</p>}
+            <div className="space-y-6">
+              <div className="flex justify-center space-x-4">
+                {otp.map((num, index) => (
+                  <input
+                    key={index}
+                    id={`otp-${index}`}
+                    type="text"
+                    className="bg-transparent border-b-2 border-white w-10 h-12 text-center text-xl font-bold text-white outline-none focus:border-blue-500"
+                    value={num}
+                    onChange={(e) => handleOtpChange(index, e.target.value)}
+                    maxLength={1}
+                    onPaste={index === 0 ? handlePaste : undefined}
+                  />
+                ))}
+              </div>
 
-            {/* Verify OTP Button */}
-            <Button
-              onClick={handleVerifyOTP}
-              disabled={verifyLoading || otp.join("").length !== 6}
-              className="w-full font-bold bg-black text-white py-2 rounded border border-gray-500 hover:bg-gray-800 transition duration-150 ease-in-out mt-3 flex items-center justify-center min-h-12"
-            >
-              {verifyLoading ? (
-                <div className="flex items-center gap-2">
-                  <span className="block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  <span>Đang xác thực...</span>
-                </div>
-              ) : (
-                "Xác nhận OTP"
+              {error && (
+                <p className="text-red-400 text-xs text-center">{error}</p>
               )}
-            </Button>
 
-            {/* Resend OTP Section */}
-            <div className="text-center text-sm mt-3">
-              <p className="ml-28 flex items-center">
-                Bạn chưa nhận được mã OTP?
-                {isResendDisabled ? (
-                  <span className="ml-2 text-gray-400">
-                    Gửi lại sau {timer}s
-                  </span>
-                ) : (
-                  <button
-                    onClick={handleResendOTP}
-                    disabled={resendLoading}
-                    className="ml-2 font-semibold text-gray-200 hover:text-gray-400 inline-flex items-center text-light-blue-600"
-                  >
-                    {resendLoading ? (
-                      <>
-                        <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin mr-1"></span>
-                        <span>Đang gửi...</span>
-                      </>
-                    ) : (
-                      "Gửi lại mã"
-                    )}
-                  </button>
-                )}
-              </p>
-
-              <p className="mt-2">
-                Bạn đã có tài khoản?
-                <Link
-                  href="/login"
-                  className="font-semibold text-gray-200 cursor-pointer hover:text-gray-400 ml-1"
+              <div className="pt-2">
+                <Button
+                  className="w-full font-bold bg-black text-white py-3 rounded-lg border border-gray-300 flex items-center justify-center min-h-12 hover:bg-gray-900 transition-colors"
+                  onClick={handleVerifyOTP}
+                  disabled={verifyLoading || otp.join("").length !== 6}
                 >
-                  Đăng nhập ngay
-                </Link>
-              </p>
+                  {verifyLoading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      <span>Đang xác thực...</span>
+                    </div>
+                  ) : (
+                    "Xác nhận OTP"
+                  )}
+                </Button>
+              </div>
+
+              <div className="text-center text-sm mt-4">
+                <p className="text-gray-300">
+                  {isResendDisabled ? (
+                    <span>Gửi lại mã sau {timer}s</span>
+                  ) : (
+                    <button
+                      onClick={handleResendOTP}
+                      disabled={resendLoading}
+                      className="font-semibold text-white hover:underline cursor-pointer"
+                    >
+                      {resendLoading ? (
+                        <span className="flex items-center justify-center gap-1">
+                          <span className="block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                          Đang gửi...
+                        </span>
+                      ) : (
+                        "Gửi lại mã OTP"
+                      )}
+                    </button>
+                  )}
+                </p>
+              </div>
+
+              <div className="text-center text-sm">
+                <p className="text-gray-300">
+                  Quay lại{" "}
+                  <Link
+                    href="/login"
+                    className="font-semibold text-white hover:underline cursor-pointer"
+                  >
+                    Đăng nhập
+                  </Link>
+                </p>
+              </div>
             </div>
           </div>
         </div>

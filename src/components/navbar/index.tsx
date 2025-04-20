@@ -14,7 +14,6 @@ import {
   XMarkIcon,
   Bars3Icon,
   BuildingStorefrontIcon,
-  BellIcon,
 } from "@heroicons/react/24/solid";
 import {
   FaChessBoard,
@@ -53,7 +52,6 @@ function NavItem({ children, href }: NavItemProps) {
     </li>
   );
 }
-
 export function Navbar() {
   const t = useTranslations("NavBar");
   const router = useRouter();
@@ -74,13 +72,6 @@ export function Navbar() {
   const { balance, loading: walletLoading } = useSelector(
     (state: RootState) => state.wallet
   );
-
-  const getUserId = () => {
-    const authDataString = localStorage.getItem("authData");
-    if (!authDataString) return null;
-    const authData = JSON.parse(authDataString);
-    return authData.userId;
-  };
 
   const toggleShowBalance = () => {
     setShowBalance((prev) => {
@@ -174,7 +165,7 @@ export function Navbar() {
       href: `/${localActive}/store`,
     },
     {
-      name: "Cộng đồng",
+      name: "Cộng đồng 🥇 ",
       icon: UserCircleIcon,
       href: `/${localActive}/community`,
     },

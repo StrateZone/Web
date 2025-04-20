@@ -125,6 +125,7 @@ export default function ChessCategoryPage() {
     closeHour: "22:00",
   });
   const [isLoadingHours, setIsLoadingHours] = useState(false);
+
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
   const systemId = 1;
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -153,10 +154,10 @@ export default function ChessCategoryPage() {
 
         const [openHourRes, closeHourRes] = await Promise.all([
           axios.get(
-            `${API_URL}/system/${systemId}/open-hour/date?date=${dateStr}`
+            `https://backend-production-ac5e.up.railway.app/system/${systemId}/open-hour/date?date=${dateStr}`
           ),
           axios.get(
-            `${API_URL}/system/${systemId}/close-hour/date?date=${dateStr}`
+            `https://backend-production-ac5e.up.railway.app/system/${systemId}/close-hour/date?date=${dateStr}`
           ),
         ]);
 
@@ -469,7 +470,7 @@ export default function ChessCategoryPage() {
     setIsLoadingRooms(true);
     try {
       const response = await axios.get(
-        `${API_URL}/rooms/by-type?roomType=${type}`
+        `https://backend-production-ac5e.up.railway.app/api/rooms/by-type?roomType=${type}`
       );
       setRooms(response.data.pagedList || []);
       setSelectedRoomId(null); // Reset selected room when type changes
