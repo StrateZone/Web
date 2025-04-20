@@ -28,6 +28,7 @@ interface Thread {
   threadsTags: {
     tag: {
       tagName: string;
+      tagColor?: string; // thêm dòng này
     };
   }[];
   likesCount: number;
