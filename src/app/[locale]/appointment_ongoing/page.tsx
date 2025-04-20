@@ -193,13 +193,14 @@ function OpponentDetailsPopup({
                       }`}
                     >
                       {request.status === "pending"
-                        ? "Đang chờ"
+                        ? "Đang chờ phản hồi"
                         : request.status === "accepted"
-                          ? "Đã chấp nhận Lời Mời"
+                          ? "Đã chấp nhận"
                           : request.status === "accepted_by_others"
                             ? "Lời mời đã có người chấp nhận"
-                            : "Lời mời đã hết hạn"}
+                            : "Đã từ chối"}
                     </span>
+
                     <p className="text-xs text-gray-500 mt-1">
                       Thời gian chơi:{" "}
                       {new Date(request.startTime).toLocaleTimeString("vi-VN")}{" "}
@@ -421,7 +422,7 @@ function Page() {
 
       // Điều hướng dựa trên lựa chọn
       if (isConfirmed) {
-        router.push(`/${localActive}/appointment_history`);
+        router.push(`/${localActive}/appointment_ongoing`);
       } else {
         router.push(`/${localActive}/chess_appointment/chess_category`);
       }
@@ -463,7 +464,7 @@ function Page() {
         return {
           bg: "bg-purple-100",
           text: "text-purple-800",
-          display: "Đã Hoàn thành",
+          display: "Hoàn thành",
         };
       case "cancelled":
         return {
@@ -477,11 +478,11 @@ function Page() {
           text: "text-indigo-800",
           display: "Đã hoàn tiền",
         };
-      case "unfinished":
+      case "incompleted":
         return {
           bg: "bg-orange-100",
           text: "text-orange-800",
-          display: "Không hoàn thành",
+          display: "Chưa hoàn thành",
         };
       default:
         return {
@@ -513,12 +514,12 @@ function Page() {
         <div className="text-black">
           {/* Background Banner */}
           <Banner
-            title="Những Cuộc Hẹn Đã Diễn Ra Của Bạn Tại StrateZone"
-            subtitle="Xem lại các lần bạn đã tham gia thi đấu tại StrateZone"
+            title="Những Cuộc Hẹn Sắp Diễn Ra Của Bạn Tại StrateZone"
+            subtitle="Hãy sẵn sàng cho những trận đấu sắp tới tại StrateZone"
           />
 
           <div className="container mx-auto px-4 py-8 flex-grow">
-            <h1 className="text-3xl font-bold mb-8">Lịch Sử Đặt Hẹn</h1>
+            <h1 className="text-3xl font-bold mb-8">Cuộc Hẹn Sắp Diễn Ra</h1>
 
             {/* Controls */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -600,7 +601,7 @@ function Page() {
                         <th className="py-2 px-4 border">Loại Cờ</th>
                         <th className="py-2 px-4 border">Loại Phòng</th>
                         <th className="py-2 px-4 border">Tên Phòng</th>
-                        <th className="py-2 px-2 border">
+                        <th className="py-2 px-4 border">
                           Giờ Bắt Đầu Và Kết Thúc
                         </th>
                         <th className="py-2 px-4 border">Ngày</th>
@@ -708,11 +709,12 @@ function Page() {
               <div>
                 {data.pagedList.filter(
                   (appointment) =>
-                    appointment.status.toLowerCase() === "completed" ||
-                    appointment.status.toLowerCase() === "unfinished"
+                    appointment.status.toLowerCase() === "incompleted"
                 ).length === 0 ? (
                   <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                    <p className="text-lg">Bạn chưa có đơn đặt bàn nào.</p>
+                    <p className="text-lg">
+                      Bạn chưa có đơn đặt hẹn nào sắp diễn ra.
+                    </p>
                   </div>
                 ) : (
                   <>
@@ -735,9 +737,7 @@ function Page() {
                             .filter(
                               (appointment) =>
                                 appointment.status.toLowerCase() ===
-                                  "completed" ||
-                                appointment.status.toLowerCase() ===
-                                  "unfinished"
+                                "incompleted"
                             )
                             .map((appointment) => (
                               <tr

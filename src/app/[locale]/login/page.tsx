@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { User } from "lucide-react";
+import { User, Eye, EyeOff, Mail } from "lucide-react";
 import Link from "next/link";
 import { useLocale } from "next-intl";
 import { Input, Button } from "@material-tailwind/react";
@@ -15,13 +15,21 @@ export default function LoginPage() {
   const localActive = useLocale();
   const router = useRouter();
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
     validateEmail(e.target.value);
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+    validatePassword(e.target.value);
   };
 
   const validateEmail = (email: string) => {
@@ -34,61 +42,129 @@ export default function LoginPage() {
     }
   };
 
+  const validatePassword = (password: string) => {
+    if (!password) {
+      setPasswordError("Mật khẩu không được bỏ trống");
+    } else if (password.length < 6) {
+      setPasswordError("Mật khẩu phải có ít nhất 6 ký tự");
+    } else {
+      setPasswordError("");
+    }
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
   const handleLogin = async () => {
-    if (!emailError && email) {
+    validateEmail(email);
+    validatePassword(password);
+
+    if (!emailError && !passwordError && email && password) {
       setLoading(true);
       try {
         const response = await axios.post(
-          `https://backend-production-ac5e.up.railway.app/api/auth/send-otp?email=${encodeURIComponent(email)}`,
+          "https://backend-production-ac5e.up.railway.app/api/auth/login",
+          {
+            email: email,
+            password: password,
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              accept: "*/*",
+            },
+          }
         );
 
-        if (
-          response.data?.success === false ||
-          response.data?.statusCode === 404
-        ) {
-          toast.error("Tài khoản không tồn tại. Vui lòng kiểm tra lại email.");
-          return;
+        // Xử lý khi login thành công
+        if (response.data?.success === true) {
+          // Lấy data từ response
+          const responseData = response.data.data;
+
+          // Chuẩn bị dữ liệu user để lưu trữ
+          const authData = {
+            userId: responseData.userId,
+            username: responseData.username,
+            email: responseData.email,
+            fullName: responseData.fullName,
+            phone: responseData.phone,
+            gender: responseData.gender,
+            userRole: responseData.userRole,
+            status: responseData.status,
+            wallet: responseData.wallet,
+            accessToken: responseData.accessToken, // Lấy từ data
+            refreshToken: responseData.refreshToken, // Lấy từ data
+            imageUrl: responseData.imageUrl,
+            skillLevel: responseData.skillLevel,
+            ranking: responseData.ranking,
+          };
+
+          // Lưu vào localStorage
+          localStorage.setItem("authData", JSON.stringify(authData));
+          localStorage.setItem("accessToken", responseData.accessToken);
+          localStorage.setItem("refreshToken", responseData.refreshToken);
+
+          // Thông báo và chuyển hướng
+          toast.success(response.data.message || "Đăng nhập thành công!");
+          router.push("/chess_appointment");
+        } else if (response.data?.success === false) {
+          // Xử lý các trường hợp thất bại
+          if (
+            response.data?.message === "Tài khoản chưa được xác thực email."
+          ) {
+            router.push(
+              `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`
+            );
+            toast.warning(
+              "Tài Khoản Vẫn Chưa Được Kích Hoạt, Vui lòng xác thực email trước khi đăng nhập"
+            );
+          } else if (response.data?.message === "User doesnt exist") {
+            toast.error(
+              "Tài khoản không tồn tại. Vui lòng kiểm tra lại email."
+            );
+          } else if (response.data?.message === "Invalid email or password") {
+            toast.error(
+              "Email hoặc mật khẩu không đúng. Vui lòng kiểm tra lại."
+            );
+          } else {
+            toast.error(response.data?.message || "Đăng nhập thất bại");
+          }
         }
-
-        router.push(
-          `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`,
-        );
-      } catch (error) {
-        console.log(error);
-        toast.error("Có lỗi xảy ra khi gửi OTP. Vui lòng thử lại sau.");
+      } catch (error: any) {
+        console.error("Login error:", error);
+        toast.error("Lỗi hệ thống. Vui lòng thử lại sau.");
       } finally {
         setLoading(false);
       }
     }
   };
+  const handleGoogleLogin = async () => {
+    router.push(`/${localActive}/login_otp`);
+  };
 
   return (
-    <div>
-      <div className="relative min-h-screen w-full bg-[url('https://png.pngtree.com/background/20230611/original/pngtree-rain-storm-and-a-chess-board-picture-image_3129264.jpg')] bg-cover bg-center bg-repeat flex items-center justify-center">
+    <div className="flex flex-col min-h-screen">
+      <div className="relative flex-grow w-full bg-[url('https://png.pngtree.com/background/20230611/original/pngtree-rain-storm-and-a-chess-board-picture-image_3129264.jpg')] bg-cover bg-center bg-no-repeat flex items-center justify-center">
         <Navbar />
         <div className="absolute inset-0 bg-gray-900/60" />
-        <div
-          style={{ marginTop: "120px", marginBottom: "50px" }}
-          className="relative w-full max-w-screen-sm mx-auto border-2 border-white bg-transparent bg-opacity-95 backdrop-blur-sm opacity-90 p-8 rounded-md shadow-lg"
-        >
-          <div className="text-white text-center flex flex-col gap-4">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <h3 className="text-4xl font-extrabold text-white">
-                  Đăng nhập
-                </h3>
-                <p className="text-sm text-gray-300">
-                  Chào mừng trở lại! Vui lòng nhập thông tin tài khoản của bạn.
-                </p>
-              </div>
-              <div className="relative w-full">
+        <div className="relative w-full max-w-md mx-auto my-32 px-4 sm:px-0">
+          <div className="bg-white bg-opacity-10 backdrop-blur-md rounded-xl shadow-xl p-8 border border-white border-opacity-20">
+            <div className="text-center mb-8">
+              <h3 className="text-3xl font-bold text-white mb-2">Đăng nhập</h3>
+              <p className="text-gray-300">
+                Chào mừng trở lại! Vui lòng nhập thông tin tài khoản của bạn.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <div>
                 <Input
-                  label={"Email"}
+                  label="Email"
                   color="white"
                   variant="standard"
                   size="lg"
                   className="text-white"
-                  icon={<User size={20} />}
+                  icon={<Mail size={20} />}
                   maxLength={50}
                   crossOrigin="anonymous"
                   value={email}
@@ -102,36 +178,98 @@ export default function LoginPage() {
                   }}
                 />
                 {emailError && (
-                  <p className="text-red-500 text-sm mt-1">{emailError}</p>
+                  <p className="text-red-400 text-xs mt-1">{emailError}</p>
                 )}
               </div>
-            </div>
-            <div className="flex flex-col gap-3 mt-4">
-              <Button
-                className="w-full font-bold bg-black text-white py-3 rounded border-[0.5px] flex items-center justify-center min-h-12"
-                onClick={handleLogin}
-                disabled={loading || !!emailError || !email}
-              >
-                {loading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    <span>Đang gửi OTP...</span>
-                  </div>
-                ) : (
-                  "Đăng nhập"
+
+              <div>
+                <Input
+                  label="Mật khẩu"
+                  type={showPassword ? "text" : "password"}
+                  color="white"
+                  variant="standard"
+                  size="lg"
+                  className="text-white"
+                  icon={
+                    <button
+                      type="button"
+                      onClick={togglePasswordVisibility}
+                      className="focus:outline-none"
+                    >
+                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
+                  }
+                  maxLength={50}
+                  crossOrigin="anonymous"
+                  value={password}
+                  onChange={handlePasswordChange}
+                  onBlur={() => validatePassword(password)}
+                  error={!!passwordError}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleLogin();
+                    }
+                  }}
+                />
+                {passwordError && (
+                  <p className="text-red-400 text-xs mt-1">{passwordError}</p>
                 )}
-              </Button>
-            </div>
-            <div className="text-center text-sm mt-4">
-              <p>
-                Bạn chưa có tài khoản?{" "}
-                <Link
-                  href={`/${localActive}/register`}
-                  className="font-semibold text-gray-200 cursor-pointer hover:text-gray-400"
+              </div>
+
+              <div className="pt-2">
+                <Button
+                  className="w-full font-bold bg-black text-white py-3 rounded-lg border border-gray-300 flex items-center justify-center min-h-12 hover:bg-gray-900 transition-colors"
+                  onClick={handleLogin}
+                  disabled={
+                    loading ||
+                    !!emailError ||
+                    !!passwordError ||
+                    !email ||
+                    !password
+                  }
                 >
-                  Đăng ký miễn phí
-                </Link>
-              </p>
+                  {loading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      <span>Đang xử lý...</span>
+                    </div>
+                  ) : (
+                    "Đăng nhập"
+                  )}
+                </Button>
+              </div>
+
+              <div className="flex items-center my-4">
+                <div className="flex-grow border-t border-gray-300"></div>
+                <span className="mx-4 text-gray-300">hoặc</span>
+                <div className="flex-grow border-t border-gray-300"></div>
+              </div>
+
+              <Button
+                className="w-full font-bold bg-white text-gray-800 py-3 rounded-lg border border-gray-300 flex items-center justify-center min-h-12 hover:bg-gray-100 transition-colors"
+                onClick={handleGoogleLogin}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <img
+                    src="https://www.google.com/favicon.ico"
+                    alt="Google"
+                    className="w-5 h-5"
+                  />
+                  <span>Đăng nhập với Google</span>
+                </div>
+              </Button>
+
+              <div className="text-center text-sm mt-6">
+                <p className="text-gray-300">
+                  Bạn chưa có tài khoản?{" "}
+                  <Link
+                    href={`/${localActive}/register`}
+                    className="font-semibold text-white hover:underline cursor-pointer"
+                  >
+                    Đăng ký miễn phí
+                  </Link>
+                </p>
+              </div>
             </div>
           </div>
         </div>

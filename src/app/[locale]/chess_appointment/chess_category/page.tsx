@@ -154,10 +154,10 @@ export default function ChessCategoryPage() {
 
         const [openHourRes, closeHourRes] = await Promise.all([
           axios.get(
-            `${API_URL}/system/${systemId}/open-hour/date?date=${dateStr}`
+            `https://backend-production-ac5e.up.railway.app/system/${systemId}/open-hour/date?date=${dateStr}`
           ),
           axios.get(
-            `${API_URL}/system/${systemId}/close-hour/date?date=${dateStr}`
+            `https://backend-production-ac5e.up.railway.app/system/${systemId}/close-hour/date?date=${dateStr}`
           ),
         ]);
 

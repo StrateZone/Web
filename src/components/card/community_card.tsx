@@ -41,6 +41,7 @@ export type CommunityCardProps = {
     tag?: {
       tagId: number;
       tagName: string;
+      tagColor?: string; // Thêm dòng này
     };
   }>;
 };
@@ -83,24 +84,21 @@ export default function CommunityCard({
 
     fetchUserId();
   }, []);
-  const buttonColors: { [key: string]: string } = {
-    // Các loại cờ
-    "cờ vua": "bg-gray-900 text-white",
-    "cờ tướng": "bg-red-700 text-white",
-    "cờ vây": "bg-yellow-600 text-black",
-    // Loại nội dung
-    "chiến thuật": "bg-blue-600 text-white",
-    gambit: "bg-indigo-600 text-white",
-    mẹo: "bg-purple-500 text-white",
-    "thảo luận": "bg-green-600 text-white",
-    "trò chuyện": "bg-teal-500 text-white",
-    "ngoài lề": "bg-pink-500 text-white",
-    // Mức độ quan trọng
-    "thông báo": "bg-orange-500 text-white",
-    "quan trọng": "bg-red-600 text-white",
-    // Màu mặc định
-    default: "bg-gray-500 text-white",
-  };
+  function getContrastColor(hexColor: string) {
+    // Nếu không có màu hoặc màu không hợp lệ, trả về màu mặc định
+    if (!hexColor || !hexColor.startsWith("#")) return "#FFFFFF";
+
+    // Chuyển hex sang RGB
+    const r = parseInt(hexColor.substr(1, 2), 16);
+    const g = parseInt(hexColor.substr(3, 2), 16);
+    const b = parseInt(hexColor.substr(5, 2), 16);
+
+    // Tính độ sáng (luminance)
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+    // Trả về màu trắng hoặc đen tùy độ sáng nền
+    return luminance > 0.5 ? "#000000" : "#FFFFFF";
+  }
 
   // Initialize current user from localStorage
   useEffect(() => {
@@ -227,18 +225,36 @@ export default function CommunityCard({
           <div className="flex-grow">
             <div className="flex justify-between items-start mb-2">
               <div className="flex items-center gap-1 flex-wrap">
-                {tags.map((tagItem) => (
-                  <Button
-                    key={tagItem.id}
-                    className={`rounded-full px-2 py-0.5 text-[0.65rem] leading-3 ${
-                      buttonColors[tagItem.tag?.tagName || theme] ||
-                      buttonColors.default
-                    }`}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {tagItem.tag?.tagName}
-                  </Button>
-                ))}
+                {tags.map((tagItem) => {
+                  const tagColor = tagItem.tag?.tagColor || "#6B7280";
+                  const textColor = getContrastColor(tagColor);
+                  const isImportantTag = ["thông báo", "quan trọng"].includes(
+                    tagItem.tag?.tagName || ""
+                  );
+
+                  return (
+                    <Button
+                      key={tagItem.id}
+                      className={`rounded-full px-2 py-0.5 text-[0.65rem] leading-3 transition-all duration-200 hover:opacity-90 ${
+                        isImportantTag ? "animate-pulse shadow-md" : ""
+                      }`}
+                      style={{
+                        backgroundColor: tagColor,
+                        color: textColor,
+                        border: isImportantTag ? "1px solid white" : "none",
+                        boxShadow: isImportantTag
+                          ? `0 0 8px ${tagColor}`
+                          : "none",
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {tagItem.tag?.tagName}
+                      {isImportantTag && (
+                        <span className="ml-1">⚠️</span> // Thêm biểu tượng cảnh báo
+                      )}
+                    </Button>
+                  );
+                })}
               </div>
 
               <div className="flex gap-2">

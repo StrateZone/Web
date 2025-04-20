@@ -373,7 +373,7 @@ const TableBookingPage = () => {
 
       const userChoice = await SuccessBookingPopup();
       if (userChoice) {
-        router.push(`/${localActive}/appointment_history`);
+        router.push(`/${localActive}/appointment_ongoing`);
       } else {
         router.push(`/${localActive}/chess_appointment/chess_category`);
       }

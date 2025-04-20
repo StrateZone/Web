@@ -173,7 +173,7 @@ const NotificationDropdown = () => {
       if (!userId) return;
 
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/notifications/users/${userId}/mark-all-as-read`,
+        `https://backend-production-ac5e.up.railway.app/api/notifications/read-all/${userId}`,
         {
           method: "PUT",
           headers: {

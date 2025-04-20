@@ -23,6 +23,7 @@ import {
   Send,
   Newspaper,
   FileText,
+  PlayCircleIcon,
 } from "lucide-react";
 import { useLocale } from "next-intl";
 
@@ -41,9 +42,14 @@ const menuConfig = [
     icon: Calendar,
     items: [
       {
-        label: "Lịch Sử Đặt Bàn",
+        label: "Lịch Sử Đặt Hẹn",
         icon: ClockIcon,
         path: "appointment_history",
+      },
+      {
+        label: "Những Cuộc Hẹn Đang Chờ",
+        icon: PlayCircleIcon,
+        path: "appointment_ongoing",
       },
       {
         label: "Lời Mời Đã Nhận",
@@ -81,11 +87,12 @@ const useProfileMenu = () => {
   const router = useRouter();
   const localActive = useLocale();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     ["accessToken", "refreshToken", "authData", "chessBookings"].forEach(
       (item) => localStorage.removeItem(item)
     );
-    router.push("/");
+    router.push("/en");
+    window.location.reload(); // Tải lại trang sau khi chuyển hướng
   };
 
   const getMenuConfig = () =>
