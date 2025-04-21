@@ -5,6 +5,8 @@ import Navbar from "@/components/navbar";
 import axios from "axios";
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
+import { Badge, Tooltip, Avatar } from "@material-tailwind/react";
+import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 
 function ProfilePage() {
   // State for user data
@@ -20,6 +22,7 @@ function ProfilePage() {
     ranking: "",
     status: "",
     imageUrl: null as string | null,
+    userRole: "", // Added userRole to track member status
   });
 
   // State for edit mode and changes
@@ -27,6 +30,9 @@ function ProfilePage() {
   const [hasChanges, setHasChanges] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Check if user is a member
+  const isMember = userData.userRole === "Member";
 
   // Load data from localStorage on component mount
   useEffect(() => {
@@ -47,6 +53,7 @@ function ProfilePage() {
           ranking: authData.userInfo.ranking || "basic",
           status: authData.userInfo.status || "Active",
           imageUrl: authData.userInfo.avatarUrl || null,
+          userRole: authData.userInfo.userRole || "", // Added userRole
         });
         setPreviewImage(authData.userInfo.avatarUrl || null);
       } else {
@@ -79,6 +86,7 @@ function ProfilePage() {
               ranking: userInfo.ranking || "basic",
               status: userInfo.status || "Active",
               imageUrl: userInfo.avatarUrl || null,
+              userRole: userInfo.userRole || "", // Added userRole
             });
             setPreviewImage(userInfo.avatarUrl || null);
 
@@ -113,6 +121,7 @@ function ProfilePage() {
     }));
     setHasChanges(true);
   };
+
   const translateSkillLevel = (level: string) => {
     switch (level) {
       case "beginner":
@@ -271,6 +280,7 @@ function ProfilePage() {
         ranking: authData.userInfo.ranking || "basic",
         status: authData.userInfo.status || "Active",
         imageUrl: authData.userInfo.avatarUrl || null,
+        userRole: authData.userInfo.userRole || "",
       });
       setPreviewImage(authData.userInfo.avatarUrl || null);
     }
@@ -288,24 +298,35 @@ function ProfilePage() {
 
       {/* Profile Content */}
       <div className="max-w-6xl mx-auto p-6 text-black">
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div
+          className={`bg-white rounded-lg shadow-md p-6 ${isMember ? "border-2 border-purple-500 shadow-purple-500/30" : ""}`}
+        >
           <div className="flex flex-col md:flex-row gap-8">
-            {/* Left Column - Profile Image  */}
+            {/* Left Column - Profile Image */}
             <div className="w-full md:w-1/3 flex flex-col items-center">
               <div className="relative mb-4">
-                <div className="w-40 h-40 rounded-full bg-gray-200 overflow-hidden border-4 border-gray-300">
-                  {previewImage ? (
-                    <img
-                      src={previewImage}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-500">
-                      No Image
-                    </div>
-                  )}
-                </div>
+                <Badge
+                  overlap="circular"
+                  placement="bottom-end"
+                  className={`border-2 border-white ${isMember ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse" : "bg-blue-gray-100"}`}
+                  content={
+                    isMember ? (
+                      <Tooltip content="Thành viên câu lạc bộ">
+                        <CheckBadgeIcon className="h-5 w-5 text-white" />
+                      </Tooltip>
+                    ) : null
+                  }
+                >
+                  <Avatar
+                    src={
+                      previewImage ||
+                      "https://i.pinimg.com/736x/0f/68/94/0f6894e539589a50809e45833c8bb6c4.jpg"
+                    }
+                    alt={userData.username}
+                    size="xxl"
+                    className={`border-2 ${isMember ? "border-purple-500 shadow-lg shadow-purple-500/30" : "border-blue-500 shadow-lg shadow-blue-500/20"}`}
+                  />
+                </Badge>
                 {isEditing && (
                   <div className="mt-4">
                     <label className="block text-sm font-bold text-gray-700 mb-1">
@@ -329,6 +350,18 @@ function ProfilePage() {
 
             {/* Right Column - Profile Info */}
             <div className="w-full md:w-2/3">
+              <div className="flex items-center gap-2 mb-4">
+                <h2
+                  className={`text-2xl font-bold ${isMember ? "text-purple-700" : "text-gray-900"}`}
+                >
+                  {userData.username}
+                </h2>
+                {isMember && (
+                  <span className="px-2 py-1 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white animate-bounce">
+                    VIP
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Các trường readonly */}
                 {[
@@ -342,7 +375,9 @@ function ProfilePage() {
                   },
                 ].map((item) => (
                   <div key={item.field} className="mb-4">
-                    <label className="block text-base font-bold text-gray-700 mb-1">
+                    <label
+                      className={`block text-base font-bold ${isMember ? "text-purple-700" : "text-gray-700"} mb-1`}
+                    >
                       {item.label}
                     </label>
                     <input
@@ -359,14 +394,16 @@ function ProfilePage() {
                             ] as string)
                       }
                       readOnly
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed"
+                      className={`w-full px-3 py-2 border ${isMember ? "border-purple-300 bg-purple-50" : "border-gray-300 bg-gray-100"} rounded-md shadow-sm cursor-not-allowed`}
                     />
                   </div>
                 ))}
 
                 {/* Các trường có thể chỉnh sửa */}
                 <div className="mb-4">
-                  <label className="block text-base font-bold text-gray-700 mb-1">
+                  <label
+                    className={`block text-base font-bold ${isMember ? "text-purple-700" : "text-gray-700"} mb-1`}
+                  >
                     Họ Và Tên
                   </label>
                   {isEditing ? (
@@ -375,17 +412,21 @@ function ProfilePage() {
                       name="fullName"
                       value={userData.fullName}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 border ${isMember ? "border-purple-300 focus:ring-purple-500 focus:border-purple-500" : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"} rounded-md shadow-sm focus:outline-none`}
                     />
                   ) : (
-                    <p className="text-gray-900 py-2 px-3 bg-gray-50 rounded-md">
+                    <p
+                      className={`text-gray-900 py-2 px-3 ${isMember ? "bg-purple-50" : "bg-gray-50"} rounded-md`}
+                    >
                       {userData.fullName}
                     </p>
                   )}
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-base font-bold text-gray-700 mb-1">
+                  <label
+                    className={`block text-base font-bold ${isMember ? "text-purple-700" : "text-gray-700"} mb-1`}
+                  >
                     Giới Tính
                   </label>
                   {isEditing ? (
@@ -393,13 +434,15 @@ function ProfilePage() {
                       name="gender"
                       value={userData.gender}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 border ${isMember ? "border-purple-300 focus:ring9644-purple-500 focus:border-purple-500" : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"} rounded-md shadow-sm focus:outline-none`}
                     >
                       <option value="male">Nam</option>
                       <option value="female">Nữ</option>
                     </select>
                   ) : (
-                    <p className="text-gray-900 py-2 px-3 bg-gray-50 rounded-md">
+                    <p
+                      className={`text-gray-900 py-2 px-3 ${isMember ? "bg-purple-50" : "bg-gray-50"} rounded-md`}
+                    >
                       {translateGender(userData.gender)}
                     </p>
                   )}
@@ -408,7 +451,9 @@ function ProfilePage() {
 
               {/* Address and Bio - Có thể chỉnh sửa */}
               <div className="mb-4">
-                <label className="block text-base font-bold text-gray-700 mb-1">
+                <label
+                  className={`block text-base font-bold ${isMember ? "text-purple-700" : "text-gray-700"} mb-1`}
+                >
                   Địa Chỉ
                 </label>
                 {isEditing ? (
@@ -417,17 +462,21 @@ function ProfilePage() {
                     name="address"
                     value={userData.address}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className={`w-full px-3 py-2 border ${isMember ? "border-purple-300 focus:ring-purple-500 focus:border-purple-500" : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"} rounded-md shadow-sm focus:outline-none`}
                   />
                 ) : (
-                  <p className="text-gray-900 py-2 px-3 bg-gray-50 rounded-md">
+                  <p
+                    className={`text-gray-900 py-2 px-3 ${isMember ? "bg-purple-50" : "bg-gray-50"} rounded-md`}
+                  >
                     {userData.address || "Chưa cập nhật"}
                   </p>
                 )}
               </div>
 
               <div className="mb-4">
-                <label className="block text-base font-bold text-gray-700 mb-1">
+                <label
+                  className={`block text-base font-bold ${isMember ? "text-purple-700" : "text-gray-700"} mb-1`}
+                >
                   Mô Tả Bản Thân
                 </label>
                 {isEditing ? (
@@ -436,10 +485,12 @@ function ProfilePage() {
                     value={userData.bio}
                     onChange={handleInputChange}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className={`w-full px-3 py-2 border ${isMember ? "border-purple-300 focus:ring-purple-500 focus:border-purple-500" : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"} rounded-md shadow-sm focus:outline-none`}
                   />
                 ) : (
-                  <p className="text-gray-900 py-2 px-3 bg-gray-50 rounded-md">
+                  <p
+                    className={`text-gray-900 py-2 px-3 ${isMember ? "bg-purple-50" : "bg-gray-50"} rounded-md`}
+                  >
                     {userData.bio || "Chưa có thông tin"}
                   </p>
                 )}
@@ -450,7 +501,7 @@ function ProfilePage() {
                 {!isEditing ? (
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-medium"
+                    className={`px-4 py-2 rounded-md hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 font-medium ${isMember ? "bg-purple-600 text-white focus:ring-purple-500" : "bg-blue-600 text-white focus:ring-blue-500"}`}
                   >
                     Chỉnh Sửa
                   </button>
@@ -468,7 +519,9 @@ function ProfilePage() {
                       disabled={!hasChanges || isLoading}
                       className={`px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 font-medium ${
                         hasChanges && !isLoading
-                          ? "bg-green-600 text-white hover:bg-green-700 focus:ring-green-500"
+                          ? isMember
+                            ? "bg-purple-600 text-white hover:bg-purple-700 focus:ring-purple-500"
+                            : "bg-green-600 text-white hover:bg-green-700 focus:ring-green-500"
                           : "bg-gray-400 text-gray-700 cursor-not-allowed"
                       }`}
                     >

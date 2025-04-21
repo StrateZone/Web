@@ -11,6 +11,7 @@ import {
   Loader2,
   RefreshCw,
   Circle,
+  UserCheck,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
@@ -895,7 +896,7 @@ const AppointmentRequestsPage = () => {
                             </span>
                           ) : request.status === "accepted_by_others" ? (
                             <span className="text-pink-700 flex items-center text-sm">
-                              <CheckCircle className="w-4 h-4 mr-1" />
+                              <UserCheck className="w-4 h-4 mr-1" />
                               <strong>
                                 Lời Mời Đã Được Người Khác Chấp Nhận
                               </strong>
