@@ -154,10 +154,10 @@ export default function ChessCategoryPage() {
 
         const [openHourRes, closeHourRes] = await Promise.all([
           axios.get(
-            `https://backend-production-ac5e.up.railway.app/system/${systemId}/open-hour/date?date=${dateStr}`
+            `https://backend-production-ac5e.up.railway.app/api/system/${systemId}/open-hour/date?date=${dateStr}`
           ),
           axios.get(
-            `https://backend-production-ac5e.up.railway.app/system/${systemId}/close-hour/date?date=${dateStr}`
+            `https://backend-production-ac5e.up.railway.app/api/system/${systemId}/close-hour/date?date=${dateStr}`
           ),
         ]);
 
@@ -737,22 +737,6 @@ export default function ChessCategoryPage() {
                           })()}
                         </div>
                       )}
-                      {/* <a
-                        href={`/${locale}/chess_appointment/${chessBooking.tableId}?startTime=${encodeURIComponent(chessBooking.startDate)}&endTime=${encodeURIComponent(chessBooking.endDate)}`}
-                        className="block"
-                      >
-                        <img
-                          src={
-                            chessBooking.gameType.typeName === "chess"
-                              ? "https://i.pinimg.com/736x/2e/7e/e5/2e7ee58125c4b42cc7387887eb350580.jpg"
-                              : chessBooking.gameType.typeName === "xiangqi"
-                                ? "https://i.pinimg.com/736x/82/82/02/828202dd07ec09743fd06f7e0659ae0c.jpg"
-                                : "https://i.pinimg.com/736x/06/31/18/063118e78b9950a9ef9c97aa4b46c1c2.jpg"
-                          }
-                          alt={chessBooking.roomName}
-                          className="w-full h-40 object-cover rounded-md"
-                        />
-                      </a> */}
                       <p
                         onClick={() => {
                           viewBookingDetail({
