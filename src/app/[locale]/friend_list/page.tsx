@@ -58,7 +58,7 @@ export interface User {
   avatarUrl: string;
   bio: string | null;
   points: number;
-  userRole: number;
+  userRole: number | string;
   gender: number;
   skillLevel: number;
   ranking: number;
