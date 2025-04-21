@@ -7,12 +7,15 @@ import {
   MenuList,
   MenuItem,
   Avatar,
+  Badge,
+  Tooltip,
 } from "@material-tailwind/react";
 import {
   UserCircleIcon,
   ChevronDownIcon,
   PowerIcon,
   ClockIcon,
+  CheckBadgeIcon,
 } from "@heroicons/react/24/solid";
 import { useRouter } from "next/navigation";
 import {
@@ -33,7 +36,6 @@ const menuConfig = [
     icon: UserCircleIcon,
     items: [
       { label: "Thông Tin Cá Nhân", icon: User, path: "profile" },
-      // { label: "Cài đặt tài khoản", icon: CogIcon, path: "settings" },
       { label: "Ví Tiền", icon: Wallet, path: "wallet" },
     ],
   },
@@ -68,11 +70,10 @@ const menuConfig = [
     icon: Newspaper,
     items: [
       {
-        label: "Lịch sử bài viết",
+        label: "Bài Viết Của Tôi",
         icon: FileText,
         path: "community/post_history",
       },
-      // { label: "Liên hệ hỗ trợ", icon: LifebuoyIcon, path: "contact-support" },
     ],
   },
   {
@@ -172,7 +173,6 @@ const SubMenu = ({
             })}
           <Typography
             as="span"
-            variant="small"
             className="font-bold"
             color={menu.isLogout ? "red" : "inherit"}
           >
@@ -198,8 +198,12 @@ export default function ProfileMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { getMenuConfig } = useProfileMenu();
   const menuConfig = getMenuConfig();
+
+  // Get authData and check if user is a member
+  const authData = JSON.parse(localStorage.getItem("authData") || "{}");
+  const isMember = authData?.userRole === "Member";
   const avatarUrl =
-    JSON.parse(localStorage.getItem("authData") || "{}")?.userInfo?.avatarUrl ||
+    authData?.userInfo?.avatarUrl ||
     "https://i.pinimg.com/736x/0f/68/94/0f6894e539589a50809e45833c8bb6c4.jpg";
 
   return (
@@ -210,13 +214,34 @@ export default function ProfileMenu() {
           color="blue-gray"
           className="flex items-center gap-1 rounded-full py-0.5 pr-2 pl-0.5 lg:ml-auto"
         >
-          <Avatar
-            variant="circular"
-            size="sm"
-            alt="user avatar"
-            className="border border-gray-900 p-0.5"
-            src={avatarUrl}
-          />
+          <Badge
+            overlap="circular"
+            placement="bottom-end"
+            className={`border-1 border-white ${
+              isMember
+                ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse !h-5 !w-5"
+                : "bg-blue-gray-100"
+            }`}
+            content={
+              isMember ? (
+                <Tooltip content="Thành viên câu lạc bộ">
+                  <CheckBadgeIcon className="h-4 w-4 text-white" />
+                </Tooltip>
+              ) : null
+            }
+          >
+            <Avatar
+              variant="circular"
+              size="sm"
+              alt="user avatar"
+              className={`p-0.5 ${
+                isMember
+                  ? "border-2 border-purple-500 shadow-lg shadow-purple-500/30 "
+                  : "border border-gray-900"
+              }`}
+              src={avatarUrl}
+            />
+          </Badge>
           <ChevronDownIcon
             strokeWidth={2.5}
             className={`h-3 w-3 transition-transform ${isMenuOpen ? "rotate-180" : ""}`}

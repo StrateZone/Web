@@ -8,8 +8,10 @@ import {
   Typography,
   Button,
   Avatar,
+  Badge,
+  Tooltip,
 } from "@material-tailwind/react";
-import { FiInfo, FiX, FiUserPlus } from "react-icons/fi";
+import { FiInfo, FiX, FiUserPlus, FiCheck } from "react-icons/fi";
 import { User } from "./page";
 
 interface FriendCardProps {
@@ -27,31 +29,64 @@ export function FriendCard({
   onRemoveFriend,
   onViewProfile,
 }: FriendCardProps) {
+  const isMember = user.userRole === "Member";
+
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card
+      className={`hover:shadow-md transition-shadow ${isMember ? "border border-purple-200" : ""}`}
+    >
       <CardBody className="p-4">
         <div className="flex items-center gap-4">
-          <Avatar
-            src={user.avatarUrl || "/default-avatar.png"}
-            alt={user.username}
-            size="lg"
-            className="border-2 border-blue-100"
-          />
+          <Badge
+            overlap="circular"
+            placement="bottom-end"
+            className={`border-2 border-white ${isMember ? "bg-gradient-to-r from-purple-500 to-pink-500" : "bg-blue-gray-100"}`}
+            content={
+              isMember ? (
+                <Tooltip content="Thành viên VIP">
+                  <FiCheck className="h-4 w-4 text-white" />
+                </Tooltip>
+              ) : null
+            }
+          >
+            <Avatar
+              src={user.avatarUrl || "/default-avatar.png"}
+              alt={user.username}
+              size="lg"
+              className={`border-2 ${isMember ? "border-purple-500 shadow-lg shadow-purple-500/20" : "border-blue-100"}`}
+            />
+          </Badge>
           <div className="flex-1 min-w-0">
-            <Typography variant="h5" className="text-gray-900 truncate">
-              {user.username}
-            </Typography>
+            <div className="flex items-center gap-2">
+              <Typography
+                variant="h5"
+                className={`text-gray-900 truncate ${isMember ? "text-purple-600" : ""}`}
+              >
+                {user.username}
+              </Typography>
+              {isMember && (
+                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                  VIP
+                </span>
+              )}
+            </div>
             <Typography variant="small" color="gray" className="truncate">
               {user.fullName || "Không có tên hiển thị"}
             </Typography>
+            {isMember && (
+              <Typography variant="small" className="text-purple-500 mt-1">
+                Thành viên VIP
+              </Typography>
+            )}
           </div>
         </div>
       </CardBody>
       <CardFooter className="pt-0 flex flex-col gap-2">
         <Button
           fullWidth
-          variant="outlined"
-          className="flex items-center justify-center gap-2"
+          variant={isMember ? "gradient" : "outlined"}
+          color={isMember ? "purple" : "blue-gray"}
+          className={`flex items-center justify-center gap-2 ${isMember ? "shadow-purple-500/20" : ""}`}
           onClick={onViewProfile}
         >
           <FiInfo className="h-4 w-4" />
@@ -60,9 +95,9 @@ export function FriendCard({
         {isFriend ? (
           <Button
             fullWidth
-            variant="outlined"
-            color="red"
-            className="flex items-center justify-center gap-2"
+            variant={isMember ? "outlined" : "outlined"}
+            color={isMember ? "purple" : "red"}
+            className={`flex items-center justify-center gap-2 ${isMember ? "border-purple-500 text-purple-500 hover:bg-purple-50" : ""}`}
             onClick={onRemoveFriend}
           >
             <FiX className="h-4 w-4" />
@@ -71,7 +106,9 @@ export function FriendCard({
         ) : (
           <Button
             fullWidth
-            className="flex items-center justify-center gap-2"
+            variant={isMember ? "gradient" : "filled"}
+            color={isMember ? "purple" : "blue"}
+            className={`flex items-center justify-center gap-2 ${isMember ? "shadow-purple-500/20" : ""}`}
             onClick={onAddFriend}
           >
             <FiUserPlus className="h-4 w-4" />

@@ -432,11 +432,11 @@ export default function FriendManagementPage() {
         </div>
 
         {/* Thông báo lỗi */}
-        {error && (
+        {/* {error && (
           <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">
             {error}
           </div>
-        )}
+        )} */}
 
         {/* Các tab */}
         <Tabs value={activeTab} className="mb-8">
@@ -527,63 +527,93 @@ export default function FriendManagementPage() {
                   </Card>
                 ) : (
                   <div className="space-y-4">
-                    {pendingRequests.map((request) => (
-                      <Card
-                        key={request.id}
-                        className="hover:shadow-md transition-shadow"
-                      >
-                        <CardBody className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              <Avatar
-                                src={
-                                  request.fromUserNavigation?.avatarUrl ||
-                                  "https://i.pinimg.com/736x/0f/68/94/0f6894e539589a50809e45833c8bb6c4.jpg"
-                                }
-                                alt={
-                                  request.fromUserNavigation?.username ||
-                                  "Người dùng ẩn danh"
-                                }
-                                size="md"
-                                className="border-2 border-blue-100"
-                              />
-                              <div>
-                                <Typography
-                                  variant="h6"
-                                  className="text-gray-900"
+                    {pendingRequests.map((request) => {
+                      const isMember =
+                        request.fromUserNavigation.userRole === 1; // Kiểm tra nếu là Member (role 1)
+                      return (
+                        <Card
+                          key={request.id}
+                          className={`hover:shadow-md transition-shadow ${isMember ? "border border-purple-200" : ""}`}
+                        >
+                          <CardBody className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                <div className="relative">
+                                  <Avatar
+                                    src={
+                                      request.fromUserNavigation?.avatarUrl ||
+                                      "https://i.pinimg.com/736x/0f/68/94/0f6894e539589a50809e45833c8bb6c4.jpg"
+                                    }
+                                    alt={
+                                      request.fromUserNavigation?.username ||
+                                      "Người dùng ẩn danh"
+                                    }
+                                    size="md"
+                                    className={`border-2 ${isMember ? "border-purple-500 shadow-lg shadow-purple-500/20" : "border-blue-100"}`}
+                                  />
+                                  {isMember && (
+                                    <div className="absolute -top-2 -right-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full p-1">
+                                      <FiCheck className="h-3 w-3" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <Typography
+                                      variant="h6"
+                                      className={`text-gray-900 ${isMember ? "text-purple-600" : ""}`}
+                                    >
+                                      {request.fromUserNavigation.username}
+                                    </Typography>
+                                    {isMember && (
+                                      <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                                        VIP
+                                      </span>
+                                    )}
+                                  </div>
+                                  <Typography variant="small" color="gray">
+                                    Đã gửi{" "}
+                                    {new Date(
+                                      request.createdAt
+                                    ).toLocaleDateString()}
+                                  </Typography>
+                                  {isMember && (
+                                    <Typography
+                                      variant="small"
+                                      className="text-purple-500 mt-1"
+                                    >
+                                      Thành viên VIP
+                                    </Typography>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <IconButton
+                                  onClick={() =>
+                                    acceptFriendRequest(request.id)
+                                  }
+                                  color={isMember ? "purple" : "green"}
+                                  variant={isMember ? "gradient" : "outlined"}
+                                  title="Chấp nhận"
                                 >
-                                  {request.fromUserNavigation.username}
-                                </Typography>
-                                <Typography variant="small" color="gray">
-                                  Đã gửi{" "}
-                                  {new Date(
-                                    request.createdAt
-                                  ).toLocaleDateString()}
-                                </Typography>
+                                  <FiCheck className="h-5 w-5" />
+                                </IconButton>
+                                <IconButton
+                                  onClick={() =>
+                                    rejectFriendRequest(request.id)
+                                  }
+                                  color={isMember ? "pink" : "red"}
+                                  variant={isMember ? "gradient" : "outlined"}
+                                  title="Từ chối"
+                                >
+                                  <FiX className="h-5 w-5" />
+                                </IconButton>
                               </div>
                             </div>
-                            <div className="flex gap-2">
-                              <IconButton
-                                onClick={() => acceptFriendRequest(request.id)}
-                                color="green"
-                                variant="outlined"
-                                title="Chấp nhận"
-                              >
-                                <FiCheck className="h-5 w-5" />
-                              </IconButton>
-                              <IconButton
-                                onClick={() => rejectFriendRequest(request.id)}
-                                color="red"
-                                variant="outlined"
-                                title="Từ chối"
-                              >
-                                <FiX className="h-5 w-5" />
-                              </IconButton>
-                            </div>
-                          </div>
-                        </CardBody>
-                      </Card>
-                    ))}
+                          </CardBody>
+                        </Card>
+                      );
+                    })}
                   </div>
                 )}
               </div>
