@@ -1,4 +1,3 @@
-// components/friends/SearchResultCard.tsx
 "use client";
 
 import {
@@ -11,14 +10,8 @@ import {
   Badge,
   Tooltip,
 } from "@material-tailwind/react";
-import {
-  FiInfo,
-  FiX,
-  FiUserPlus,
-  FiClock,
-  FiUser,
-  FiCheck,
-} from "react-icons/fi";
+import { FiInfo, FiX, FiUserPlus, FiClock, FiUser } from "react-icons/fi";
+import { CheckBadgeIcon } from "@heroicons/react/24/solid"; // Thêm import này
 import { SearchFriendResult } from "./page";
 
 interface SearchResultCardProps {
@@ -100,11 +93,11 @@ export function SearchResultCard({
           <Badge
             overlap="circular"
             placement="bottom-end"
-            className={`border-2 border-white ${isMember ? "bg-gradient-to-r from-purple-500 to-pink-500" : "bg-blue-gray-100"}`}
+            className={`border-2 border-white ${isMember ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse" : "bg-blue-gray-100"}`}
             content={
               isMember ? (
-                <Tooltip content="Thành viên VIP">
-                  <FiCheck className="h-4 w-4 text-white" />
+                <Tooltip content="Thành viên câu lạc bộ">
+                  <CheckBadgeIcon className="h-5 w-5 text-white" />
                 </Tooltip>
               ) : null
             }
@@ -129,7 +122,7 @@ export function SearchResultCard({
               </Typography>
               {isMember && (
                 <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-                  VIP
+                  MEMBER
                 </span>
               )}
             </div>
@@ -138,7 +131,7 @@ export function SearchResultCard({
             </Typography>
             {isMember && (
               <Typography variant="small" className="text-purple-500 mt-1">
-                Thành viên VIP
+                Thành viên câu lạc bộ
               </Typography>
             )}
           </div>

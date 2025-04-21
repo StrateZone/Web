@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Button } from "@material-tailwind/react";
+import { Button, Badge, Tooltip } from "@material-tailwind/react"; // Added Badge and Tooltip
 import { User, X, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import { toast } from "react-toastify";
+import { CheckBadgeIcon } from "@heroicons/react/24/solid"; // Added CheckBadgeIcon
 
 interface Opponent {
   userId: number;
@@ -17,7 +18,7 @@ interface Opponent {
   gender: string;
   isInvited?: boolean;
   ranking?: string;
-  userRole?: string; // Added to check for "Member" role
+  userRole?: string | number; // Updated to handle both string and number
 }
 
 interface ChessBooking {
@@ -228,7 +229,8 @@ const OpponentRecommendationModal = ({
         )}
         <div className="space-y-3">
           {opponents.map((opponent) => {
-            const isMember = opponent.userRole === "Member"; // Check if this opponent is a member
+            const isMember =
+              opponent.userRole === "Member" || opponent.userRole === 1; // Handle both string and number
             return (
               <div
                 key={opponent.userId}
@@ -238,45 +240,64 @@ const OpponentRecommendationModal = ({
                     : "border-gray-200"
                 }`}
               >
-                {opponent.avatarUrl ? (
-                  <Image
-                    src={opponent.avatarUrl}
-                    alt={opponent.fullName}
-                    width={40}
-                    height={40}
-                    className={`rounded-full object-cover w-10 h-10 flex-shrink-0 ${
-                      isMember
-                        ? "border-2 border-purple-500 shadow-lg shadow-purple-500/30"
-                        : ""
-                    }`}
-                  />
-                ) : (
-                  <div
-                    className={`bg-gray-200 text-gray-500 w-10 h-10 flex items-center justify-center rounded-full flex-shrink-0 ${
-                      isMember
-                        ? "border-2 border-purple-500 shadow-lg shadow-purple-500/30"
-                        : ""
-                    }`}
-                  >
-                    <User size={18} />
-                  </div>
-                )}
+                <Badge
+                  overlap="circular"
+                  placement="bottom-end"
+                  className={`border-2 border-white ${
+                    isMember
+                      ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse !h-5 !w-5"
+                      : "bg-blue-gray-100"
+                  }`}
+                  content={
+                    isMember ? (
+                      <Tooltip content="Thành viên câu lạc bộ">
+                        <CheckBadgeIcon className="h-4 w-4 text-white" />
+                      </Tooltip>
+                    ) : null
+                  }
+                >
+                  {opponent.avatarUrl ? (
+                    <Image
+                      src={opponent.avatarUrl}
+                      alt={opponent.fullName}
+                      width={40}
+                      height={40}
+                      className={`rounded-full object-cover w-10 h-10 flex-shrink-0 ${
+                        isMember
+                          ? "border-2 border-purple-500 shadow-lg shadow-purple-500/30"
+                          : ""
+                      }`}
+                    />
+                  ) : (
+                    <div
+                      className={`bg-gray-200 text-gray-500 w-10 h-10 flex items-center justify-center rounded-full flex-shrink-0 ${
+                        isMember
+                          ? "border-2 border-purple-500 shadow-lg shadow-purple-500/30"
+                          : ""
+                      }`}
+                    >
+                      <User size={18} />
+                    </div>
+                  )}
+                </Badge>
                 <div className="flex-1 min-w-0">
                   <h3
                     className={`font-semibold text-sm truncate ${
                       isMember ? "text-purple-700" : "text-gray-800"
                     }`}
                   >
-                    {opponent.username || opponent.username}
+                    {opponent.username || opponent.fullName}
                     {isMember && (
                       <span className="ml-2 px-2 py-1 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white animate-bounce">
-                        VIP
+                        MEMBER
                       </span>
                     )}
                   </h3>
                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                     <span
-                      className={`text-xs ${isMember ? "text-purple-600" : "text-gray-500"}`}
+                      className={`text-xs ${
+                        isMember ? "text-purple-600" : "text-gray-500"
+                      }`}
                     >
                       {opponent.gender === "male" ? "Nam" : "Nữ"}
                     </span>
@@ -291,7 +312,7 @@ const OpponentRecommendationModal = ({
                       opponent.isInvited
                         ? "bg-gray-400"
                         : isMember
-                          ? "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 animate-pulse"
+                          ? "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
                           : "bg-blue-500 hover:bg-blue-600"
                     }`}
                   >

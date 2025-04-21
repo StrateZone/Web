@@ -358,7 +358,7 @@ function ProfilePage() {
                 </h2>
                 {isMember && (
                   <span className="px-2 py-1 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white animate-bounce">
-                    VIP
+                    MEMBER
                   </span>
                 )}
               </div>

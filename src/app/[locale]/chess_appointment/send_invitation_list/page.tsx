@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@material-tailwind/react";
+import { Button, Badge } from "@material-tailwind/react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import {
@@ -19,6 +19,10 @@ import { SuccessCancelPopup } from "../../appointment_history/CancelSuccessPopup
 import { DefaultPagination } from "@/components/pagination";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/app/store";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
+import Banner from "@/components/banner/banner";
+import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 
 interface UserNavigation {
   userId: number;
@@ -35,7 +39,7 @@ interface UserNavigation {
   points: number;
   ranking: number;
   status: string;
-  userRole: number;
+  userRole: number | string; // Support both number (1) and string ("Member") for flexibility
   wallet: any | null;
   otp: string | null;
   otpExpiry: string | null;
@@ -89,14 +93,10 @@ interface AppointmentRequest {
   createdAt: string;
   totalPrice: number | null;
   fromUserNavigation: UserNavigation | null;
-  toUserNavigation: any | null;
+  toUserNavigation: UserNavigation | null;
   table: Table;
   appointment: any | null;
 }
-
-import Swal from "sweetalert2";
-import withReactContent from "sweetalert2-react-content";
-import Banner from "@/components/banner/banner";
 
 const MySwal = withReactContent(Swal);
 
@@ -418,64 +418,94 @@ const AppointmentSendRequestsPage = () => {
     }
   };
 
+  const isMember = (userRole: number | string) =>
+    userRole === 1 || userRole === "Member";
+
   return (
     <div>
-      <div>
-        <Navbar />
-        <Banner
-          title="Lời Mời Đã Gửi"
-          subtitle="Xem lại các lời mời đánh cờ bạn đã gửi đi"
-        />
+      <Navbar />
+      <Banner
+        title="Lời Mời Đã Gửi"
+        subtitle="Xem lại các lời mời đánh cờ bạn đã gửi đi"
+      />
 
-        <div className="min-h-[calc(100vh-200px)] bg-gray-50 p-4 text-black">
-          <div className="container mx-auto px-2 py-4">
-            <div className="flex justify-between items-center mb-4">
-              <h1 className="text-2xl font-bold">
-                Những Lời Mời Của Bạn Đã Gửi Đi Cho Người Khác
-              </h1>
-              <Button
-                onClick={handleRefresh}
-                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600"
-                disabled={isLoading}
-              >
-                <RefreshCw
-                  className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
-                />
-                <strong>Làm Mới</strong>
-              </Button>
+      <div className="min-h-[calc(100vh-200px)] bg-gray-50 p-4 text-black">
+        <div className="container mx-auto px-2 py-4">
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-2xl font-bold">
+              Những Lời Mời Của Bạn Đã Gửi Đi Cho Người Khác
+            </h1>
+            <Button
+              onClick={handleRefresh}
+              className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600"
+              disabled={isLoading}
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+              />
+              <strong>Làm Mới</strong>
+            </Button>
+          </div>
+
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
             </div>
+          ) : selectedRequest ? (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <button
+                onClick={handleBackToList}
+                className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+              >
+                ← <strong>Quay Lại</strong>
+              </button>
 
-            {isLoading ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-              </div>
-            ) : selectedRequest ? (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <button
-                  onClick={handleBackToList}
-                  className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-semibold">
+                  Thông Tin Chi Tiết Lời Mời
+                </h2>
+                <span
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedRequest.status).bg} ${getStatusColor(selectedRequest.status).text}`}
                 >
-                  ← <strong>Quay Lại</strong>
-                </button>
+                  {getStatusColor(selectedRequest.status).display}
+                </span>
+              </div>
 
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-semibold">
-                    Thông Tin Chi Tiết Lời Mời
-                  </h2>
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedRequest.status).bg} ${getStatusColor(selectedRequest.status).text}`}
-                  >
-                    {getStatusColor(selectedRequest.status).display}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="text-lg mb-2 font-bold">
-                      <strong>Thông Tin Người Nhận</strong>
-                    </h3>
-                    <div className="flex items-center space-x-3 mb-4">
-                      <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg mb-2 font-bold">
+                    <strong>Thông Tin Người Nhận</strong>
+                  </h3>
+                  <div className="flex items-center space-x-3 mb-4">
+                    <Badge
+                      overlap="circular"
+                      placement="bottom-end"
+                      className={`border-2 border-white ${
+                        selectedRequest.toUserNavigation &&
+                        isMember(selectedRequest.toUserNavigation.userRole)
+                          ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse !h-5 !w-5"
+                          : "bg-blue-gray-100"
+                      }`}
+                      content={
+                        selectedRequest.toUserNavigation &&
+                        isMember(selectedRequest.toUserNavigation.userRole) ? (
+                          <div className="relative group">
+                            <CheckBadgeIcon className="h-4 w-4 text-white" />
+                            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-white text-black text-sm p-2 rounded shadow-lg">
+                              Thành viên câu lạc bộ
+                            </span>
+                          </div>
+                        ) : null
+                      }
+                    >
+                      <div
+                        className={`w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden ${
+                          selectedRequest.toUserNavigation &&
+                          isMember(selectedRequest.toUserNavigation.userRole)
+                            ? "border-2 border-purple-500 shadow-lg shadow-purple-500/20"
+                            : ""
+                        }`}
+                      >
                         {selectedRequest.toUserNavigation?.avatarUrl ? (
                           <img
                             src={selectedRequest.toUserNavigation.avatarUrl}
@@ -486,175 +516,224 @@ const AppointmentSendRequestsPage = () => {
                           <User className="w-6 h-6 text-gray-500" />
                         )}
                       </div>
-                      <div>
-                        <h4 className="font-bold">
+                    </Badge>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4
+                          className={`font-bold ${
+                            selectedRequest.toUserNavigation &&
+                            isMember(selectedRequest.toUserNavigation.userRole)
+                              ? "text-purple-600"
+                              : ""
+                          }`}
+                        >
                           {selectedRequest.toUserNavigation?.username ||
                             "Người dùng ẩn danh"}
                         </h4>
-                        <p className="text-gray-600 text-sm">
-                          <strong>Trình Độ:</strong>{" "}
-                          {getRankLevelText(
-                            selectedRequest.toUserNavigation?.ranking || 0
+                        {selectedRequest.toUserNavigation &&
+                          isMember(
+                            selectedRequest.toUserNavigation.userRole
+                          ) && (
+                            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                              MEMBER
+                            </span>
                           )}
-                        </p>
                       </div>
-                    </div>
-                    <div className="space-y-2">
-                      <p>
-                        <span className="font-medium">
-                          <strong>Email:</strong>
-                        </span>{" "}
-                        {selectedRequest.toUserNavigation?.email ||
-                          "Không có thông tin"}
+                      <p className="text-gray-600 text-sm">
+                        <strong>Trình Độ:</strong>{" "}
+                        {getRankLevelText(
+                          selectedRequest.toUserNavigation?.ranking || 0
+                        )}
                       </p>
-                      <p>
-                        <span className="font-medium">
-                          <strong>Số Điện Thoại:</strong>
-                        </span>{" "}
-                        {selectedRequest.toUserNavigation?.phone || "N/A"}
-                      </p>
-                      <p>
-                        <span className="font-medium">
-                          <strong>Giới Thiệu:</strong>
-                        </span>{" "}
-                        {selectedRequest.toUserNavigation?.bio ||
-                          "Không đề cập"}
-                      </p>
+                      {selectedRequest.toUserNavigation &&
+                        isMember(selectedRequest.toUserNavigation.userRole) && (
+                          <p className="text-purple-500 text-sm mt-1">
+                            Thành viên câu lạc bộ
+                          </p>
+                        )}
                     </div>
                   </div>
-
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="text-lg mb-2 font-bold">
-                      <strong>Thông Tin Bàn</strong>
-                    </h3>
-                    <div className="space-y-2">
-                      <p>
-                        <span className="font-medium">
-                          <strong>Loại Cờ:</strong>
-                        </span>{" "}
-                        {selectedRequest.table?.gameTypeId === 1
-                          ? "Cờ Vua"
-                          : selectedRequest.table?.gameTypeId === 2
-                            ? "Cờ Tướng"
-                            : selectedRequest.table?.gameTypeId === 3
-                              ? "Cờ Vây"
-                              : selectedRequest.table?.gameType?.typeName ||
-                                "Unknown"}
-                      </p>
-                      <p>
-                        <span className="font-medium">
-                          <strong>Loại Phòng:</strong>
-                        </span>{" "}
-                        {selectedRequest.table?.roomType === "basic"
-                          ? "Phòng Thường"
-                          : selectedRequest.table?.roomType === "premium"
-                            ? "Phòng Cao Cấp"
-                            : selectedRequest.table?.roomType === "openspaced"
-                              ? "Không Gian Mở"
-                              : "Unknown"}
-                      </p>
-                      <p>
-                        <span className="font-medium">
-                          <strong>Tên Phòng:</strong>
-                        </span>{" "}
-                        {selectedRequest.table?.roomName || "N/A"}
-                      </p>
-                      <p>
-                        <span className="font-medium">
-                          <strong>Mã Bàn:</strong>
-                        </span>{" "}
-                        {selectedRequest.tableId || "N/A"}
-                      </p>
-                      {selectedRequest.totalPrice && (
-                        <p>
-                          <span className="font-medium">
-                            <strong>Số Tiền Cần Trả:</strong>
-                          </span>{" "}
-                          {selectedRequest.totalPrice.toLocaleString()} VND
-                        </p>
-                      )}
-                    </div>
+                  <div className="space-y-2">
+                    <p>
+                      <span className="font-medium">
+                        <strong>Email:</strong>
+                      </span>{" "}
+                      {selectedRequest.toUserNavigation?.email ||
+                        "Không có thông tin"}
+                    </p>
+                    <p>
+                      <span className="font-medium">
+                        <strong>Số Điện Thoại:</strong>
+                      </span>{" "}
+                      {selectedRequest.toUserNavigation?.phone || "N/A"}
+                    </p>
+                    <p>
+                      <span className="font-medium">
+                        <strong>Giới Thiệu:</strong>
+                      </span>{" "}
+                      {selectedRequest.toUserNavigation?.bio || "Không đề cập"}
+                    </p>
                   </div>
                 </div>
 
-                <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="text-lg mb-2 font-bold">
-                    <strong>Thông Tin Thời Gian</strong>
+                    <strong>Thông Tin Bàn</strong>
                   </h3>
                   <div className="space-y-2">
                     <p>
                       <span className="font-medium">
-                        <strong>Ngày Chơi:</strong>
+                        <strong>Loại Cờ:</strong>
                       </span>{" "}
-                      {new Date(selectedRequest.startTime).toLocaleDateString(
-                        "vi-VN"
-                      )}
+                      {selectedRequest.table?.gameTypeId === 1
+                        ? "Cờ Vua"
+                        : selectedRequest.table?.gameTypeId === 2
+                          ? "Cờ Tướng"
+                          : selectedRequest.table?.gameTypeId === 3
+                            ? "Cờ Vây"
+                            : selectedRequest.table?.gameType?.typeName ||
+                              "Unknown"}
                     </p>
                     <p>
                       <span className="font-medium">
-                        <strong>Thời Gian Bắt Đầu Và Kết Thúc:</strong>
+                        <strong>Loại Phòng:</strong>
                       </span>{" "}
-                      {formatTimeRange(
-                        selectedRequest.startTime,
-                        selectedRequest.endTime
-                      )}
+                      {selectedRequest.table?.roomType === "basic"
+                        ? "Phòng Thường"
+                        : selectedRequest.table?.roomType === "premium"
+                          ? "Phòng Cao Cấp"
+                          : selectedRequest.table?.roomType === "openspaced"
+                            ? "Không Gian Mở"
+                            : "Unknown"}
                     </p>
                     <p>
                       <span className="font-medium">
-                        <strong>Gửi Lời Mời Lúc:</strong>
+                        <strong>Tên Phòng:</strong>
                       </span>{" "}
-                      {formatDateTime(selectedRequest.createdAt)}
+                      {selectedRequest.table?.roomName || "N/A"}
                     </p>
-                    {selectedRequest.expireAt && (
+                    <p>
+                      <span className="font-medium">
+                        <strong>Mã Bàn:</strong>
+                      </span>{" "}
+                      {selectedRequest.tableId || "N/A"}
+                    </p>
+                    {selectedRequest.totalPrice && (
                       <p>
                         <span className="font-medium">
-                          <strong>Lời Mời Hết Hạn Vào Lúc:</strong>
+                          <strong>Số Tiền Cần Trả:</strong>
                         </span>{" "}
-                        {formatDateTime(selectedRequest.expireAt)}
-                        {isExpired(selectedRequest.expireAt) && (
-                          <span className="ml-2 text-red-500">
-                            (Đã Hết Hạn)
-                          </span>
-                        )}
+                        {selectedRequest.totalPrice.toLocaleString()} VND
                       </p>
                     )}
                   </div>
                 </div>
+              </div>
 
-                <div className="flex justify-end space-x-3"></div>
-              </div>
-            ) : requests.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="mx-auto w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-3">
-                  <Clock className="w-8 h-8 text-gray-400" />
+              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <h3 className="text-lg mb-2 font-bold">
+                  <strong>Thông Tin Thời Gian</strong>
+                </h3>
+                <div className="space-y-2">
+                  <p>
+                    <span className="font-medium">
+                      <strong>Ngày Chơi:</strong>
+                    </span>{" "}
+                    {new Date(selectedRequest.startTime).toLocaleDateString(
+                      "vi-VN"
+                    )}
+                  </p>
+                  <p>
+                    <span className="font-medium">
+                      <strong>Thời Gian Bắt Đầu Và Kết Thúc:</strong>
+                    </span>{" "}
+                    {formatTimeRange(
+                      selectedRequest.startTime,
+                      selectedRequest.endTime
+                    )}
+                  </p>
+                  <p>
+                    <span className="font-medium">
+                      <strong>Gửi Lời Mời Lúc:</strong>
+                    </span>{" "}
+                    {formatDateTime(selectedRequest.createdAt)}
+                  </p>
+                  {selectedRequest.expireAt && (
+                    <p>
+                      <span className="font-medium">
+                        <strong>Lời Mời Hết Hạn Vào Lúc:</strong>
+                      </span>{" "}
+                      {formatDateTime(selectedRequest.expireAt)}
+                      {isExpired(selectedRequest.expireAt) && (
+                        <span className="ml-2 text-red-500">(Đã Hết Hạn)</span>
+                      )}
+                    </p>
+                  )}
                 </div>
-                <h2 className="text-lg font-medium text-gray-600">
-                  <strong>Không có lời mời nào</strong>
-                </h2>
-                <p className="text-gray-500 mt-1 text-sm">
-                  <strong>Bạn chưa gửi lời mời đánh cờ nào</strong>
-                </p>
               </div>
-            ) : (
-              <>
-                <div className="grid gap-4">
-                  {requests.map((request) => (
-                    <div
-                      key={request.id}
-                      className={`bg-white rounded-md shadow-sm p-4 border-l-4 ${
-                        request.status === "accepted"
-                          ? "border-green-500"
-                          : request.status === "rejected"
-                            ? "border-red-500"
-                            : isExpired(request.expireAt) ||
-                                request.status === "cancelled"
-                              ? "border-gray-400"
-                              : "border-blue-500"
-                      }`}
-                    >
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+
+              <div className="flex justify-end space-x-3"></div>
+            </div>
+          ) : requests.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="mx-auto w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-3">
+                <Clock className="w-8 h-8 text-gray-400" />
+              </div>
+              <h2 className="text-lg font-medium text-gray-600">
+                <strong>Không có lời mời nào</strong>
+              </h2>
+              <p className="text-gray-500 mt-1 text-sm">
+                <strong>Bạn chưa gửi lời mời đánh cờ nào</strong>
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-4">
+                {requests.map((request) => (
+                  <div
+                    key={request.id}
+                    className={`bg-white rounded-md shadow-sm p-4 border-l-4 ${
+                      request.status === "accepted"
+                        ? "border-green-500"
+                        : request.status === "rejected"
+                          ? "border-red-500"
+                          : isExpired(request.expireAt) ||
+                              request.status === "cancelled"
+                            ? "border-gray-400"
+                            : "border-blue-500"
+                    }`}
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                      <div className="flex items-center space-x-3">
+                        <Badge
+                          overlap="circular"
+                          placement="bottom-end"
+                          className={`border-2 border-white ${
+                            request.toUserNavigation &&
+                            isMember(request.toUserNavigation.userRole)
+                              ? "bg-gradient-to-r from-purple-500 to-pink-500 !h-5 !w-5 animate-pulse"
+                              : "bg-blue-gray-100"
+                          }`}
+                          content={
+                            request.toUserNavigation &&
+                            isMember(request.toUserNavigation.userRole) ? (
+                              <div className="relative group">
+                                <CheckBadgeIcon className="h-4 w-4 text-white" />
+                                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-white text-black text-sm p-2 rounded shadow-lg">
+                                  Thành viên câu lạc bộ
+                                </span>
+                              </div>
+                            ) : null
+                          }
+                        >
+                          <div
+                            className={`w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden ${
+                              request.toUserNavigation &&
+                              isMember(request.toUserNavigation.userRole)
+                                ? "border-2 border-purple-500 shadow-lg shadow-purple-500/20"
+                                : ""
+                            }`}
+                          >
                             {request.toUserNavigation?.avatarUrl ? (
                               <img
                                 src={request.toUserNavigation.avatarUrl}
@@ -665,128 +744,145 @@ const AppointmentSendRequestsPage = () => {
                               <User className="w-5 h-5 text-gray-500" />
                             )}
                           </div>
-                          <div>
-                            <h3 className="font-bold text-base">
+                        </Badge>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3
+                              className={`font-bold text-base ${
+                                request.toUserNavigation &&
+                                isMember(request.toUserNavigation.userRole)
+                                  ? "text-purple-600"
+                                  : ""
+                              }`}
+                            >
                               Người Nhận: @
                               {request.toUserNavigation?.username ||
                                 "Người dùng ẩn danh"}
                             </h3>
-                            <p className="text-gray-600 text-sm">
-                              <strong>Trình Độ:</strong>{" "}
-                              {getRankLevelText(
-                                request.toUserNavigation?.ranking || 0
+                            {request.toUserNavigation &&
+                              isMember(request.toUserNavigation.userRole) && (
+                                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                                  MEMBER
+                                </span>
                               )}
-                            </p>
                           </div>
-                        </div>
-
-                        <div className="text-center md:text-right">
-                          <p className="font-medium text-sm">
-                            <strong>Số Bàn:</strong> {request.tableId}
-                          </p>
                           <p className="text-gray-600 text-sm">
-                            <strong>Ngày Chơi Cờ:</strong>{" "}
-                            {formatDateTimeWithoutHour(request.startTime)}
-                          </p>
-                          <p className="text-gray-600 text-sm">
-                            <strong>Giờ Bắt Đầu Và Kết Thúc</strong>{" "}
-                            {formatTimeRange(
-                              request.startTime,
-                              request.endTime
+                            <strong>Trình Độ:</strong>{" "}
+                            {getRankLevelText(
+                              request.toUserNavigation?.ranking || 0
                             )}
                           </p>
-                          <p className="text-gray-600 text-sm">
-                            <strong>Số Tiền Cần Trả</strong>{" "}
-                            {request.totalPrice?.toLocaleString()} VND
-                          </p>
-                          <p className="text-gray-600 text-sm">
-                            <strong>Lời mời hết hạn sau:</strong>{" "}
-                            {calculateTimeRemaining(request.expireAt)}
-                          </p>
+                          {request.toUserNavigation &&
+                            isMember(request.toUserNavigation.userRole) && (
+                              <p className="text-purple-500 text-sm mt-1">
+                                Thành viên câu lạc bộ
+                              </p>
+                            )}
                         </div>
                       </div>
 
-                      <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row justify-between items-center gap-3">
-                        <div className="flex items-center">
-                          {request.status === "accepted" ? (
-                            <span className="text-blue-700 flex items-center text-sm">
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              <strong>Đã Chấp Nhận</strong>
-                            </span>
-                          ) : request.status === "payment_required" ? (
-                            <span className="text-indigo-700 flex items-center text-sm">
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              <strong>Yêu Cầu Thanh Toán</strong>
-                            </span>
-                          ) : request.status === "rejected" ? (
-                            <span className="text-red-700 flex items-center text-sm">
-                              <XCircle className="w-4 h-4 mr-1" />
-                              <strong>Đã Từ Chối</strong>
-                            </span>
-                          ) : request.status === "expired" ? (
-                            <span className="text-orange-600 flex items-center text-sm">
-                              <Clock className="w-4 h-4 mr-1" />
-                              <strong>Đã Hết Hạn</strong>
-                            </span>
-                          ) : request.status === "cancelled" ? (
-                            <span className="text-gray-600 flex items-center text-sm">
-                              <XCircle className="w-4 h-4 mr-1" />
-                              <strong>Đã Hủy</strong>
-                            </span>
-                          ) : request.status ===
-                            "await_appointment_creation" ? (
-                            <span className="text-yellow-600 flex items-center text-sm">
-                              <Clock className="w-4 h-4 mr-1" />
-                              <strong>Chờ Tạo Cuộc Hẹn</strong>
-                            </span>
-                          ) : (
-                            <span className="text-yellow-700 flex items-center text-sm">
-                              <Clock className="w-4 h-4 mr-1" />
-                              <strong>Chờ Phản Hồi</strong>
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex space-x-2">
-                          <Button
-                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-sm"
-                            onClick={() => handleViewDetails(request)}
-                          >
-                            Xem Chi Tiết
-                          </Button>
-                        </div>
+                      <div className="text-center md:text-right">
+                        <p className="font-medium text-sm">
+                          <strong>Số Bàn:</strong> {request.tableId}
+                        </p>
+                        <p className="text-gray-600 text-sm">
+                          <strong>Ngày Chơi Cờ:</strong>{" "}
+                          {formatDateTimeWithoutHour(request.startTime)}
+                        </p>
+                        <p className="text-gray-600 text-sm">
+                          <strong>Giờ Bắt Đầu Và Kết Thúc</strong>{" "}
+                          {formatTimeRange(request.startTime, request.endTime)}
+                        </p>
+                        <p className="text-gray-600 text-sm">
+                          <strong>Số Tiền Cần Trả</strong>{" "}
+                          {request.totalPrice?.toLocaleString()} VND
+                        </p>
+                        <p className="text-gray-600 text-sm">
+                          <strong>Lời mời hết hạn sau:</strong>{" "}
+                          {calculateTimeRemaining(request.expireAt)}
+                        </p>
                       </div>
                     </div>
-                  ))}
-                </div>
 
-                {requests.length > 0 && (
-                  <div className="flex justify-center mt-8 mb-8">
-                    <DefaultPagination
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={handlePageChange}
-                    />
+                    <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row justify-between items-center gap-3">
+                      <div className="flex items-center">
+                        {request.status === "accepted" ? (
+                          <span className="text-blue-700 flex items-center text-sm">
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            <strong>Đã Chấp Nhận</strong>
+                          </span>
+                        ) : request.status === "payment_required" ? (
+                          <span className="text-indigo-700 flex items-center text-sm">
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            <strong>Yêu Cầu Thanh Toán</strong>
+                          </span>
+                        ) : request.status === "rejected" ? (
+                          <span className="text-red-700 flex items-center text-sm">
+                            <XCircle className="w-4 h-4 mr-1" />
+                            <strong>Đã Từ Chối</strong>
+                          </span>
+                        ) : request.status === "expired" ? (
+                          <span className="text-orange-600 flex items-center text-sm">
+                            <Clock className="w-4 h-4 mr-1" />
+                            <strong>Đã Hết Hạn</strong>
+                          </span>
+                        ) : request.status === "cancelled" ? (
+                          <span className="text-gray-600 flex items-center text-sm">
+                            <XCircle className="w-4 h-4 mr-1" />
+                            <strong>Đã Hủy</strong>
+                          </span>
+                        ) : request.status === "await_appointment_creation" ? (
+                          <span className="text-yellow-600 flex items-center text-sm">
+                            <Clock className="w-4 h-4 mr-1" />
+                            <strong>Chờ Tạo Cuộc Hẹn</strong>
+                          </span>
+                        ) : (
+                          <span className="text-yellow-700 flex items-center text-sm">
+                            <Clock className="w-4 h-4 mr-1" />
+                            <strong>Chờ Phản Hồi</strong>
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex space-x-2">
+                        <Button
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-sm"
+                          onClick={() => handleViewDetails(request)}
+                        >
+                          Xem Chi Tiết
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </>
-            )}
-          </div>
+                ))}
+              </div>
+
+              {requests.length > 0 && (
+                <div className="flex justify-center mt-8 mb-8">
+                  <DefaultPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                  />
+                </div>
+              )}
+            </>
+          )}
         </div>
-
-        <Footer></Footer>
-
-        <CancelConfirmationModal
-          show={showCancelConfirm}
-          onClose={() => {
-            setShowCancelConfirm(false);
-            setCurrentCancellingId(null);
-          }}
-          onConfirm={confirmCancelRequest}
-          refundInfo={refundInfo}
-          isLoading={isCancelling}
-        />
       </div>
+
+      <Footer />
+
+      <CancelConfirmationModal
+        show={showCancelConfirm}
+        onClose={() => {
+          setShowCancelConfirm(false);
+          setCurrentCancellingId(null);
+        }}
+        onConfirm={confirmCancelRequest}
+        refundInfo={refundInfo}
+        isLoading={isCancelling}
+      />
     </div>
   );
 };
