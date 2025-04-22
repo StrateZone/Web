@@ -62,8 +62,8 @@ interface User {
 
 interface AppointmentRequest {
   id: number;
-  fromUser: number; // Included to match OpponentDetailsPopup requirements
-  toUser: number | number[]; // Support both single number and array
+  fromUser: number;
+  toUser: number[]; // Changed to number[] to match OpponentDetailsPopup
   status: string;
   tableId: number;
   appointmentId: number;
@@ -71,7 +71,7 @@ interface AppointmentRequest {
   endTime: string;
   expireAt: string;
   createdAt: string;
-  totalPrice: number; // Included to match OpponentDetailsPopup requirements
+  totalPrice: number;
   toUserNavigation: User;
 }
 
