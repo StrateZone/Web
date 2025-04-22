@@ -27,8 +27,7 @@ export function UserProfileDialog({
   onClose,
   user,
 }: UserProfileDialogProps) {
-  const isMember = user?.userRole === "Member";
-
+  const isMember = user?.userRole === "Member" || user?.userRole === 1;
   return (
     <Dialog open={open} handler={onClose} size="md" className="rounded-lg">
       <DialogHeader className="justify-between p-4 border-b">
@@ -82,7 +81,7 @@ export function UserProfileDialog({
                   </Typography>
                   {isMember && (
                     <span className="px-2 py-1 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white animate-bounce">
-                      VIP
+                      MEMBER
                     </span>
                   )}
                 </div>
@@ -98,7 +97,7 @@ export function UserProfileDialog({
               color={isMember ? "purple" : "blue-gray"}
               className={`-mt-4 ${isMember ? "font-bold" : ""}`}
             >
-              Tham gia câu lạc bộ từ ngày{" "}
+              Người dùng đã tạo tài khoản vào ngày{" "}
               {new Date(user.createdAt).toLocaleDateString("vi-VN")}
               {isMember && " 🎉"}
             </Typography>
@@ -168,7 +167,7 @@ export function UserProfileDialog({
                   color="purple"
                   className="font-bold"
                 >
-                  ✨ Thành viên VIP với nhiều ưu đãi độc quyền ✨
+                  ✨ Thành viên câu lạc bộ với nhiều ưu đãi độc quyền ✨
                 </Typography>
               </div>
             )}

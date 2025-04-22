@@ -11,6 +11,7 @@ import { SuccessCancelPopup } from "../appointment_history/CancelSuccessPopup";
 import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import Banner from "@/components/banner/banner";
+import OpponentDetailsPopup from "../appointment_history/OpponentDetailsPopup";
 
 interface GameType {
   typeId: number;
@@ -56,11 +57,13 @@ interface User {
   avatarUrl: string;
   skillLevel: string;
   ranking: string;
+  userRole?: number | string;
 }
 
 interface AppointmentRequest {
   id: number;
-  toUser: number;
+  fromUser: number;
+  toUser: number[]; // Changed to number[] to match OpponentDetailsPopup
   status: string;
   tableId: number;
   appointmentId: number;
@@ -68,6 +71,7 @@ interface AppointmentRequest {
   endTime: string;
   expireAt: string;
   createdAt: string;
+  totalPrice: number;
   toUserNavigation: User;
 }
 
@@ -102,128 +106,6 @@ interface RefundInfo {
   cancellationTime: string;
   cancellation_Block_TimeGate: string;
   cancellation_PartialRefund_TimeGate: string;
-}
-
-function OpponentDetailsPopup({
-  show,
-  onClose,
-  requests,
-  tableId,
-}: {
-  show: boolean;
-  onClose: () => void;
-  requests: AppointmentRequest[];
-  tableId: number;
-}) {
-  if (!show) return null;
-
-  // Filter requests by tableId
-  const filteredRequests = requests.filter(
-    (request) => request.tableId === tableId
-  );
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-bold">
-              Danh sách người chơi (Bàn {tableId})
-            </h3>
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-
-          {filteredRequests.length === 0 ? (
-            <p className="text-gray-500 py-4">
-              Chưa có lời mời nào cho bàn này
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {filteredRequests.map((request) => (
-                <div
-                  key={request.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-                >
-                  <div className="flex items-center space-x-3">
-                    <img
-                      src={
-                        request.toUserNavigation.avatarUrl ||
-                        "/default-avatar.png"
-                      }
-                      alt={request.toUserNavigation.fullName}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                    <div>
-                      <p className="font-medium">
-                        {request.toUserNavigation.fullName}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {request.toUserNavigation.username}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <span
-                      className={`px-2 py-1 text-xs rounded ${
-                        request.status === "pending"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : request.status === "accepted"
-                            ? "bg-green-100 text-green-800"
-                            : request.status === "accepted_by_others"
-                              ? "bg-pink-100 text-pink-800"
-                              : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {request.status === "pending"
-                        ? "Đang chờ phản hồi"
-                        : request.status === "accepted"
-                          ? "Đã chấp nhận"
-                          : request.status === "accepted_by_others"
-                            ? "Lời mời đã có người chấp nhận"
-                            : "Đã từ chối"}
-                    </span>
-
-                    <p className="text-xs text-gray-500 mt-1">
-                      Thời gian chơi:{" "}
-                      {new Date(request.startTime).toLocaleTimeString("vi-VN")}{" "}
-                      - {new Date(request.endTime).toLocaleTimeString("vi-VN")}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="mt-6 flex justify-end">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-            >
-              Đóng
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 function Page() {
@@ -288,7 +170,10 @@ function Page() {
       }
 
       const result: ApiResponse = await response.json();
-      console.log(result);
+      console.log(
+        "userRole sample:",
+        result.pagedList[0]?.appointmentrequests[0]?.toUserNavigation?.userRole
+      );
 
       setData(result);
       setCurrentPage(result.currentPage);
@@ -646,7 +531,7 @@ function Page() {
                             </td>
                             <td className="py-2 px-4 border text-center">
                               {formatTime(tableAppointment.scheduleTime)}
-                              &nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;&nbsp;
+                                  -    
                               {formatTime(tableAppointment.endTime)}
                             </td>
                             <td className="py-2 px-4 border text-center">
@@ -816,6 +701,22 @@ function Page() {
               onClose={() => setShowOpponentDetails(false)}
               requests={currentOpponentRequests}
               tableId={currentTableId || 0}
+              tableAppointmentStatus={
+                selectedAppointment?.tablesAppointments.find(
+                  (ta) => ta.table.tableId === currentTableId
+                )?.status
+              } // Pass TablesAppointment status
+              appointmentId={selectedAppointment?.appointmentId}
+              startTime={
+                selectedAppointment?.tablesAppointments.find(
+                  (ta) => ta.table.tableId === currentTableId
+                )?.scheduleTime
+              }
+              endTime={
+                selectedAppointment?.tablesAppointments.find(
+                  (ta) => ta.table.tableId === currentTableId
+                )?.endTime
+              }
             />
           </div>
         </div>

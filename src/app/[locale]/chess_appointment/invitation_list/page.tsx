@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@material-tailwind/react";
+import { Button, Badge } from "@material-tailwind/react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import {
@@ -23,6 +23,11 @@ import { RootState, AppDispatch } from "@/app/store";
 import { fetchWallet } from "@/app/[locale]/wallet/walletSlice";
 import { ConfirmPaymentPopup } from "./ConfirmPaymentPopup";
 import { InsufficientBalancePopup } from "../chess_appointment_order/InsufficientBalancePopup";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
+import Banner from "@/components/banner/banner";
+import { AlreadyRejectedPopup } from "./AcceptedByOtherPopup";
+import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 
 interface UserNavigation {
   userId: number;
@@ -39,7 +44,7 @@ interface UserNavigation {
   points: number;
   ranking: number;
   status: string;
-  userRole: number;
+  userRole: number | string; // Support both number (1) and string ("Member") for flexibility
   wallet: any | null;
   otp: string | null;
   otpExpiry: string | null;
@@ -97,11 +102,6 @@ interface AppointmentRequest {
   table: Table;
   appointment: any | null;
 }
-
-import Swal from "sweetalert2";
-import withReactContent from "sweetalert2-react-content";
-import Banner from "@/components/banner/banner";
-import { AlreadyRejectedPopup } from "./AcceptedByOtherPopup";
 
 const MySwal = withReactContent(Swal);
 
@@ -225,8 +225,6 @@ const AppointmentRequestsPage = () => {
         throw new Error("Failed to check cancel condition");
       }
 
-      const data = await response.json();
-      console.log("Cancel condition response:", data);
       await fetchAppointmentRequests(currentPage);
     } catch (err) {
       console.error("Error checking cancel condition:", err);
@@ -234,6 +232,7 @@ const AppointmentRequestsPage = () => {
       setProcessingRequestId(null);
     }
   };
+
   const handleProcessPayment = async (requestId: number) => {
     setProcessingAcceptId(requestId);
     try {
@@ -242,7 +241,6 @@ const AppointmentRequestsPage = () => {
         throw new Error("Request not found or invalid appointment ID");
       }
 
-      // Kiểm tra số dư trước khi thực hiện thanh toán
       if (balance < (request.totalPrice || 0)) {
         const isRedirect = await InsufficientBalancePopup({
           finalPrice:
@@ -254,7 +252,6 @@ const AppointmentRequestsPage = () => {
         return;
       }
 
-      // ... (phần chuẩn bị thông tin và xác nhận thanh toán)
       const tableInfo = {
         tableId: request.tableId,
         roomName: request.table.roomName,
@@ -274,7 +271,6 @@ const AppointmentRequestsPage = () => {
         opponentRank: getRankLevelText(request.fromUserNavigation.ranking),
       };
 
-      // Hiển thị popup xác nhận thanh toán
       const isConfirmed = await ConfirmPaymentPopup({
         tableInfo,
         currentBalance: balance,
@@ -302,9 +298,7 @@ const AppointmentRequestsPage = () => {
 
       const result = await response.json();
 
-      // Kiểm tra kết quả trả về từ server
       if (!response.ok || !result.success) {
-        // Xử lý riêng trường hợp số dư không đủ
         if (result.message === "Balance is not enough") {
           const isRedirect = await InsufficientBalancePopup({
             finalPrice: request.totalPrice || 0,
@@ -317,7 +311,7 @@ const AppointmentRequestsPage = () => {
 
         throw new Error(result.message || "Payment processing failed");
       }
-      // Cập nhật state và hiển thị thông báo thành công
+
       dispatch(fetchWallet(userId));
       await fetchAppointmentRequests(currentPage);
 
@@ -358,7 +352,7 @@ const AppointmentRequestsPage = () => {
       setProcessingAcceptId(null);
     }
   };
-  // Thêm hàm này vào component của bạn
+
   const calculateTimeRemaining = (expireAt: string) => {
     const now = new Date();
     const expireDate = new Date(expireAt);
@@ -387,6 +381,7 @@ const AppointmentRequestsPage = () => {
       return `Hết hạn sau ${seconds} giây`;
     }
   };
+
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString("vi-VN", {
@@ -396,9 +391,10 @@ const AppointmentRequestsPage = () => {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
-      hour12: false, // dùng định dạng 24 giờ
+      hour12: false,
     });
   };
+
   const formatDateTimeWithoutHour = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString("vi-VN", {
@@ -510,6 +506,7 @@ const AppointmentRequestsPage = () => {
         return "Unknown";
     }
   };
+
   function toLocalISOString(date: Date) {
     const tzOffset = date.getTimezoneOffset() * 60000;
     const localDate = new Date(date.getTime() - tzOffset);
@@ -519,7 +516,7 @@ const AppointmentRequestsPage = () => {
   const checkCancelCondition = async (tablesAppointmentId: number) => {
     try {
       setIsLoading(true);
-      const currentTime = toLocalISOString(new Date()); // Sử dụng hàm này
+      const currentTime = toLocalISOString(new Date());
 
       const response = await fetch(
         `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`
@@ -530,7 +527,6 @@ const AppointmentRequestsPage = () => {
       }
 
       const data = await response.json();
-      console.log("API Response:", data);
       setRefundInfo({
         message: data.message,
         refundAmount: data.refundAmount,
@@ -549,13 +545,14 @@ const AppointmentRequestsPage = () => {
       setIsLoading(false);
     }
   };
+
   const confirmCancelAppointment = async () => {
     const authData = JSON.parse(localStorage.getItem("authData") || "{}");
     const userId = authData.userId;
 
     if (!currentCancellingId || !userId) {
       console.error("Missing currentCancellingId or userId");
-      setShowCancelConfirm(false); // Đóng popup nếu có lỗi
+      setShowCancelConfirm(false);
       return;
     }
 
@@ -570,99 +567,122 @@ const AppointmentRequestsPage = () => {
       );
 
       const responseData = await response.json();
-      console.log("API Response:", responseData);
 
       if (!response.ok) {
-        setShowCancelConfirm(false); // Đóng popup nếu có lỗi
+        setShowCancelConfirm(false);
         throw new Error("Hủy đơn đặt không thành công");
       }
 
-      // ✅ Cập nhật lại số dư ví
       await dispatch(fetchWallet(userId));
+      await fetchAppointmentRequests(currentPage);
 
-      // Cập nhật UI trước khi hiển thị popup
-      await fetchAppointmentRequests();
-
-      // Đóng popup xác nhận trước khi hiển thị popup thành công
       setShowCancelConfirm(false);
       setCurrentCancellingId(null);
       if (selectedRequest) setSelectedRequest(null);
 
-      // Hiển thị popup với số tiền hoàn lại
       const refundAmount = responseData.price;
       const isConfirmed = await SuccessCancelPopup(refundAmount);
 
-      // Điều hướng dựa trên lựa chọn
       if (isConfirmed) {
         router.push(`/${localActive}/chess_appointment/invitation_list`);
       } else {
         router.push(`/${localActive}/chess_appointment/chess_category`);
       }
     } catch (err) {
-      setShowCancelConfirm(false); // Đảm bảo popup luôn được đóng khi có lỗi
+      setShowCancelConfirm(false);
       setError(err instanceof Error ? err.message : "Lỗi không xác định");
     } finally {
       setIsLoading(false);
     }
   };
+
+  const isMember = (userRole: number | string) =>
+    userRole === 1 || userRole === "Member";
+
   return (
     <div>
-      <div>
-        <Navbar />
-        <Banner
-          title="Lời Mời Đã Nhận"
-          subtitle="Xem lại các lời mời đánh cờ bạn đã nhận"
-        />
+      <Navbar />
+      <Banner
+        title="Lời Mời Đã Nhận"
+        subtitle="Xem lại các lời mời đánh cờ bạn đã nhận"
+      />
 
-        <div className="min-h-[calc(100vh-200px)] bg-gray-50 p-4 text-black">
-          <div className="container mx-auto px-2 py-4">
-            <div className="flex justify-between items-center mb-4">
-              <h1 className="text-2xl font-bold">
-                Những Lời Mời Bạn Đã Được Nhận Từ Người Khác
-              </h1>
-              <Button
-                onClick={handleRefresh}
-                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600"
-                disabled={isLoading}
-              >
-                <RefreshCw
-                  className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
-                />
-                <strong>Làm Mới</strong>
-              </Button>
+      <div className="min-h-[calc(100vh-200px)] bg-gray-50 p-4 text-black">
+        <div className="container mx-auto px-2 py-4">
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-2xl font-bold">
+              Những Lời Mời Bạn Đã Được Nhận Từ Người Khác
+            </h1>
+            <Button
+              onClick={handleRefresh}
+              className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600"
+              disabled={isLoading}
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+              />
+              <strong>Làm Mới</strong>
+            </Button>
+          </div>
+
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
             </div>
+          ) : selectedRequest ? (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <button
+                onClick={handleBackToList}
+                className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+              >
+                ← <strong>Quay Lại</strong>
+              </button>
 
-            {isLoading ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-              </div>
-            ) : selectedRequest ? (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <button
-                  onClick={handleBackToList}
-                  className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-semibold">
+                  Thông Tin Chi Tiết Của Lời Mời Đánh Cờ
+                </h2>
+                <span
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedRequest.status).bg} ${getStatusColor(selectedRequest.status).text}`}
                 >
-                  ← <strong>Quay Lại</strong>
-                </button>
+                  {getStatusColor(selectedRequest.status).display}
+                </span>
+              </div>
 
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-semibold">
-                    Thông Tin Chi Tiết Của Lời Mời Đánh Cờ
-                  </h2>
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedRequest.status).bg} ${getStatusColor(selectedRequest.status).text}`}
-                  >
-                    {getStatusColor(selectedRequest.status).display}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="text-lg mb-2 font-bold">
-                      <strong>Thông Tin Người Gửi</strong>
-                    </h3>
-                    <div className="flex items-center space-x-3 mb-4">
-                      <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg mb-2 font-bold">
+                    <strong>Thông Tin Người Gửi</strong>
+                  </h3>
+                  <div className="flex items-center space-x-3 mb-4">
+                    <Badge
+                      overlap="circular"
+                      placement="bottom-end"
+                      className={`border-2 border-white ${
+                        isMember(selectedRequest.fromUserNavigation.userRole)
+                          ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse !h-5 !w-5"
+                          : "bg-blue-gray-100"
+                      }`}
+                      content={
+                        isMember(
+                          selectedRequest.fromUserNavigation.userRole
+                        ) ? (
+                          <div className="relative group">
+                            <CheckBadgeIcon className="h-4 w-4 text-white" />
+                            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-white text-black text-sm p-2 rounded shadow-lg">
+                              Thành viên câu lạc bộ
+                            </span>
+                          </div>
+                        ) : null
+                      }
+                    >
+                      <div
+                        className={`w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden ${
+                          isMember(selectedRequest.fromUserNavigation.userRole)
+                            ? "border-2 border-purple-500 shadow-lg shadow-purple-500/20"
+                            : ""
+                        }`}
+                      >
                         {selectedRequest.fromUserNavigation.avatarUrl ? (
                           <img
                             src={selectedRequest.fromUserNavigation.avatarUrl}
@@ -673,171 +693,218 @@ const AppointmentRequestsPage = () => {
                           <User className="w-6 h-6 text-gray-500" />
                         )}
                       </div>
-                      <div>
-                        <h4 className="font-bold">
+                    </Badge>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4
+                          className={`font-bold ${
+                            isMember(
+                              selectedRequest.fromUserNavigation.userRole
+                            )
+                              ? "text-purple-600"
+                              : ""
+                          }`}
+                        >
                           {selectedRequest.fromUserNavigation.username ||
                             selectedRequest.fromUserNavigation.username}
                         </h4>
-                        <p className="text-gray-600 text-sm">
-                          <strong>Họ Và Tên:</strong>{" "}
-                          {selectedRequest.fromUserNavigation.fullName}
-                        </p>
+                        {isMember(
+                          selectedRequest.fromUserNavigation.userRole
+                        ) && (
+                          <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                            MEMBER
+                          </span>
+                        )}
                       </div>
-                    </div>
-                    <div className="space-y-2">
-                      <p>
-                        <span className="font-medium">
-                          <strong>Email:</strong>
-                        </span>{" "}
-                        {selectedRequest.fromUserNavigation.email}
+                      <p className="text-gray-600 text-sm">
+                        <strong>Họ Và Tên:</strong>{" "}
+                        {selectedRequest.fromUserNavigation.fullName}
                       </p>
-                      <p>
-                        <span className="font-medium">
-                          <strong>Số Điện Thoại:</strong>
-                        </span>{" "}
-                        {selectedRequest.fromUserNavigation.phone || "N/A"}
-                      </p>
-                      <p>
-                        <span className="font-medium">
-                          <strong>Giới Thiệu:</strong>
-                        </span>{" "}
-                        {selectedRequest.fromUserNavigation.bio ||
-                          "Không đề cập"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="text-lg mb-2 font-bold">
-                      <strong>Thông Tin Bàn</strong>
-                    </h3>
-                    <div className="space-y-2">
-                      <p>
-                        <span className="font-medium">
-                          <strong>Loại Cờ:</strong>
-                        </span>{" "}
-                        {selectedRequest.table?.gameTypeId === 1
-                          ? "Cờ Vua"
-                          : selectedRequest.table?.gameTypeId === 2
-                            ? "Cờ Tướng"
-                            : selectedRequest.table?.gameTypeId === 3
-                              ? "Cờ Vây"
-                              : selectedRequest.table?.gameType?.typeName ||
-                                "Unknown"}
-                      </p>
-                      <p>
-                        <span className="font-medium">
-                          <strong>Loại Phòng:</strong>
-                        </span>{" "}
-                        {selectedRequest.table?.roomType === "basic"
-                          ? "Phòng Thường"
-                          : selectedRequest.table?.roomType === "premium"
-                            ? "Phòng Cao Cấp"
-                            : selectedRequest.table?.roomType === "openspaced"
-                              ? "Không Gian Mở"
-                              : "Unknown"}
-                      </p>
-                      <p>
-                        <span className="font-medium">
-                          <strong>Tên Phòng:</strong>
-                        </span>{" "}
-                        {selectedRequest.table?.roomName}
-                      </p>
-                      <p>
-                        <span className="font-medium">
-                          <strong>Mã Bàn:</strong>
-                        </span>{" "}
-                        {selectedRequest.tableId}
-                      </p>
-                      {selectedRequest.totalPrice && (
-                        <p>
-                          <span className="font-medium">
-                            <strong>Số Tiền Cần Trả:</strong>
-                          </span>{" "}
-                          {selectedRequest.totalPrice.toLocaleString()} VND
+                      {isMember(
+                        selectedRequest.fromUserNavigation.userRole
+                      ) && (
+                        <p className="text-purple-500 text-sm mt-1">
+                          Thành viên câu lạc bộ
                         </p>
                       )}
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <p>
+                      <span className="font-medium">
+                        <strong>Email:</strong>
+                      </span>{" "}
+                      {selectedRequest.fromUserNavigation.email}
+                    </p>
+                    <p>
+                      <span className="font-medium">
+                        <strong>Số Điện Thoại:</strong>
+                      </span>{" "}
+                      {selectedRequest.fromUserNavigation.phone || "N/A"}
+                    </p>
+                    <p>
+                      <span className="font-medium">
+                        <strong>Giới Thiệu:</strong>
+                      </span>{" "}
+                      {selectedRequest.fromUserNavigation.bio || "Không đề cập"}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="text-lg mb-2 font-bold">
-                    <strong>Thông Tin Thời Gian</strong>
+                    <strong>Thông Tin Bàn</strong>
                   </h3>
                   <div className="space-y-2">
                     <p>
                       <span className="font-medium">
-                        <strong>Ngày Chơi:</strong>
+                        <strong>Loại Cờ:</strong>
                       </span>{" "}
-                      {new Date(selectedRequest.startTime).toLocaleDateString(
-                        "vi-VN"
-                      )}
+                      {selectedRequest.table?.gameTypeId === 1
+                        ? "Cờ Vua"
+                        : selectedRequest.table?.gameTypeId === 2
+                          ? "Cờ Tướng"
+                          : selectedRequest.table?.gameTypeId === 3
+                            ? "Cờ Vây"
+                            : selectedRequest.table?.gameType?.typeName ||
+                              "Unknown"}
                     </p>
                     <p>
                       <span className="font-medium">
-                        <strong>Thời Gian Bắt Đầu Và Kết Thúc:</strong>
+                        <strong>Loại Phòng:</strong>
                       </span>{" "}
-                      {formatTimeRange(
-                        selectedRequest.startTime,
-                        selectedRequest.endTime
-                      )}
+                      {selectedRequest.table?.roomType === "basic"
+                        ? "Phòng Thường"
+                        : selectedRequest.table?.roomType === "premium"
+                          ? "Phòng Cao Cấp"
+                          : selectedRequest.table?.roomType === "openspaced"
+                            ? "Không Gian Mở"
+                            : "Unknown"}
                     </p>
                     <p>
                       <span className="font-medium">
-                        <strong>Gửi Lời Mời Lúc:</strong>
+                        <strong>Tên Phòng:</strong>
                       </span>{" "}
-                      {formatDateTime(selectedRequest.createdAt)}
+                      {selectedRequest.table?.roomName}
                     </p>
-                    {selectedRequest.expireAt && (
+                    <p>
+                      <span className="font-medium">
+                        <strong>Mã Bàn:</strong>
+                      </span>{" "}
+                      {selectedRequest.tableId}
+                    </p>
+                    {selectedRequest.totalPrice && (
                       <p>
                         <span className="font-medium">
-                          <strong>Lời Mời Hết Hạn Vào Lúc:</strong>
+                          <strong>Số Tiền Cần Trả:</strong>
                         </span>{" "}
-                        {formatDateTime(selectedRequest.expireAt)}
-                        {isExpired(selectedRequest.expireAt) && (
-                          <span className="ml-2 text-red-500">
-                            (Đã Hết Hạn)
-                          </span>
-                        )}
+                        {selectedRequest.totalPrice.toLocaleString()} VND
                       </p>
                     )}
                   </div>
                 </div>
               </div>
-            ) : requests.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="mx-auto w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-3">
-                  <Clock className="w-8 h-8 text-gray-400" />
+
+              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <h3 className="text-lg mb-2 font-bold">
+                  <strong>Thông Tin Thời Gian</strong>
+                </h3>
+                <div className="space-y-2">
+                  <p>
+                    <span className="font-medium">
+                      <strong>Ngày Chơi:</strong>
+                    </span>{" "}
+                    {new Date(selectedRequest.startTime).toLocaleDateString(
+                      "vi-VN"
+                    )}
+                  </p>
+                  <p>
+                    <span className="font-medium">
+                      <strong>Thời Gian Bắt Đầu Và Kết Thúc:</strong>
+                    </span>{" "}
+                    {formatTimeRange(
+                      selectedRequest.startTime,
+                      selectedRequest.endTime
+                    )}
+                  </p>
+                  <p>
+                    <span className="font-medium">
+                      <strong>Gửi Lời Mời Lúc:</strong>
+                    </span>{" "}
+                    {formatDateTime(selectedRequest.createdAt)}
+                  </p>
+                  {selectedRequest.expireAt && (
+                    <p>
+                      <span className="font-medium">
+                        <strong>Lời Mời Hết Hạn Vào Lúc:</strong>
+                      </span>{" "}
+                      {formatDateTime(selectedRequest.expireAt)}
+                      {isExpired(selectedRequest.expireAt) && (
+                        <span className="ml-2 text-red-500">(Đã Hết Hạn)</span>
+                      )}
+                    </p>
+                  )}
                 </div>
-                <h2 className="text-lg font-medium text-gray-600">
-                  <strong>No appointment requests</strong>
-                </h2>
-                <p className="text-gray-500 mt-1 text-sm">
-                  <strong>
-                    You don't have any chess appointment requests yet
-                  </strong>
-                </p>
               </div>
-            ) : (
-              <>
-                <div className="grid gap-4">
-                  {requests.map((request) => (
-                    <div
-                      key={request.id}
-                      className={`bg-white rounded-md shadow-sm p-4 border-l-4 ${
-                        request.status === "accepted" ||
-                        request.status === "rejected"
-                          ? "border-red-500"
-                          : isExpired(request.expireAt) ||
-                              request.status === "cancelled"
-                            ? "border-gray-400"
-                            : "border-blue-500"
-                      }`}
-                    >
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+            </div>
+          ) : requests.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="mx-auto w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-3">
+                <Clock className="w-8 h-8 text-gray-400" />
+              </div>
+              <h2 className="text-lg font-medium text-gray-600">
+                <strong>No appointment requests</strong>
+              </h2>
+              <p className="text-gray-500 mt-1 text-sm">
+                <strong>
+                  You don't have any chess appointment requests yet
+                </strong>
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-4">
+                {requests.map((request) => (
+                  <div
+                    key={request.id}
+                    className={`bg-white rounded-md shadow-sm p-4 border-l-4 ${
+                      request.status === "accepted" ||
+                      request.status === "rejected"
+                        ? "border-red-500"
+                        : isExpired(request.expireAt) ||
+                            request.status === "cancelled"
+                          ? "border-gray-400"
+                          : "border-blue-500"
+                    }`}
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                      <div className="flex items-center space-x-3">
+                        <Badge
+                          overlap="circular"
+                          placement="bottom-end"
+                          className={`border-2 border-white ${
+                            isMember(request.fromUserNavigation.userRole)
+                              ? "bg-gradient-to-r from-purple-500 to-pink-500 !h-5 !w-5 animate-pulse"
+                              : "bg-blue-gray-100"
+                          }`}
+                          content={
+                            isMember(request.fromUserNavigation.userRole) ? (
+                              <div className="relative group">
+                                <CheckBadgeIcon className="h-4 w-4 text-white" />
+                                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-white text-black text-sm p-2 rounded shadow-lg">
+                                  Thành viên câu lạc bộ
+                                </span>
+                              </div>
+                            ) : null
+                          }
+                        >
+                          <div
+                            className={`w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden ${
+                              isMember(request.fromUserNavigation.userRole)
+                                ? "border-2 border-purple-500 shadow-lg shadow-purple-500/20"
+                                : ""
+                            }`}
+                          >
                             {request.fromUserNavigation.avatarUrl ? (
                               <img
                                 src={request.fromUserNavigation.avatarUrl}
@@ -848,188 +915,199 @@ const AppointmentRequestsPage = () => {
                               <User className="w-5 h-5 text-gray-500" />
                             )}
                           </div>
-                          <div>
-                            <h3 className="font-bold text-base">
+                        </Badge>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3
+                              className={`font-bold text-base ${
+                                isMember(request.fromUserNavigation.userRole)
+                                  ? "text-purple-600"
+                                  : ""
+                              }`}
+                            >
                               Người Gửi:{" "}
                               {request.fromUserNavigation.username ||
                                 request.fromUserNavigation.username}
                             </h3>
-                            <p className="text-gray-600 text-sm">
-                              <strong>Họ Và Tên:</strong>{" "}
-                              {request.fromUserNavigation.fullName}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="text-center md:text-right">
-                          <p className="font-medium text-sm">
-                            <strong>Mã Bàn:</strong> {request.tableId}
-                          </p>
-                          <p className="text-gray-600 text-sm">
-                            <strong>Ngày Chơi Cờ:</strong>{" "}
-                            {formatDateTimeWithoutHour(request.startTime)}
-                          </p>
-                          <p className="text-gray-600 text-sm">
-                            <strong>Giờ Bắt Đầu Và Kết Thúc</strong>{" "}
-                            {formatTimeRange(
-                              request.startTime,
-                              request.endTime
+                            {isMember(request.fromUserNavigation.userRole) && (
+                              <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                                MEMBER
+                              </span>
                             )}
-                          </p>
+                          </div>
                           <p className="text-gray-600 text-sm">
-                            <strong>Số Tiền Cần Trả</strong>{" "}
-                            {request.totalPrice?.toLocaleString()} VND
+                            <strong>Họ Và Tên:</strong>{" "}
+                            {request.fromUserNavigation.fullName}
                           </p>
-                          <p className="text-gray-600 text-sm">
-                            <strong>Lời mời hết hạn sau:</strong>{" "}
-                            {calculateTimeRemaining(request.expireAt)}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row justify-between items-center gap-3">
-                        <div className="flex items-center">
-                          {request.status === "accepted" ? (
-                            <span className="text-blue-700 flex items-center text-sm">
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              <strong>Đã Chấp Nhận Lời Mời</strong>
-                            </span>
-                          ) : request.status === "accepted_by_others" ? (
-                            <span className="text-pink-700 flex items-center text-sm">
-                              <UserCheck className="w-4 h-4 mr-1" />
-                              <strong>
-                                Lời Mời Đã Được Người Khác Chấp Nhận
-                              </strong>
-                            </span>
-                          ) : request.status === "rejected" ? (
-                            <span className="text-red-700 flex items-center text-sm">
-                              <XCircle className="w-4 h-4 mr-1" />
-                              <strong>Đã Từ Chối Lời Mời</strong>
-                            </span>
-                          ) : request.status === "expired" ? (
-                            <span className="text-orange-600 flex items-center text-sm">
-                              <Clock className="w-4 h-4 mr-1" />
-                              <strong>Lời Mời Đã Hết Hạn</strong>
-                            </span>
-                          ) : request.status === "cancelled" ? (
-                            <span className="text-gray-600 flex items-center text-sm">
-                              <XCircle className="w-4 h-4 mr-1" />
-                              <strong>Lời Mời Đã Bị Hủy</strong>
-                            </span>
-                          ) : (
-                            <span className="text-yellow-700 flex items-center text-sm">
-                              <Clock className="w-4 h-4 mr-1" />
-                              <strong>Chờ Phản Hồi</strong>
-                            </span>
+                          {isMember(request.fromUserNavigation.userRole) && (
+                            <p className="text-purple-500 text-sm mt-1">
+                              Thành viên câu lạc bộ
+                            </p>
                           )}
                         </div>
+                      </div>
 
-                        <div className="flex space-x-2">
-                          {request.status === "pending" &&
-                            !isExpired(request.expireAt) && (
-                              <>
-                                <Button
-                                  className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[100px]"
-                                  onClick={() =>
-                                    handleProcessPayment(request.id)
-                                  }
-                                  disabled={
-                                    processingAcceptId !== null || // Disable nếu có bất kỳ bàn nào đang xử lý
-                                    processingRequestId !== null || // Hoặc đang xử lý từ chối
-                                    isExpired(request.expireAt) // Hoặc đã hết hạn
-                                  }
-                                >
-                                  {processingAcceptId === request.id ? (
-                                    <>
-                                      <Loader2 className="animate-spin mr-1 h-3 w-3" />
-                                      Đang xử lý...
-                                    </>
-                                  ) : (
-                                    "Chấp Nhận Và Thanh Toán"
-                                  )}
-                                </Button>
-                                <Button
-                                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[80px]"
-                                  onClick={() => rejectAppointment(request.id)}
-                                  disabled={
-                                    processingRequestId !== null &&
-                                    processingRequestId !== request.id
-                                  }
-                                >
-                                  {processingRequestId === request.id ? (
-                                    <>
-                                      <Loader2 className="animate-spin mr-1 h-3 w-3" />
-                                      Đang Xử Lý
-                                    </>
-                                  ) : (
-                                    "Từ Chối"
-                                  )}
-                                </Button>
-                              </>
-                            )}
-                          {request.status === "accepted" &&
-                            !isExpired(request.expireAt) &&
-                            request.tablesAppointmentStatus !== "incoming" && (
-                              <>
-                                <Button
-                                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[80px]"
-                                  disabled={isRejecting}
-                                  onClick={() =>
-                                    checkCancelCondition(
-                                      request.tablesAppointmentId!
-                                    )
-                                  }
-                                >
-                                  {isRejecting ? (
-                                    <>
-                                      <Loader2 className="animate-spin mr-1 h-3 w-3" />
-                                      Đang Xử Lý
-                                    </>
-                                  ) : (
-                                    "Hủy"
-                                  )}
-                                </Button>
-                              </>
-                            )}
-                          <Button
-                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-sm"
-                            onClick={() => handleViewDetails(request)}
-                          >
-                            Xem Chi Tiết
-                          </Button>
-                        </div>
+                      <div className="text-center md:text-right">
+                        <p className="font-medium text-sm">
+                          <strong>Mã Bàn:</strong> {request.tableId}
+                        </p>
+                        <p className="text-gray-600 text-sm">
+                          <strong>Ngày Chơi Cờ:</strong>{" "}
+                          {formatDateTimeWithoutHour(request.startTime)}
+                        </p>
+                        <p className="text-gray-600 text-sm">
+                          <strong>Giờ Bắt Đầu Và Kết Thúc</strong>{" "}
+                          {formatTimeRange(request.startTime, request.endTime)}
+                        </p>
+                        <p className="text-gray-600 text-sm">
+                          <strong>Số Tiền Cần Trả</strong>{" "}
+                          {request.totalPrice?.toLocaleString()} VND
+                        </p>
+                        <p className="text-gray-600 text-sm">
+                          <strong>Lời mời hết hạn sau:</strong>{" "}
+                          {calculateTimeRemaining(request.expireAt)}
+                        </p>
                       </div>
                     </div>
-                  ))}
-                </div>
 
-                {requests.length > 0 && (
-                  <div className="flex justify-center mt-8 mb-8">
-                    <DefaultPagination
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={handlePageChange}
-                    />
+                    <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row justify-between items-center gap-3">
+                      <div className="flex items-center">
+                        {request.status === "pending" ? (
+                          <span className="text-yellow-700 flex items-center text-sm">
+                            <Clock className="w-4 h-4 mr-1" />
+                            <strong>Chờ Phản Hồi</strong>
+                          </span>
+                        ) : request.status === "accepted" ? (
+                          <span className="text-blue-700 flex items-center text-sm">
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            <strong>Đã Chấp Nhận Lời Mời</strong>
+                          </span>
+                        ) : request.status === "accepted_by_others" ? (
+                          <span className="text-pink-700 flex items-center text-sm">
+                            <UserCheck className="w-4 h-4 mr-1" />
+                            <strong>
+                              Lời Mời Đã Được Người Khác Chấp Nhận
+                            </strong>
+                          </span>
+                        ) : request.status === "rejected" ? (
+                          <span className="text-red-700 flex items-center text-sm">
+                            <XCircle className="w-4 h-4 mr-1" />
+                            <strong>Đã Từ Chối Lời Mời</strong>
+                          </span>
+                        ) : request.status === "expired" ? (
+                          <span className="text-orange-600 flex items-center text-sm">
+                            <Clock className="w-4 h-4 mr-1" />
+                            <strong>Lời Mời Đã Hết Hạn</strong>
+                          </span>
+                        ) : request.status === "cancelled" ? (
+                          <span className="text-gray-600 flex items-center text-sm">
+                            <XCircle className="w-4 h-4 mr-1" />
+                            <strong>Lời Mời Đã Bị Hủy</strong>
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <div className="flex space-x-2">
+                        {request.status === "pending" &&
+                          !isExpired(request.expireAt) && (
+                            <>
+                              <Button
+                                className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[100px]"
+                                onClick={() => handleProcessPayment(request.id)}
+                                disabled={
+                                  processingAcceptId !== null ||
+                                  processingRequestId !== null ||
+                                  isExpired(request.expireAt)
+                                }
+                              >
+                                {processingAcceptId === request.id ? (
+                                  <>
+                                    <Loader2 className="animate-spin mr-1 h-3 w-3" />
+                                    Đang xử lý...
+                                  </>
+                                ) : (
+                                  "Chấp Nhận Và Thanh Toán"
+                                )}
+                              </Button>
+                              <Button
+                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[80px]"
+                                onClick={() => rejectAppointment(request.id)}
+                                disabled={
+                                  processingRequestId !== null &&
+                                  processingRequestId !== request.id
+                                }
+                              >
+                                {processingRequestId === request.id ? (
+                                  <>
+                                    <Loader2 className="animate-spin mr-1 h-3 w-3" />
+                                    Đang Xử Lý
+                                  </>
+                                ) : (
+                                  "Từ Chối"
+                                )}
+                              </Button>
+                            </>
+                          )}
+                        {request.status === "accepted" &&
+                          !isExpired(request.expireAt) &&
+                          request.tablesAppointmentStatus !== "incoming" && (
+                            <Button
+                              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[80px]"
+                              disabled={isRejecting}
+                              onClick={() =>
+                                checkCancelCondition(
+                                  request.tablesAppointmentId!
+                                )
+                              }
+                            >
+                              {isRejecting ? (
+                                <>
+                                  <Loader2 className="animate-spin mr-1 h-3 w-3" />
+                                  Đang Xử Lý
+                                </>
+                              ) : (
+                                "Hủy"
+                              )}
+                            </Button>
+                          )}
+                        <Button
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-sm"
+                          onClick={() => handleViewDetails(request)}
+                        >
+                          Xem Chi Tiết
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </>
-            )}
-          </div>
+                ))}
+              </div>
+
+              {requests.length > 0 && (
+                <div className="flex justify-center mt-8 mb-8">
+                  <DefaultPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                  />
+                </div>
+              )}
+            </>
+          )}
         </div>
-
-        <Footer></Footer>
-
-        <CancelConfirmationModal
-          show={showCancelConfirm}
-          onClose={() => {
-            setShowCancelConfirm(false);
-            setCurrentCancellingId(null);
-          }}
-          onConfirm={confirmCancelAppointment}
-          refundInfo={refundInfo}
-          isLoading={isCancelling}
-        />
       </div>
+
+      <Footer />
+
+      <CancelConfirmationModal
+        show={showCancelConfirm}
+        onClose={() => {
+          setShowCancelConfirm(false);
+          setCurrentCancellingId(null);
+        }}
+        onConfirm={confirmCancelAppointment}
+        refundInfo={refundInfo}
+        isLoading={isCancelling}
+      />
     </div>
   );
 };

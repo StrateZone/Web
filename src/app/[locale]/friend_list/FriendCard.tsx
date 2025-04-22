@@ -1,4 +1,3 @@
-// components/friends/FriendCard.tsx
 "use client";
 
 import {
@@ -11,7 +10,8 @@ import {
   Badge,
   Tooltip,
 } from "@material-tailwind/react";
-import { FiInfo, FiX, FiUserPlus, FiCheck } from "react-icons/fi";
+import { FiInfo, FiX, FiUserPlus } from "react-icons/fi";
+import { CheckBadgeIcon } from "@heroicons/react/24/solid"; // Thêm import này
 import { User } from "./page";
 
 interface FriendCardProps {
@@ -40,17 +40,20 @@ export function FriendCard({
           <Badge
             overlap="circular"
             placement="bottom-end"
-            className={`border-2 border-white ${isMember ? "bg-gradient-to-r from-purple-500 to-pink-500" : "bg-blue-gray-100"}`}
+            className={`border-2 border-white ${isMember ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse" : "bg-blue-gray-100"}`}
             content={
               isMember ? (
-                <Tooltip content="Thành viên VIP">
-                  <FiCheck className="h-4 w-4 text-white" />
+                <Tooltip content="Thành viên câu lạc bộ">
+                  <CheckBadgeIcon className="h-5 w-5 text-white" />
                 </Tooltip>
               ) : null
             }
           >
             <Avatar
-              src={user.avatarUrl || "/default-avatar.png"}
+              src={
+                user.avatarUrl ||
+                "https://i.pinimg.com/736x/0f/68/94/0f6894e539589a50809e45833c8bb6c4.jpg"
+              }
               alt={user.username}
               size="lg"
               className={`border-2 ${isMember ? "border-purple-500 shadow-lg shadow-purple-500/20" : "border-blue-100"}`}
@@ -66,7 +69,7 @@ export function FriendCard({
               </Typography>
               {isMember && (
                 <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-                  VIP
+                  MEMBER
                 </span>
               )}
             </div>
@@ -75,7 +78,7 @@ export function FriendCard({
             </Typography>
             {isMember && (
               <Typography variant="small" className="text-purple-500 mt-1">
-                Thành viên VIP
+                Thành viên câu lạc bộ
               </Typography>
             )}
           </div>

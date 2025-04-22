@@ -55,6 +55,7 @@ export default function LoginPage() {
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
+
   const handleLogin = async () => {
     validateEmail(email);
     validatePassword(password);
@@ -92,8 +93,8 @@ export default function LoginPage() {
             userRole: responseData.userRole,
             status: responseData.status,
             wallet: responseData.wallet,
-            accessToken: responseData.accessToken, // Lấy từ data
-            refreshToken: responseData.refreshToken, // Lấy từ data
+            accessToken: responseData.accessToken,
+            refreshToken: responseData.refreshToken,
             imageUrl: responseData.imageUrl,
             skillLevel: responseData.skillLevel,
             ranking: responseData.ranking,
@@ -138,7 +139,8 @@ export default function LoginPage() {
       }
     }
   };
-  const handleGoogleLogin = async () => {
+
+  const handleOtpLogin = async () => {
     router.push(`/${localActive}/login_otp`);
   };
 
@@ -247,15 +249,11 @@ export default function LoginPage() {
 
               <Button
                 className="w-full font-bold bg-white text-gray-800 py-3 rounded-lg border border-gray-300 flex items-center justify-center min-h-12 hover:bg-gray-100 transition-colors"
-                onClick={handleGoogleLogin}
+                onClick={handleOtpLogin}
               >
                 <div className="flex items-center justify-center gap-2">
-                  <img
-                    src="https://www.google.com/favicon.ico"
-                    alt="Google"
-                    className="w-5 h-5"
-                  />
-                  <span>Đăng nhập với Google</span>
+                  <Mail size={20} />
+                  <span>Đăng nhập với OTP</span>
                 </div>
               </Button>
 

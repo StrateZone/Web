@@ -251,12 +251,15 @@ const TableBookingPage = () => {
     go: "Cờ Vây",
   };
 
-  const translateRoomType = (roomType: string): string => {
+  const translateRoomType = (roomType?: string): string => {
+    if (!roomType) return "Không xác định";
+
     const type = roomType.toLowerCase();
     if (type.includes("basic")) return "Phòng thường";
     if (type.includes("premium")) return "Phòng cao cấp";
     if (type.includes("openspace") || type.includes("open space"))
       return "Không gian mở";
+
     return roomType;
   };
 
@@ -265,10 +268,6 @@ const TableBookingPage = () => {
     0
   );
   const finalPrice = totalPrice - discount;
-
-  const applyCoupon = () => {
-    // Coupon logic here
-  };
 
   const viewBookingDetail = (bookingInfo: {
     id: number;
@@ -558,8 +557,10 @@ const TableBookingPage = () => {
                               Loại Cờ:{" "}
                             </span>
                             {GAME_TYPE_TRANSLATIONS[
-                              booking.gameType.typeName.toLowerCase()
-                            ] || booking.gameType.typeName}{" "}
+                              booking?.gameType?.typeName?.toLowerCase?.() || ""
+                            ] ||
+                              booking?.gameType?.typeName ||
+                              "Không rõ"}
                           </p>
                           <p>
                             <span className="font-bold text-lg ">
@@ -616,7 +617,7 @@ const TableBookingPage = () => {
                           </div>
                           <p className="mt-2">
                             <span className="font-bold text-lg">Tổng: </span>
-                            {booking.totalPrice.toLocaleString()}đ
+                            {booking.totalPrice?.toLocaleString()}đ
                             {booking.hasInvitations ? (
                               <span className="text-green-600 ml-2">
                                 (Thanh Toán Trước 50%)
@@ -655,7 +656,7 @@ const TableBookingPage = () => {
                                     />
                                   ) : (
                                     <div className="w-full h-full flex items-center justify-center bg-blue-500 text-white text-xs font-bold">
-                                      {user.username.charAt(0).toUpperCase()}
+                                      {user.username?.charAt(0).toUpperCase()}
                                     </div>
                                   )}
                                 </div>
