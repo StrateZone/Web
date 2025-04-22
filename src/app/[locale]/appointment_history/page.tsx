@@ -54,7 +54,7 @@ interface User {
   email: string;
   phone: string;
   fullName: string;
-  avatarUrl: string;
+  avatarUrl: string | null;
   skillLevel: string;
   ranking: string;
   userRole?: number | string;
@@ -62,7 +62,8 @@ interface User {
 
 interface AppointmentRequest {
   id: number;
-  toUser: number;
+  fromUser: number; // Included to match OpponentDetailsPopup requirements
+  toUser: number | number[]; // Support both single number and array
   status: string;
   tableId: number;
   appointmentId: number;
@@ -70,6 +71,7 @@ interface AppointmentRequest {
   endTime: string;
   expireAt: string;
   createdAt: string;
+  totalPrice: number; // Included to match OpponentDetailsPopup requirements
   toUserNavigation: User;
 }
 
@@ -700,6 +702,22 @@ function Page() {
               onClose={() => setShowOpponentDetails(false)}
               requests={currentOpponentRequests}
               tableId={currentTableId || 0}
+              tableAppointmentStatus={
+                selectedAppointment?.tablesAppointments.find(
+                  (ta) => ta.table.tableId === currentTableId
+                )?.status
+              }
+              appointmentId={selectedAppointment?.appointmentId}
+              startTime={
+                selectedAppointment?.tablesAppointments.find(
+                  (ta) => ta.table.tableId === currentTableId
+                )?.scheduleTime
+              }
+              endTime={
+                selectedAppointment?.tablesAppointments.find(
+                  (ta) => ta.table.tableId === currentTableId
+                )?.endTime
+              }
             />
           </div>
         </div>
