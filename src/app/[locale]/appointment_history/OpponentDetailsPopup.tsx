@@ -1,6 +1,9 @@
 "use client";
-import { Badge } from "@material-tailwind/react";
+import { Badge, Button } from "@material-tailwind/react";
 import { CheckBadgeIcon } from "@heroicons/react/24/solid";
+import OpponentRecommendationModalWithNewInvite from "../appointment_ongoing/OpponentRecommendationModal";
+import { useState, useEffect } from "react";
+import { toast } from "react-toastify";
 
 interface User {
   userId: number;
@@ -16,7 +19,8 @@ interface User {
 
 interface AppointmentRequest {
   id: number;
-  toUser: number;
+  fromUser: number;
+  toUser: number[];
   status: string;
   tableId: number;
   appointmentId: number;
@@ -24,7 +28,25 @@ interface AppointmentRequest {
   endTime: string;
   expireAt: string;
   createdAt: string;
+  totalPrice: number;
   toUserNavigation: User;
+}
+
+interface Opponent {
+  userId: number;
+  username: string;
+  fullName: string;
+  avatarUrl: string;
+}
+
+interface ChessBooking {
+  tableId: number;
+  startDate: string;
+  endDate: string;
+  invitedUsers: {
+    userId: number;
+    data?: { username: string; fullName: string; avatarUrl: string | null };
+  }[];
 }
 
 interface OpponentDetailsPopupProps {
@@ -32,6 +54,10 @@ interface OpponentDetailsPopupProps {
   onClose: () => void;
   requests: AppointmentRequest[];
   tableId: number;
+  tableAppointmentStatus?: string;
+  appointmentId?: number;
+  startTime?: string;
+  endTime?: string;
 }
 
 function OpponentDetailsPopup({
@@ -39,16 +65,179 @@ function OpponentDetailsPopup({
   onClose,
   requests,
   tableId,
+  tableAppointmentStatus,
+  appointmentId,
+  startTime,
+  endTime,
 }: OpponentDetailsPopupProps) {
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [newlyInvitedUsers, setNewlyInvitedUsers] = useState<number[]>([]);
+  const [localRequests, setLocalRequests] =
+    useState<AppointmentRequest[]>(requests);
+
+  // Sync localRequests with requests prop when it changes
+  useEffect(() => {
+    setLocalRequests((prev) => {
+      // Keep locally added requests that aren't in the new requests prop
+      const localOnlyRequests = prev.filter(
+        (req) => !requests.some((r) => r.id === req.id)
+      );
+      return [...requests, ...localOnlyRequests];
+    });
+  }, [requests]);
+
+  // Reset newlyInvitedUsers when the modal is closed
+  useEffect(() => {
+    if (!show) {
+      setNewlyInvitedUsers([]);
+    }
+  }, [show]);
+
   if (!show) return null;
 
   // Filter requests by tableId
-  const filteredRequests = requests.filter(
+  const filteredRequests = localRequests.filter(
     (request) => request.tableId === tableId
   );
 
+  // Check if all requests are expired or rejected
+  const allRequestsInvalid = filteredRequests.every(
+    (request) =>
+      request.status.toLowerCase() === "rejected" ||
+      request.status.toLowerCase() === "expired" ||
+      request.status.toLowerCase() === "accepted_by_others"
+  );
+
+  // Show invite button if:
+  // - Table status is confirmed
+  // - All existing requests are invalid
+  // - No new invitations are pending
+  const showInviteButton =
+    tableAppointmentStatus?.toLowerCase() === "confirmed" &&
+    allRequestsInvalid &&
+    newlyInvitedUsers.length === 0;
+
   const isMember = (userRole: number | string | undefined) =>
     userRole === 1 || userRole === "Member";
+
+  // Handle invite success
+  const handleInviteSuccess = async (opponents: Opponent[]) => {
+    try {
+      const authDataString = localStorage.getItem("authData");
+      const authData = authDataString ? JSON.parse(authDataString) : {};
+      const fromUserId = authData.userId;
+
+      if (!fromUserId || !appointmentId || !startTime || !endTime) {
+        throw new Error("Missing required data for invitation");
+      }
+
+      // Get current bookings
+      const savedBookings = localStorage.getItem("chessBookingsInvite");
+      const bookings: ChessBooking[] = savedBookings
+        ? JSON.parse(savedBookings)
+        : [];
+
+      const requestBody = {
+        fromUser: fromUserId,
+        toUser: opponents.map((o) => o.userId),
+        tableId,
+        appointmentId,
+        startTime,
+        endTime,
+        totalPrice: 0,
+      };
+
+      const response = await fetch(
+        "https://backend-production-ac5e.up.railway.app/api/appointmentrequests",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to send invitations");
+      }
+
+      // Update localStorage
+      const bookingIndex = bookings.findIndex(
+        (b) => b.tableId === tableId && b.startDate === startTime
+      );
+
+      const newInvitedUsers = opponents.map((o) => ({ userId: o.userId }));
+
+      if (bookingIndex !== -1) {
+        bookings[bookingIndex].invitedUsers = [
+          ...(bookings[bookingIndex].invitedUsers || []),
+          ...newInvitedUsers,
+        ];
+      } else {
+        bookings.push({
+          tableId,
+          startDate: startTime,
+          endDate: endTime,
+          invitedUsers: newInvitedUsers,
+        });
+      }
+
+      localStorage.setItem("chessBookingsInvite", JSON.stringify(bookings));
+
+      // Update newly invited users state
+      setNewlyInvitedUsers((prev) => [
+        ...prev,
+        ...opponents.map((o) => o.userId),
+      ]);
+
+      // Create new AppointmentRequest objects for the invited opponents
+      const newRequests: AppointmentRequest[] = opponents.map((opponent) => ({
+        id: Date.now() + opponent.userId, // Temporary unique ID
+        fromUser: fromUserId,
+        toUser: [opponent.userId],
+        status: "pending",
+        tableId,
+        appointmentId,
+        startTime,
+        endTime,
+        expireAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Example: 24 hours from now
+        createdAt: new Date().toISOString(),
+        totalPrice: 0,
+        toUserNavigation: {
+          userId: opponent.userId,
+          username: opponent.username,
+          fullName: opponent.fullName,
+          avatarUrl: opponent.avatarUrl,
+          email: "", // Placeholder
+          phone: "", // Placeholder
+          skillLevel: "", // Placeholder
+          ranking: "", // Placeholder
+          userRole: undefined, // Placeholder
+        },
+      }));
+
+      // Update localRequests with new invitations
+      setLocalRequests((prev) => [...prev, ...newRequests]);
+
+      toast.success(`Đã gửi lời mời đến ${opponents.length} người thành công!`);
+
+      // Clear localStorage for this table after successful invitation
+      const updatedBookings = bookings.filter(
+        (b) => !(b.tableId === tableId && b.startDate === startTime)
+      );
+      localStorage.setItem(
+        "chessBookingsInvite",
+        JSON.stringify(updatedBookings)
+      );
+
+      return true;
+    } catch (error) {
+      console.error("Error sending invitations:", error);
+      toast.error("Có lỗi khi gửi lời mời");
+      return false;
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -181,16 +370,40 @@ function OpponentDetailsPopup({
             </div>
           )}
 
+          {/* Show Invite Button */}
+          {showInviteButton && (
+            <div className="mt-6 flex justify-center">
+              <Button
+                onClick={() => setShowInviteModal(true)}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded"
+              >
+                Mời thêm bạn
+              </Button>
+            </div>
+          )}
+
           <div className="mt-8 flex justify-end">
-            <button
+            <Button
               onClick={onClose}
               className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-lg"
             >
               Đóng
-            </button>
+            </Button>
           </div>
         </div>
       </div>
+
+      {/* Opponent Recommendation Modal */}
+      {showInviteModal && (
+        <OpponentRecommendationModalWithNewInvite
+          startDate={startTime!}
+          endDate={endTime!}
+          tableId={tableId}
+          open={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          onInviteSuccess={handleInviteSuccess}
+        />
+      )}
     </div>
   );
 }

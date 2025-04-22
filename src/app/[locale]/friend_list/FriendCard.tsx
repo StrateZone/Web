@@ -69,7 +69,7 @@ export function FriendCard({
               </Typography>
               {isMember && (
                 <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-                  VIP
+                  MEMBER
                 </span>
               )}
             </div>
@@ -78,7 +78,7 @@ export function FriendCard({
             </Typography>
             {isMember && (
               <Typography variant="small" className="text-purple-500 mt-1">
-                Thành viên VIP
+                Thành viên câu lạc bộ
               </Typography>
             )}
           </div>

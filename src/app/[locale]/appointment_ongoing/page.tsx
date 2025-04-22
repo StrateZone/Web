@@ -699,6 +699,22 @@ function Page() {
               onClose={() => setShowOpponentDetails(false)}
               requests={currentOpponentRequests}
               tableId={currentTableId || 0}
+              tableAppointmentStatus={
+                selectedAppointment?.tablesAppointments.find(
+                  (ta) => ta.table.tableId === currentTableId
+                )?.status
+              } // Pass TablesAppointment status
+              appointmentId={selectedAppointment?.appointmentId}
+              startTime={
+                selectedAppointment?.tablesAppointments.find(
+                  (ta) => ta.table.tableId === currentTableId
+                )?.scheduleTime
+              }
+              endTime={
+                selectedAppointment?.tablesAppointments.find(
+                  (ta) => ta.table.tableId === currentTableId
+                )?.endTime
+              }
             />
           </div>
         </div>
