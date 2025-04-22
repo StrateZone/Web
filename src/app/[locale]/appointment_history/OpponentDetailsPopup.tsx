@@ -11,12 +11,17 @@ interface User {
   email: string;
   phone: string;
   fullName: string;
-  avatarUrl: string;
+  avatarUrl: string | null;
   skillLevel: string;
   ranking: string;
   userRole?: number | string;
 }
-
+interface Opponent {
+  userId: number;
+  username: string;
+  fullName: string;
+  avatarUrl: string | null;
+}
 interface AppointmentRequest {
   id: number;
   fromUser: number;
@@ -36,7 +41,7 @@ interface Opponent {
   userId: number;
   username: string;
   fullName: string;
-  avatarUrl: string;
+  avatarUrl: string | null;
 }
 
 interface ChessBooking {
