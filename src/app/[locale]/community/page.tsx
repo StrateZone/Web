@@ -159,7 +159,7 @@ export default function CommunityPage() {
     try {
       setTagLoading(true);
       const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/tags"
+        "https://backend-production-ac5e.up.railway.app/api/tags",
       );
       if (!response.ok) throw new Error("Failed to fetch tags");
       const data: Tag[] = await response.json();
@@ -175,7 +175,7 @@ export default function CommunityPage() {
   const fetchMembershipPrice = async () => {
     try {
       const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/prices/membership"
+        "https://backend-production-ac5e.up.railway.app/api/prices/membership",
       );
       if (!response.ok) throw new Error("Failed to fetch membership price");
       const data: MembershipPrice = await response.json();
@@ -196,7 +196,7 @@ export default function CommunityPage() {
     setSelectedTags((prev) =>
       prev.includes(tagId)
         ? prev.filter((id) => id !== tagId)
-        : [...prev, tagId]
+        : [...prev, tagId],
     );
   };
   function getContrastColor(hexColor: string) {
@@ -223,7 +223,7 @@ export default function CommunityPage() {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       const result = await response.json();
@@ -259,7 +259,7 @@ export default function CommunityPage() {
             {
               autoClose: 3000,
               closeButton: true,
-            }
+            },
           );
 
           fetchThreads();

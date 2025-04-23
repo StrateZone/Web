@@ -122,7 +122,7 @@ export default function CommunityCard({
     if (threadData?.likes && currentUser.userId) {
       const userLike = threadData.likes.find(
         (like) =>
-          like.userId === currentUser.userId && like.threadId === threadId
+          like.userId === currentUser.userId && like.threadId === threadId,
       );
       setIsLiked(!!userLike);
       setLikeId(userLike?.id);
@@ -152,7 +152,7 @@ export default function CommunityCard({
               "Content-Type": "application/json",
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
-          }
+          },
         );
         setLikeCount((prev) => prev - 1);
         setIsLiked(false);
@@ -171,7 +171,7 @@ export default function CommunityCard({
               userId: currentUser.userId,
               threadId: threadId,
             }),
-          }
+          },
         );
 
         if (response.ok) {
@@ -229,7 +229,7 @@ export default function CommunityCard({
                   const tagColor = tagItem.tag?.tagColor || "#6B7280";
                   const textColor = getContrastColor(tagColor);
                   const isImportantTag = ["thông báo", "quan trọng"].includes(
-                    tagItem.tag?.tagName || ""
+                    tagItem.tag?.tagName || "",
                   );
 
                   return (

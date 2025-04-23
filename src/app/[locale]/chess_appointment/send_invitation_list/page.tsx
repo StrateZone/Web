@@ -115,7 +115,7 @@ const AppointmentSendRequestsPage = () => {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [refundInfo, setRefundInfo] = useState<any>(null);
   const [currentCancellingId, setCurrentCancellingId] = useState<number | null>(
-    null
+    null,
   );
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -125,7 +125,7 @@ const AppointmentSendRequestsPage = () => {
   const [hasNext, setHasNext] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading: walletLoading } = useSelector(
-    (state: RootState) => state.wallet
+    (state: RootState) => state.wallet,
   );
   const getUserId = () => {
     const authDataString = localStorage.getItem("authData");
@@ -155,7 +155,7 @@ const AppointmentSendRequestsPage = () => {
         }
 
         const apiUrl = new URL(
-          `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/from/${userId}`
+          `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/from/${userId}`,
         );
         apiUrl.searchParams.append("page-number", page.toString());
         apiUrl.searchParams.append("page-size", pageSize.toString());
@@ -185,7 +185,7 @@ const AppointmentSendRequestsPage = () => {
         setIsLoading(false);
       }
     },
-    [locale, pageSize, router]
+    [locale, pageSize, router],
   );
 
   const handleRefresh = () => {
@@ -352,13 +352,13 @@ const AppointmentSendRequestsPage = () => {
 
     setRequests((prev) =>
       prev.map((req) =>
-        req.id === currentCancellingId ? { ...req, status: "cancelled" } : req
-      )
+        req.id === currentCancellingId ? { ...req, status: "cancelled" } : req,
+      ),
     );
 
     if (selectedRequest?.id === currentCancellingId) {
       setSelectedRequest((prev) =>
-        prev ? { ...prev, status: "cancelled" } : null
+        prev ? { ...prev, status: "cancelled" } : null,
       );
     }
 
@@ -370,7 +370,7 @@ const AppointmentSendRequestsPage = () => {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -382,7 +382,7 @@ const AppointmentSendRequestsPage = () => {
       setSelectedRequest(null);
 
       const isConfirmed = await SuccessCancelPopup(
-        refundInfo?.refundAmount || 0
+        refundInfo?.refundAmount || 0,
       );
 
       if (isConfirmed) {
@@ -532,7 +532,7 @@ const AppointmentSendRequestsPage = () => {
                         </h4>
                         {selectedRequest.toUserNavigation &&
                           isMember(
-                            selectedRequest.toUserNavigation.userRole
+                            selectedRequest.toUserNavigation.userRole,
                           ) && (
                             <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
                               MEMBER
@@ -542,7 +542,7 @@ const AppointmentSendRequestsPage = () => {
                       <p className="text-gray-600 text-sm">
                         <strong>Trình Độ:</strong>{" "}
                         {getRankLevelText(
-                          selectedRequest.toUserNavigation?.ranking || 0
+                          selectedRequest.toUserNavigation?.ranking || 0,
                         )}
                       </p>
                       {selectedRequest.toUserNavigation &&
@@ -640,7 +640,7 @@ const AppointmentSendRequestsPage = () => {
                       <strong>Ngày Chơi:</strong>
                     </span>{" "}
                     {new Date(selectedRequest.startTime).toLocaleDateString(
-                      "vi-VN"
+                      "vi-VN",
                     )}
                   </p>
                   <p>
@@ -649,7 +649,7 @@ const AppointmentSendRequestsPage = () => {
                     </span>{" "}
                     {formatTimeRange(
                       selectedRequest.startTime,
-                      selectedRequest.endTime
+                      selectedRequest.endTime,
                     )}
                   </p>
                   <p>
@@ -769,7 +769,7 @@ const AppointmentSendRequestsPage = () => {
                           <p className="text-gray-600 text-sm">
                             <strong>Trình Độ:</strong>{" "}
                             {getRankLevelText(
-                              request.toUserNavigation?.ranking || 0
+                              request.toUserNavigation?.ranking || 0,
                             )}
                           </p>
                           {request.toUserNavigation &&

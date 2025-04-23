@@ -104,20 +104,20 @@ const OpponentRecommendationModalWithNewInvite = ({
         (b: ChessBooking) =>
           b.tableId === tableId &&
           b.startDate === startDate &&
-          b.endDate === endDate
+          b.endDate === endDate,
       );
 
       if (currentBooking?.invitedUsers) {
         alreadyInvitedIds = currentBooking.invitedUsers.map(
-          (user: { userId: number }) => user.userId
+          (user: { userId: number }) => user.userId,
         );
         selectedOpponentIds = currentBooking.invitedUsers.map(
-          (user: { userId: number }) => user.userId
+          (user: { userId: number }) => user.userId,
         );
       }
 
       const url = new URL(
-        `https://backend-production-ac5e.up.railway.app/api/users/opponents/${userId}`
+        `https://backend-production-ac5e.up.railway.app/api/users/opponents/${userId}`,
       );
 
       if (searchTerm) {
@@ -147,14 +147,14 @@ const OpponentRecommendationModalWithNewInvite = ({
       }));
 
       const selectedFromStorage = [...markedOpponents, ...markedFriends].filter(
-        (opponent) => selectedOpponentIds.includes(opponent.userId)
+        (opponent) => selectedOpponentIds.includes(opponent.userId),
       );
 
       const missingOpponents = currentBooking?.invitedUsers
         ? currentBooking.invitedUsers
             .filter(
               (user: any) =>
-                !selectedFromStorage.some((o) => o.userId === user.userId)
+                !selectedFromStorage.some((o) => o.userId === user.userId),
             )
             .map((user: any) => ({
               userId: user.userId,
@@ -176,7 +176,7 @@ const OpponentRecommendationModalWithNewInvite = ({
       setInvitedOpponents(alreadyInvitedIds);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "An unknown error occurred"
+        err instanceof Error ? err.message : "An unknown error occurred",
       );
     } finally {
       setLoading(false);
@@ -206,7 +206,7 @@ const OpponentRecommendationModalWithNewInvite = ({
       (b: ChessBooking) =>
         b.tableId === tableId &&
         b.startDate === startDate &&
-        b.endDate === endDate
+        b.endDate === endDate,
     );
 
     const currentInvitedCount = currentBooking?.invitedUsers?.length || 0;
@@ -225,7 +225,7 @@ const OpponentRecommendationModalWithNewInvite = ({
         (b: ChessBooking) =>
           b.tableId === tableId &&
           b.startDate === startDate &&
-          b.endDate === endDate
+          b.endDate === endDate,
       );
 
       const opponentData = {
@@ -266,7 +266,7 @@ const OpponentRecommendationModalWithNewInvite = ({
 
   const handleRemoveOpponent = (userId: number) => {
     const newSelectedOpponents = selectedOpponents.filter(
-      (o) => o.userId !== userId
+      (o) => o.userId !== userId,
     );
     setSelectedOpponents(newSelectedOpponents);
 
@@ -275,7 +275,7 @@ const OpponentRecommendationModalWithNewInvite = ({
       (b: ChessBooking) =>
         b.tableId === tableId &&
         b.startDate === startDate &&
-        b.endDate === endDate
+        b.endDate === endDate,
     );
 
     if (bookingIndex !== -1) {
@@ -299,7 +299,7 @@ const OpponentRecommendationModalWithNewInvite = ({
       (b: ChessBooking) =>
         b.tableId === tableId &&
         b.startDate === startDate &&
-        b.endDate === endDate
+        b.endDate === endDate,
     );
 
     if (bookingIndex !== -1) {
@@ -324,7 +324,7 @@ const OpponentRecommendationModalWithNewInvite = ({
           (b: ChessBooking) =>
             b.tableId === tableId &&
             b.startDate === startDate &&
-            b.endDate === endDate
+            b.endDate === endDate,
         );
 
         if (bookingIndex !== -1) {
@@ -346,7 +346,7 @@ const OpponentRecommendationModalWithNewInvite = ({
 
   const renderOpponentList = (
     opponents: Opponent[],
-    isSelectedTab: boolean = false
+    isSelectedTab: boolean = false,
   ) => {
     if (opponents.length === 0) {
       return (
@@ -462,14 +462,14 @@ const OpponentRecommendationModalWithNewInvite = ({
                       opponent.isInvited ||
                       loading ||
                       selectedOpponents.some(
-                        (o) => o.userId === opponent.userId
+                        (o) => o.userId === opponent.userId,
                       )
                     }
                     size="sm"
                     className={`text-white text-xs px-2.5 py-1 ${
                       opponent.isInvited ||
                       selectedOpponents.some(
-                        (o) => o.userId === opponent.userId
+                        (o) => o.userId === opponent.userId,
                       )
                         ? "bg-gray-400"
                         : isMember

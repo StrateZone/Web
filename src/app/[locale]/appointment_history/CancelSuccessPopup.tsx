@@ -52,7 +52,7 @@
 import Swal from "sweetalert2";
 
 export const SuccessCancelPopup = async (
-  refundAmount: number
+  refundAmount: number,
 ): Promise<boolean> => {
   const { isConfirmed } = await Swal.fire({
     title:

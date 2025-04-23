@@ -135,7 +135,7 @@ function Page() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [refundInfo, setRefundInfo] = useState<RefundInfo | null>(null);
   const [currentCancellingId, setCurrentCancellingId] = useState<number | null>(
-    null
+    null,
   );
   const [showOpponentDetails, setShowOpponentDetails] = useState(false);
   const [currentOpponentRequests, setCurrentOpponentRequests] = useState<
@@ -148,7 +148,7 @@ function Page() {
   const userId = authData.userId;
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading: walletLoading } = useSelector(
-    (state: RootState) => state.wallet
+    (state: RootState) => state.wallet,
   );
 
   // Fetch data from API
@@ -157,7 +157,7 @@ function Page() {
     setError(null);
     try {
       const apiUrl = new URL(
-        `https://backend-production-ac5e.up.railway.app/api/appointments/users/${userId}`
+        `https://backend-production-ac5e.up.railway.app/api/appointments/users/${userId}`,
       );
       apiUrl.searchParams.append("page-number", currentPage.toString());
       apiUrl.searchParams.append("page-size", pageSize.toString());
@@ -172,7 +172,7 @@ function Page() {
       const result: ApiResponse = await response.json();
       console.log(
         "userRole sample:",
-        result.pagedList[0]?.appointmentrequests[0]?.toUserNavigation?.userRole
+        result.pagedList[0]?.appointmentrequests[0]?.toUserNavigation?.userRole,
       );
 
       setData(result);
@@ -183,7 +183,7 @@ function Page() {
       setHasNext(result.hasNext);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định"
+        err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định",
       );
     } finally {
       setIsLoading(false);
@@ -242,7 +242,7 @@ function Page() {
       const currentTime = toLocalISOString(new Date());
 
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`
+        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`,
       );
 
       if (!response.ok) {
@@ -263,7 +263,7 @@ function Page() {
       setShowCancelConfirm(true);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Lỗi khi kiểm tra điều kiện hủy"
+        err instanceof Error ? err.message : "Lỗi khi kiểm tra điều kiện hủy",
       );
     } finally {
       setIsLoading(false);
@@ -286,7 +286,7 @@ function Page() {
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
       const responseData = await response.json();
       console.log("API Response:", responseData);
@@ -385,7 +385,7 @@ function Page() {
 
   const handleShowOpponentDetails = (
     requests: AppointmentRequest[],
-    tableId: number
+    tableId: number,
   ) => {
     setCurrentOpponentRequests(requests);
     setCurrentTableId(tableId);
@@ -536,7 +536,7 @@ function Page() {
                             </td>
                             <td className="py-2 px-4 border text-center">
                               {new Date(
-                                tableAppointment.scheduleTime
+                                tableAppointment.scheduleTime,
                               ).toLocaleDateString("vi-VN")}
                             </td>
                             <td className="py-2 px-4 border text-center">
@@ -555,13 +555,14 @@ function Page() {
                             <td className="py-2 px-4 border text-center">
                               {selectedAppointment.appointmentrequests.some(
                                 (req) =>
-                                  req.tableId === tableAppointment.table.tableId
+                                  req.tableId ===
+                                  tableAppointment.table.tableId,
                               ) && (
                                 <button
                                   onClick={() =>
                                     handleShowOpponentDetails(
                                       selectedAppointment.appointmentrequests,
-                                      tableAppointment.table.tableId
+                                      tableAppointment.table.tableId,
                                     )
                                   }
                                   className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm"
@@ -584,7 +585,7 @@ function Page() {
                               )}
                             </td>
                           </tr>
-                        )
+                        ),
                       )}
                     </tbody>
                   </table>
@@ -594,7 +595,7 @@ function Page() {
               <div>
                 {data.pagedList.filter(
                   (appointment) =>
-                    appointment.status.toLowerCase() === "incompleted"
+                    appointment.status.toLowerCase() === "incompleted",
                 ).length === 0 ? (
                   <div className="bg-white rounded-lg shadow-md p-8 text-center">
                     <p className="text-lg">
@@ -622,7 +623,7 @@ function Page() {
                             .filter(
                               (appointment) =>
                                 appointment.status.toLowerCase() ===
-                                "incompleted"
+                                "incompleted",
                             )
                             .map((appointment) => (
                               <tr
@@ -703,18 +704,18 @@ function Page() {
               tableId={currentTableId || 0}
               tableAppointmentStatus={
                 selectedAppointment?.tablesAppointments.find(
-                  (ta) => ta.table.tableId === currentTableId
+                  (ta) => ta.table.tableId === currentTableId,
                 )?.status
               } // Pass TablesAppointment status
               appointmentId={selectedAppointment?.appointmentId}
               startTime={
                 selectedAppointment?.tablesAppointments.find(
-                  (ta) => ta.table.tableId === currentTableId
+                  (ta) => ta.table.tableId === currentTableId,
                 )?.scheduleTime
               }
               endTime={
                 selectedAppointment?.tablesAppointments.find(
-                  (ta) => ta.table.tableId === currentTableId
+                  (ta) => ta.table.tableId === currentTableId,
                 )?.endTime
               }
             />

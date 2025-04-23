@@ -150,7 +150,7 @@ function PostDetailPage() {
   const fetchMembershipPrice = async () => {
     try {
       const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/prices/membership"
+        "https://backend-production-ac5e.up.railway.app/api/prices/membership",
       );
       if (!response.ok) throw new Error("Failed to fetch membership price");
       const data: MembershipPrice = await response.json();
@@ -172,7 +172,7 @@ function PostDetailPage() {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       const result = await response.json();
@@ -208,7 +208,7 @@ function PostDetailPage() {
             {
               autoClose: 3000,
               closeButton: true,
-            }
+            },
           );
 
           // Reload thread data
@@ -256,7 +256,7 @@ function PostDetailPage() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
       if (!threadResponse.ok) {
         throw new Error(`HTTP error! status: ${threadResponse.status}`);
@@ -276,7 +276,7 @@ function PostDetailPage() {
 
       // Check if current user has liked this thread
       const userLike = threadData.likes?.find(
-        (like: any) => like.userId === currentUser.userId
+        (like: any) => like.userId === currentUser.userId,
       );
 
       setThread({
@@ -289,7 +289,7 @@ function PostDetailPage() {
       // Fetch comments (only for published threads)
       if (threadData.status === "published") {
         const commentsResponse = await fetch(
-          `https://backend-production-ac5e.up.railway.app/api/comments/thread/${id}`
+          `https://backend-production-ac5e.up.railway.app/api/comments/thread/${id}`,
         );
         let commentsData = await commentsResponse.json();
 
@@ -304,11 +304,11 @@ function PostDetailPage() {
             inverseReplyToNavigation: [],
             isLiked:
               comment.likes?.some(
-                (like: any) => like.userId === currentUser.userId
+                (like: any) => like.userId === currentUser.userId,
               ) || false,
             likeId:
               comment.likes?.find(
-                (like: any) => like.userId === currentUser.userId
+                (like: any) => like.userId === currentUser.userId,
               )?.id || null,
             likesCount: comment.likes?.length || 0,
           };
@@ -364,7 +364,7 @@ function PostDetailPage() {
             content: mainCommentContent,
             replyTo: null,
           }),
-        }
+        },
       );
 
       if (response.ok) {
@@ -408,7 +408,7 @@ function PostDetailPage() {
             content: replyCommentContent,
             replyTo: replyingTo,
           }),
-        }
+        },
       );
 
       if (response.ok) {
@@ -446,7 +446,7 @@ function PostDetailPage() {
                   };
                 }
                 return reply;
-              }
+              },
             );
 
             if (updatedInverseReplies !== comment.inverseReplyToNavigation) {
@@ -456,7 +456,7 @@ function PostDetailPage() {
               };
             }
             return comment;
-          })
+          }),
         );
 
         setReplyCommentContent("");
@@ -483,7 +483,7 @@ function PostDetailPage() {
             headers: {
               Authorization: `Bearer ${token}`,
             },
-          }
+          },
         );
         setThread({
           ...thread,
@@ -505,7 +505,7 @@ function PostDetailPage() {
               userId: currentUser.userId,
               threadId: thread.threadId,
             }),
-          }
+          },
         );
         const data = await response.json();
         setThread({
@@ -526,7 +526,7 @@ function PostDetailPage() {
   const handleLikeComment = async (
     commentId: number,
     currentLikeStatus: boolean,
-    currentLikeId: number | null
+    currentLikeId: number | null,
   ) => {
     if (isLoadingCommentLike) return;
     setIsLoadingCommentLike(true);
@@ -541,12 +541,12 @@ function PostDetailPage() {
             headers: {
               Authorization: `Bearer ${token}`,
             },
-          }
+          },
         );
 
         // Update state
         setComments((prevComments) =>
-          updateCommentLikes(prevComments, commentId, false, null, -1)
+          updateCommentLikes(prevComments, commentId, false, null, -1),
         );
       } else {
         // Like
@@ -562,13 +562,13 @@ function PostDetailPage() {
               userId: currentUser.userId,
               commentId: commentId,
             }),
-          }
+          },
         );
         const data = await response.json();
 
         // Update state
         setComments((prevComments) =>
-          updateCommentLikes(prevComments, commentId, true, data.id, 1)
+          updateCommentLikes(prevComments, commentId, true, data.id, 1),
         );
       }
     } catch (error) {
@@ -584,7 +584,7 @@ function PostDetailPage() {
     commentId: number,
     isLiked: boolean,
     likeId: number | null,
-    countChange: number
+    countChange: number,
   ): Comment[] => {
     return comments.map((comment) => {
       if (comment.commentId === commentId) {
@@ -605,7 +605,7 @@ function PostDetailPage() {
             commentId,
             isLiked,
             likeId,
-            countChange
+            countChange,
           ),
         };
       }
@@ -649,7 +649,7 @@ function PostDetailPage() {
               <button
                 onClick={() =>
                   setReplyingTo(
-                    comment.commentId === replyingTo ? null : comment.commentId
+                    comment.commentId === replyingTo ? null : comment.commentId,
                   )
                 }
                 className="text-blue-500 text-sm hover:underline"
@@ -663,7 +663,7 @@ function PostDetailPage() {
                   handleLikeComment(
                     comment.commentId,
                     comment.isLiked,
-                    comment.likeId
+                    comment.likeId,
                   );
                 }}
                 className="flex items-center gap-1 text-sm"
@@ -718,7 +718,7 @@ function PostDetailPage() {
 
   const totalComments = comments.reduce(
     (total, comment) => total + 1 + comment.inverseReplyToNavigation.length,
-    0
+    0,
   );
 
   if (initialLoading) {

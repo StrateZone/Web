@@ -74,7 +74,7 @@ export default function LoginPage() {
               "Content-Type": "application/json",
               accept: "*/*",
             },
-          }
+          },
         );
 
         // Xử lý khi login thành công
@@ -114,18 +114,18 @@ export default function LoginPage() {
             response.data?.message === "Tài khoản chưa được xác thực email."
           ) {
             router.push(
-              `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`
+              `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`,
             );
             toast.warning(
-              "Tài Khoản Vẫn Chưa Được Kích Hoạt, Vui lòng xác thực email trước khi đăng nhập"
+              "Tài Khoản Vẫn Chưa Được Kích Hoạt, Vui lòng xác thực email trước khi đăng nhập",
             );
           } else if (response.data?.message === "User doesnt exist") {
             toast.error(
-              "Tài khoản không tồn tại. Vui lòng kiểm tra lại email."
+              "Tài khoản không tồn tại. Vui lòng kiểm tra lại email.",
             );
           } else if (response.data?.message === "Invalid email or password") {
             toast.error(
-              "Email hoặc mật khẩu không đúng. Vui lòng kiểm tra lại."
+              "Email hoặc mật khẩu không đúng. Vui lòng kiểm tra lại.",
             );
           } else {
             toast.error(response.data?.message || "Đăng nhập thất bại");

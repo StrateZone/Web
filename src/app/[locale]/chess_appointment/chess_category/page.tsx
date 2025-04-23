@@ -68,7 +68,7 @@ const saveSearchParams = (params: SearchParams) => {
     JSON.stringify({
       ...params,
       startDate: localDateStr,
-    })
+    }),
   );
 };
 
@@ -82,7 +82,7 @@ const getSavedSearchParams = (): SearchParams | null => {
     const localDate = new Date(
       parseInt(dateParts[0]),
       parseInt(dateParts[1]) - 1,
-      parseInt(dateParts[2])
+      parseInt(dateParts[2]),
     );
     localDate.setHours(12, 0, 0, 0);
 
@@ -154,10 +154,10 @@ export default function ChessCategoryPage() {
 
         const [openHourRes, closeHourRes] = await Promise.all([
           axios.get(
-            `https://backend-production-ac5e.up.railway.app/api/system/${systemId}/open-hour/date?date=${dateStr}`
+            `https://backend-production-ac5e.up.railway.app/api/system/${systemId}/open-hour/date?date=${dateStr}`,
           ),
           axios.get(
-            `https://backend-production-ac5e.up.railway.app/api/system/${systemId}/close-hour/date?date=${dateStr}`
+            `https://backend-production-ac5e.up.railway.app/api/system/${systemId}/close-hour/date?date=${dateStr}`,
           ),
         ]);
 
@@ -207,8 +207,8 @@ export default function ChessCategoryPage() {
   }) => {
     router.push(
       `/${locale}/chess_appointment/${bookingInfo.id}?startTime=${encodeURIComponent(
-        bookingInfo.startDate
-      )}&endTime=${encodeURIComponent(bookingInfo.endDate)}`
+        bookingInfo.startDate,
+      )}&endTime=${encodeURIComponent(bookingInfo.endDate)}`,
     );
   };
   const generateTimeOptions = () => {
@@ -244,7 +244,7 @@ export default function ChessCategoryPage() {
             style={{ color: disabled ? "#ccc" : "#000" }}
           >
             {timeString}
-          </option>
+          </option>,
         );
       }
     }
@@ -343,7 +343,7 @@ export default function ChessCategoryPage() {
             indexes: null,
             encode: (param) => param,
           },
-        }
+        },
       );
 
       if (
@@ -437,7 +437,7 @@ export default function ChessCategoryPage() {
     // Kiểm tra nếu khoảng thời gian không phải là bội số của 60 phút (1 tiếng)
     if (timeDiffInMinutes % 60 !== 0) {
       toast.error(
-        "Vui lòng chọn khung giờ chẵn (1 tiếng, 2 tiếng...) không chấp nhận khung giờ lẻ như 1 tiếng rưỡi!"
+        "Vui lòng chọn khung giờ chẵn (1 tiếng, 2 tiếng...) không chấp nhận khung giờ lẻ như 1 tiếng rưỡi!",
       );
       return;
     }
@@ -470,7 +470,7 @@ export default function ChessCategoryPage() {
     setIsLoadingRooms(true);
     try {
       const response = await axios.get(
-        `https://backend-production-ac5e.up.railway.app/api/rooms/by-type?roomType=${type}`
+        `https://backend-production-ac5e.up.railway.app/api/rooms/by-type?roomType=${type}`,
       );
       setRooms(response.data.pagedList || []);
       setSelectedRoomId(null); // Reset selected room when type changes
@@ -716,13 +716,13 @@ export default function ChessCategoryPage() {
                       {isBooked(
                         chessBooking.tableId,
                         chessBooking.startDate,
-                        chessBooking.endDate
+                        chessBooking.endDate,
                       ) && (
                         <div className="mt-2 text-sm text-green-600">
                           {(() => {
                             const localBooking = getLocalBooking(
                               chessBooking.tableId,
-                              new Date(startDate)
+                              new Date(startDate),
                             );
                             if (localBooking) {
                               return (
@@ -761,7 +761,7 @@ export default function ChessCategoryPage() {
                         <span className="font-medium text-black text-sm ml-1">
                           (
                           {Number(chessBooking.gameTypePrice).toLocaleString(
-                            "vi-VN"
+                            "vi-VN",
                           )}{" "}
                           ₫/giờ)
                         </span>
@@ -781,7 +781,7 @@ export default function ChessCategoryPage() {
                         <span className="font-medium text-black text-sm ml-1">
                           (
                           {Number(chessBooking.roomTypePrice).toLocaleString(
-                            "vi-VN"
+                            "vi-VN",
                           )}{" "}
                           ₫/giờ)
                         </span>
@@ -800,7 +800,7 @@ export default function ChessCategoryPage() {
                       <p className="text-gray-600 text-sm mt-2">
                         <span className="font-medium text-black">Ngày: </span>{" "}
                         {new Date(chessBooking.startDate).toLocaleDateString(
-                          "vi-VN"
+                          "vi-VN",
                         )}
                       </p>
                       <div className="text-gray-600 text-sm mt-2">
@@ -815,7 +815,7 @@ export default function ChessCategoryPage() {
                               minute: "2-digit",
                               hour12: false,
                               timeZone: "Asia/Ho_Chi_Minh",
-                            }
+                            },
                           )}
                         </p>
                         <p className="mt-2">
@@ -829,7 +829,7 @@ export default function ChessCategoryPage() {
                               minute: "2-digit",
                               hour12: false,
                               timeZone: "Asia/Ho_Chi_Minh",
-                            }
+                            },
                           )}
                         </p>
                       </div>
@@ -869,7 +869,7 @@ export default function ChessCategoryPage() {
                             isBooked(
                               chessBooking.tableId,
                               chessBooking.startDate,
-                              chessBooking.endDate
+                              chessBooking.endDate,
                             )
                               ? "opacity-70 cursor-not-allowed"
                               : "hover:shadow-md transition-shadow"
@@ -877,7 +877,7 @@ export default function ChessCategoryPage() {
                           disabled={isBooked(
                             chessBooking.tableId,
                             chessBooking.startDate,
-                            chessBooking.endDate
+                            chessBooking.endDate,
                           )}
                           onClick={() => {
                             try {
@@ -891,7 +891,7 @@ export default function ChessCategoryPage() {
                                     return false;
 
                                   const bookingStart = new Date(
-                                    booking.startDate
+                                    booking.startDate,
                                   );
                                   const bookingEnd = new Date(booking.endDate);
 
@@ -903,25 +903,25 @@ export default function ChessCategoryPage() {
                                     (newStart <= bookingStart &&
                                       newEnd >= bookingEnd)
                                   );
-                                }
+                                },
                               );
 
                               if (isAlreadyBooked) {
                                 const existingBookings = localBookings.filter(
-                                  (b) => b.tableId === chessBooking.tableId
+                                  (b) => b.tableId === chessBooking.tableId,
                                 );
 
                                 const bookingDetails = existingBookings
                                   .map((b) => {
                                     const start = new Date(
-                                      b.startDate
+                                      b.startDate,
                                     ).toLocaleTimeString("vi-VN", {
                                       hour: "2-digit",
                                       minute: "2-digit",
                                       hour12: false,
                                     });
                                     const end = new Date(
-                                      b.endDate
+                                      b.endDate,
                                     ).toLocaleTimeString("vi-VN", {
                                       hour: "2-digit",
                                       minute: "2-digit",
@@ -932,7 +932,7 @@ export default function ChessCategoryPage() {
                                   .join(", ");
 
                                 toast.warning(
-                                  `Bàn số ${chessBooking.tableId} đã được đặt trong khung giờ: ${bookingDetails}`
+                                  `Bàn số ${chessBooking.tableId} đã được đặt trong khung giờ: ${bookingDetails}`,
                                 );
                                 return;
                               }
@@ -949,7 +949,7 @@ export default function ChessCategoryPage() {
                                   hour: "2-digit",
                                   minute: "2-digit",
                                   hour12: false,
-                                }
+                                },
                               );
                               const endTimeStr = newEnd.toLocaleTimeString(
                                 "vi-VN",
@@ -957,16 +957,16 @@ export default function ChessCategoryPage() {
                                   hour: "2-digit",
                                   minute: "2-digit",
                                   hour12: false,
-                                }
+                                },
                               );
 
                               localStorage.setItem(
                                 "chessBookings",
-                                JSON.stringify(updatedBookings)
+                                JSON.stringify(updatedBookings),
                               );
                               setLocalBookings(updatedBookings);
                               toast.success(
-                                `Đã thêm bàn số ${chessBooking.tableId} từ ${startTimeStr} đến ${endTimeStr} vào danh sách đặt!`
+                                `Đã thêm bàn số ${chessBooking.tableId} từ ${startTimeStr} đến ${endTimeStr} vào danh sách đặt!`,
                               );
                             } catch (error) {
                               console.error("Lỗi khi xử lý đặt bàn:", error);
@@ -977,7 +977,7 @@ export default function ChessCategoryPage() {
                           {isBooked(
                             chessBooking.tableId,
                             chessBooking.startDate,
-                            chessBooking.endDate
+                            chessBooking.endDate,
                           )
                             ? "Đã thêm vào danh sách"
                             : "Thêm vào danh sách"}
@@ -986,8 +986,8 @@ export default function ChessCategoryPage() {
                           onClick={() => {
                             router.push(
                               `/${locale}/chess_appointment/${chessBooking.tableId}?startTime=${encodeURIComponent(
-                                chessBooking.startDate
-                              )}&endTime=${encodeURIComponent(chessBooking.endDate)}`
+                                chessBooking.startDate,
+                              )}&endTime=${encodeURIComponent(chessBooking.endDate)}`,
                             );
                           }}
                           className="text-xs px-2 py-1 bg-green-600"

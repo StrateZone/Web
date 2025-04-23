@@ -208,7 +208,7 @@ function BlogHistory() {
   const fetchMembershipPrice = async () => {
     try {
       const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/prices/membership"
+        "https://backend-production-ac5e.up.railway.app/api/prices/membership",
       );
       if (!response.ok) throw new Error("Failed to fetch membership price");
       const data: MembershipPrice = await response.json();
@@ -230,7 +230,7 @@ function BlogHistory() {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       const result = await response.json();
@@ -265,7 +265,7 @@ function BlogHistory() {
           {
             autoClose: 3000,
             closeButton: true,
-          }
+          },
         );
       }
     } catch (error: any) {
@@ -312,7 +312,7 @@ function BlogHistory() {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
-          }
+          },
         );
 
         if (!response.ok) {
@@ -427,7 +427,7 @@ function BlogHistory() {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-        }
+        },
       );
 
       if (response.ok) {
@@ -438,7 +438,7 @@ function BlogHistory() {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
               },
-            }
+            },
           );
           if (!fetchResponse.ok) {
             throw new Error("Failed to fetch threads after deletion");
@@ -471,10 +471,12 @@ function BlogHistory() {
                 borderRadius: "8px",
                 padding: "12px",
               },
-            }
+            },
           );
           setThreads((prevThreads) =>
-            prevThreads.filter((thread) => thread.threadId !== threadIdToDelete)
+            prevThreads.filter(
+              (thread) => thread.threadId !== threadIdToDelete,
+            ),
           );
           setTotalCount((prev) => prev - 1);
           if (threads.length === 1 && currentPage > 1) {
@@ -523,7 +525,7 @@ function BlogHistory() {
             accept: "*/*",
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-        }
+        },
       );
 
       if (response.ok) {
@@ -534,7 +536,7 @@ function BlogHistory() {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
               },
-            }
+            },
           );
           if (!fetchResponse.ok) {
             throw new Error("Failed to fetch threads after hiding");
@@ -567,14 +569,14 @@ function BlogHistory() {
                 borderRadius: "8px",
                 padding: "12px",
               },
-            }
+            },
           );
           setThreads((prevThreads) =>
             prevThreads.map((thread) =>
               thread.threadId === threadIdToHide
                 ? { ...thread, status: "hidden" }
-                : thread
-            )
+                : thread,
+            ),
           );
         }
       } else {
@@ -620,7 +622,7 @@ function BlogHistory() {
             accept: "*/*",
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-        }
+        },
       );
 
       if (response.ok) {
@@ -631,7 +633,7 @@ function BlogHistory() {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
               },
-            }
+            },
           );
           if (!fetchResponse.ok) {
             throw new Error("Failed to fetch threads after showing");
@@ -664,14 +666,14 @@ function BlogHistory() {
                 borderRadius: "8px",
                 padding: "12px",
               },
-            }
+            },
           );
           setThreads((prevThreads) =>
             prevThreads.map((thread) =>
               thread.threadId === threadIdToShow
                 ? { ...thread, status: "published" }
-                : thread
-            )
+                : thread,
+            ),
           );
         }
       } else {
@@ -707,7 +709,7 @@ function BlogHistory() {
   const handleLike = async (
     threadId: number,
     isLiked: boolean,
-    likeId?: number
+    likeId?: number,
   ) => {
     if (!currentUser.userId) return;
 
@@ -721,7 +723,7 @@ function BlogHistory() {
               "Content-Type": "application/json",
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
-          }
+          },
         );
         setThreads((prevThreads) =>
           prevThreads.map((thread) => {
@@ -733,7 +735,7 @@ function BlogHistory() {
               };
             }
             return thread;
-          })
+          }),
         );
       } else {
         const response = await fetch(
@@ -748,7 +750,7 @@ function BlogHistory() {
               userId: currentUser.userId,
               threadId: threadId,
             }),
-          }
+          },
         );
 
         if (response.ok) {
@@ -763,7 +765,7 @@ function BlogHistory() {
                 };
               }
               return thread;
-            })
+            }),
           );
         } else {
           throw new Error("Failed to like thread");
@@ -898,10 +900,10 @@ function BlogHistory() {
                 ) : (
                   displayedThreads.map((thread) => {
                     const isLiked = thread.likes.some(
-                      (like) => like.userId === currentUser.userId
+                      (like) => like.userId === currentUser.userId,
                     );
                     const likeId = thread.likes.find(
-                      (like) => like.userId === currentUser.userId
+                      (like) => like.userId === currentUser.userId,
                     )?.id;
 
                     return (
@@ -1067,7 +1069,7 @@ function BlogHistory() {
                                   className="flex items-center gap-2 px-4 py-2 rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-transform"
                                   onClick={() =>
                                     router.push(
-                                      `/${locale}/community/post_edit/${thread.threadId}`
+                                      `/${locale}/community/post_edit/${thread.threadId}`,
                                     )
                                   }
                                   aria-label="Edit post"
@@ -1124,7 +1126,7 @@ function BlogHistory() {
                                 className="flex items-center gap-2 px-4 py-2 rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-transform"
                                 onClick={() =>
                                   router.push(
-                                    `/${locale}/community/${thread.threadId}`
+                                    `/${locale}/community/${thread.threadId}`,
                                   )
                                 }
                                 aria-label="View post details"
@@ -1140,7 +1142,7 @@ function BlogHistory() {
                                   className="flex items-center gap-2 px-4 py-2 rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition-transform"
                                   onClick={() =>
                                     router.push(
-                                      `/${locale}/community/create_post?draftId=${thread.threadId}`
+                                      `/${locale}/community/create_post?draftId=${thread.threadId}`,
                                     )
                                   }
                                   aria-label="Create from draft"

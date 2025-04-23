@@ -61,7 +61,7 @@ function OpponentDetailsPopup({
   useEffect(() => {
     setLocalRequests((prev) => {
       const localOnlyRequests = prev.filter(
-        (req) => !requests.some((r) => r.id === req.id)
+        (req) => !requests.some((r) => r.id === req.id),
       );
       return [...requests, ...localOnlyRequests];
     });
@@ -76,14 +76,14 @@ function OpponentDetailsPopup({
   if (!show) return null;
 
   const filteredRequests = localRequests.filter(
-    (request) => request.tableId === tableId
+    (request) => request.tableId === tableId,
   );
 
   const allRequestsInvalid = filteredRequests.every(
     (request) =>
       request.status.toLowerCase() === "rejected" ||
       request.status.toLowerCase() === "expired" ||
-      request.status.toLowerCase() === "accepted_by_others"
+      request.status.toLowerCase() === "accepted_by_others",
   );
 
   const showInviteButton =
@@ -140,7 +140,7 @@ function OpponentDetailsPopup({
             "Content-Type": "application/json",
           },
           body: JSON.stringify(requestBody),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -148,7 +148,7 @@ function OpponentDetailsPopup({
       }
 
       const bookingIndex = bookings.findIndex(
-        (b) => b.tableId === tableId && b.startDate === startTime
+        (b) => b.tableId === tableId && b.startDate === startTime,
       );
 
       const newInvitedUsers = opponents.map((o) => ({ userId: o.userId }));
@@ -204,11 +204,11 @@ function OpponentDetailsPopup({
       toast.success(`Đã gửi lời mời đến ${opponents.length} người thành công!`);
 
       const updatedBookings = bookings.filter(
-        (b) => !(b.tableId === tableId && b.startDate === startTime)
+        (b) => !(b.tableId === tableId && b.startDate === startTime),
       );
       localStorage.setItem(
         "chessBookingsInvite",
-        JSON.stringify(updatedBookings)
+        JSON.stringify(updatedBookings),
       );
 
       return true;

@@ -54,7 +54,7 @@ const NotificationsPage = () => {
               Accept: "application/json",
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
-          }
+          },
         );
 
         if (!response.ok) {
@@ -104,7 +104,7 @@ const NotificationsPage = () => {
             Accept: "application/json",
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -128,7 +128,7 @@ const NotificationsPage = () => {
             Accept: "application/json",
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
-        }
+        },
       );
 
       if (response.ok) {
@@ -143,7 +143,7 @@ const NotificationsPage = () => {
     if (notification.status === 1) {
       await markAsRead(notification.id);
       setNotifications((prev) =>
-        prev.map((n) => (n.id === notification.id ? { ...n, status: 0 } : n))
+        prev.map((n) => (n.id === notification.id ? { ...n, status: 0 } : n)),
       );
     }
 

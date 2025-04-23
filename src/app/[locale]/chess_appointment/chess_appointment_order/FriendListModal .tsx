@@ -78,19 +78,19 @@ const OpponentRecommendationModal = ({
           (b) =>
             b.tableId === tableId &&
             b.startDate === startDate &&
-            b.endDate === endDate
+            b.endDate === endDate,
         );
 
         if (currentBooking?.invitedUsers) {
           alreadyInvitedIds = currentBooking.invitedUsers.map(
-            (user) => user.userId
+            (user) => user.userId,
           );
         }
       }
 
       // Build the URL with query parameters
       const url = new URL(
-        `https://backend-production-ac5e.up.railway.app/api/users/opponents/${userId}`
+        `https://backend-production-ac5e.up.railway.app/api/users/opponents/${userId}`,
       );
 
       if (searchTerm) {
@@ -124,7 +124,7 @@ const OpponentRecommendationModal = ({
       setFriends(markedFriends || []);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "An unknown error occurred"
+        err instanceof Error ? err.message : "An unknown error occurred",
       );
     } finally {
       setLoading(false);
@@ -166,7 +166,7 @@ const OpponentRecommendationModal = ({
         (b) =>
           b.tableId === tableId &&
           b.startDate === startDate &&
-          b.endDate === endDate
+          b.endDate === endDate,
       );
 
       if (!currentBooking) {
@@ -183,7 +183,7 @@ const OpponentRecommendationModal = ({
 
       // 4. Check if already invited this user
       const isAlreadyInvited = currentBooking.invitedUsers?.some(
-        (u) => u.userId === opponent.userId
+        (u) => u.userId === opponent.userId,
       );
 
       if (isAlreadyInvited) {
@@ -193,12 +193,12 @@ const OpponentRecommendationModal = ({
 
       // 5. Update UI state
       const updatedOpponents = opponents.map((o) =>
-        o.userId === opponent.userId ? { ...o, isInvited: true } : o
+        o.userId === opponent.userId ? { ...o, isInvited: true } : o,
       );
       setOpponents(updatedOpponents);
 
       const updatedFriends = friends.map((f) =>
-        f.userId === opponent.userId ? { ...f, isInvited: true } : f
+        f.userId === opponent.userId ? { ...f, isInvited: true } : f,
       );
       setFriends(updatedFriends);
 
