@@ -94,6 +94,13 @@ function OpponentDetailsPopup({
   const isMember = (userRole: number | string | undefined) =>
     userRole === 1 || userRole === "Member";
 
+  interface Opponent {
+    userId: number;
+    username: string;
+    fullName: string;
+    avatarUrl: string | null;
+  }
+
   const handleInviteSuccess = async (opponents: Opponent[]) => {
     try {
       const authDataString = localStorage.getItem("authData");
@@ -105,6 +112,12 @@ function OpponentDetailsPopup({
       }
 
       const savedBookings = localStorage.getItem("chessBookingsInvite");
+      interface ChessBooking {
+        tableId: number;
+        startDate: string;
+        endDate: string;
+        invitedUsers: { userId: number }[];
+      }
       const bookings: ChessBooking[] = savedBookings
         ? JSON.parse(savedBookings)
         : [];
