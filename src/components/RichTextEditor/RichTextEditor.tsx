@@ -16,7 +16,7 @@ export default function RichTextEditor({
   // Dynamic import để tránh lỗi SSR
   const ReactQuill = useMemo(
     () => dynamic(() => import("react-quill"), { ssr: false }),
-    []
+    [],
   );
 
   const modules = {

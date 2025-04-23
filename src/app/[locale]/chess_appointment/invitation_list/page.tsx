@@ -120,13 +120,13 @@ const AppointmentRequestsPage = () => {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [refundInfo, setRefundInfo] = useState<any>(null);
   const [currentCancellingId, setCurrentCancellingId] = useState<number | null>(
-    null
+    null,
   );
   const [processingRequestId, setProcessingRequestId] = useState<number | null>(
-    null
+    null,
   );
   const [processingAcceptId, setProcessingAcceptId] = useState<number | null>(
-    null
+    null,
   );
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -137,7 +137,7 @@ const AppointmentRequestsPage = () => {
   const [hasNext, setHasNext] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading: walletLoading } = useSelector(
-    (state: RootState) => state.wallet
+    (state: RootState) => state.wallet,
   );
   const getUserId = () => {
     const authDataString = localStorage.getItem("authData");
@@ -167,7 +167,7 @@ const AppointmentRequestsPage = () => {
         }
 
         const apiUrl = new URL(
-          `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/to/${userId}`
+          `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/to/${userId}`,
         );
         apiUrl.searchParams.append("page-number", page.toString());
         apiUrl.searchParams.append("page-size", pageSize.toString());
@@ -197,7 +197,7 @@ const AppointmentRequestsPage = () => {
         setIsLoading(false);
       }
     },
-    [locale, pageSize, router]
+    [locale, pageSize, router],
   );
 
   const handleRefresh = () => {
@@ -218,7 +218,7 @@ const AppointmentRequestsPage = () => {
           headers: {
             accept: "*/*",
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -293,7 +293,7 @@ const AppointmentRequestsPage = () => {
             tableId: request.tableId,
             appointmentId: request.appointmentId,
           }),
-        }
+        },
       );
 
       const result = await response.json();
@@ -519,7 +519,7 @@ const AppointmentRequestsPage = () => {
       const currentTime = toLocalISOString(new Date());
 
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`
+        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`,
       );
 
       if (!response.ok) {
@@ -539,7 +539,7 @@ const AppointmentRequestsPage = () => {
       setShowCancelConfirm(true);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Lỗi khi kiểm tra điều kiện hủy"
+        err instanceof Error ? err.message : "Lỗi khi kiểm tra điều kiện hủy",
       );
     } finally {
       setIsLoading(false);
@@ -563,7 +563,7 @@ const AppointmentRequestsPage = () => {
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
 
       const responseData = await response.json();
@@ -665,7 +665,7 @@ const AppointmentRequestsPage = () => {
                       }`}
                       content={
                         isMember(
-                          selectedRequest.fromUserNavigation.userRole
+                          selectedRequest.fromUserNavigation.userRole,
                         ) ? (
                           <div className="relative group">
                             <CheckBadgeIcon className="h-4 w-4 text-white" />
@@ -699,7 +699,7 @@ const AppointmentRequestsPage = () => {
                         <h4
                           className={`font-bold ${
                             isMember(
-                              selectedRequest.fromUserNavigation.userRole
+                              selectedRequest.fromUserNavigation.userRole,
                             )
                               ? "text-purple-600"
                               : ""
@@ -709,7 +709,7 @@ const AppointmentRequestsPage = () => {
                             selectedRequest.fromUserNavigation.username}
                         </h4>
                         {isMember(
-                          selectedRequest.fromUserNavigation.userRole
+                          selectedRequest.fromUserNavigation.userRole,
                         ) && (
                           <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
                             MEMBER
@@ -721,7 +721,7 @@ const AppointmentRequestsPage = () => {
                         {selectedRequest.fromUserNavigation.fullName}
                       </p>
                       {isMember(
-                        selectedRequest.fromUserNavigation.userRole
+                        selectedRequest.fromUserNavigation.userRole,
                       ) && (
                         <p className="text-purple-500 text-sm mt-1">
                           Thành viên câu lạc bộ
@@ -815,7 +815,7 @@ const AppointmentRequestsPage = () => {
                       <strong>Ngày Chơi:</strong>
                     </span>{" "}
                     {new Date(selectedRequest.startTime).toLocaleDateString(
-                      "vi-VN"
+                      "vi-VN",
                     )}
                   </p>
                   <p>
@@ -824,7 +824,7 @@ const AppointmentRequestsPage = () => {
                     </span>{" "}
                     {formatTimeRange(
                       selectedRequest.startTime,
-                      selectedRequest.endTime
+                      selectedRequest.endTime,
                     )}
                   </p>
                   <p>
@@ -1056,7 +1056,7 @@ const AppointmentRequestsPage = () => {
                               disabled={isRejecting}
                               onClick={() =>
                                 checkCancelCondition(
-                                  request.tablesAppointmentId!
+                                  request.tablesAppointmentId!,
                                 )
                               }
                             >

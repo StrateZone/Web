@@ -78,7 +78,7 @@ const TableBookingPage = () => {
   const handleCancelInvitation = async (
     tableId: number,
     startDate: string,
-    endDate: string
+    endDate: string,
   ) => {
     if (isLoading) return;
 
@@ -107,7 +107,7 @@ const TableBookingPage = () => {
       localStorage.setItem("chessBookings", JSON.stringify(updatedBookings));
 
       toast.info(
-        `Đã hủy tất cả lời mời cho bàn số ${tableId} (${formatTime(startDate)} - ${formatTime(endDate)})`
+        `Đã hủy tất cả lời mời cho bàn số ${tableId} (${formatTime(startDate)} - ${formatTime(endDate)})`,
       );
     } catch (error) {
       console.error("Error canceling invitations:", error);
@@ -134,7 +134,7 @@ const TableBookingPage = () => {
       if (booking.tableId === tableId) {
         const existingInvites = booking.invitedUsers || [];
         const isAlreadyInvited = existingInvites.some(
-          (u) => u.userId === opponent.userId
+          (u) => u.userId === opponent.userId,
         );
 
         if (isAlreadyInvited) {
@@ -168,7 +168,7 @@ const TableBookingPage = () => {
   const removeTable = async (
     tableId: number,
     startDate: string,
-    endDate: string
+    endDate: string,
   ) => {
     if (isLoading) return;
 
@@ -181,7 +181,7 @@ const TableBookingPage = () => {
         (b) =>
           b.tableId === tableId &&
           b.startDate === startDate &&
-          b.endDate === endDate
+          b.endDate === endDate,
       );
 
       if (booking?.invitedUsers && booking.invitedUsers.length > 0) {
@@ -198,7 +198,7 @@ const TableBookingPage = () => {
             booking.tableId === tableId &&
             booking.startDate === startDate &&
             booking.endDate === endDate
-          )
+          ),
       );
 
       setChessBookings(updatedBookings);
@@ -265,7 +265,7 @@ const TableBookingPage = () => {
 
   const totalPrice = chessBookings.reduce(
     (sum, booking) => sum + booking.totalPrice,
-    0
+    0,
   );
   const finalPrice = totalPrice - discount;
 
@@ -277,15 +277,15 @@ const TableBookingPage = () => {
     if (isLoading) return;
     router.push(
       `/${locale}/chess_appointment/${bookingInfo.id}?startTime=${encodeURIComponent(
-        bookingInfo.startDate
-      )}&endTime=${encodeURIComponent(bookingInfo.endDate)}`
+        bookingInfo.startDate,
+      )}&endTime=${encodeURIComponent(bookingInfo.endDate)}`,
     );
   };
 
   const inviteFriend = (
     tableId: number,
     startDate: string,
-    endDate: string
+    endDate: string,
   ) => {
     if (isLoading) return;
     setSelectedTableId(tableId);
@@ -303,7 +303,7 @@ const TableBookingPage = () => {
     const now = new Date();
     const closeToNowBookings = chessBookings.filter(
       (booking) =>
-        new Date(booking.startDate).getTime() - now.getTime() < 90 * 60 * 1000
+        new Date(booking.startDate).getTime() - now.getTime() < 90 * 60 * 1000,
     );
 
     if (closeToNowBookings.length > 0) {
@@ -357,7 +357,7 @@ const TableBookingPage = () => {
             "Content-Type": "application/json-patch+json",
           },
           body: JSON.stringify(requestData),
-        }
+        },
       );
 
       const responseText = await response.text();
@@ -404,7 +404,7 @@ const TableBookingPage = () => {
           });
 
           const validBookings = chessBookings.filter(
-            (booking) => new Date(booking.startDate) > now
+            (booking) => new Date(booking.startDate) > now,
           );
           setChessBookings(validBookings);
           localStorage.setItem("chessBookings", JSON.stringify(validBookings));
@@ -416,7 +416,7 @@ const TableBookingPage = () => {
                 tableId: t.table_id,
                 startTime: formatTime(t.start_time),
                 endTime: formatTime(t.end_time),
-              })
+              }),
             );
 
             await UnavailableTablesPopup({ unavailableTables });
@@ -426,14 +426,14 @@ const TableBookingPage = () => {
                 (unavailable: UnavailableTable) =>
                   booking.tableId === unavailable.table_id &&
                   booking.startDate === unavailable.start_time &&
-                  booking.endDate === unavailable.end_time
+                  booking.endDate === unavailable.end_time,
               );
             });
 
             setChessBookings(updatedBookings);
             localStorage.setItem(
               "chessBookings",
-              JSON.stringify(updatedBookings)
+              JSON.stringify(updatedBookings),
             );
           } catch (parseError) {
             console.error("Error parsing unavailable tables:", parseError);
@@ -672,7 +672,7 @@ const TableBookingPage = () => {
                             inviteFriend(
                               booking.tableId,
                               booking.startDate,
-                              booking.endDate
+                              booking.endDate,
                             )
                           }
                           className={`text-blue-500 hover:text-blue-700 p-2 ${
@@ -696,7 +696,7 @@ const TableBookingPage = () => {
                             handleCancelInvitation(
                               booking.tableId,
                               booking.startDate,
-                              booking.endDate
+                              booking.endDate,
                             )
                           }
                           className={`p-2 ${
@@ -732,7 +732,7 @@ const TableBookingPage = () => {
                             removeTable(
                               booking.tableId,
                               booking.startDate,
-                              booking.endDate
+                              booking.endDate,
                             )
                           }
                           className={`text-red-500 hover:text-red-700 p-2 ${

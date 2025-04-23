@@ -41,7 +41,7 @@ export default function LoginPage() {
       setLoading(true);
       try {
         const response = await axios.post(
-          `https://backend-production-ac5e.up.railway.app/api/auth/send-otp?email=${encodeURIComponent(email)}`
+          `https://backend-production-ac5e.up.railway.app/api/auth/send-otp?email=${encodeURIComponent(email)}`,
         );
 
         if (
@@ -53,7 +53,7 @@ export default function LoginPage() {
         }
 
         router.push(
-          `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`
+          `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`,
         );
       } catch (error) {
         console.log(error);

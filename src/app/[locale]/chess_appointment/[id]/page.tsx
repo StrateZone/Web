@@ -116,7 +116,7 @@ const TableDetailsPage = () => {
               startTime: startTime ? decodeURIComponent(startTime) : undefined,
               endTime: endTime ? decodeURIComponent(endTime) : undefined,
             },
-          }
+          },
         );
 
         const data = response.data;
@@ -222,7 +222,7 @@ const TableDetailsPage = () => {
 
       if (isAlreadyBooked) {
         const existingBookings = localBookings.filter(
-          (b) => b.tableId === chessBooking.tableId
+          (b) => b.tableId === chessBooking.tableId,
         );
 
         const bookingDetails = existingBookings
@@ -242,7 +242,7 @@ const TableDetailsPage = () => {
           .join(", ");
 
         toast.warning(
-          `Bàn số ${chessBooking.tableId} đã được đặt trong khung giờ: ${bookingDetails}`
+          `Bàn số ${chessBooking.tableId} đã được đặt trong khung giờ: ${bookingDetails}`,
         );
         return;
       }
@@ -297,8 +297,8 @@ const TableDetailsPage = () => {
                 (m) =>
                   m.tableId === booking.tableId &&
                   m.startDate === booking.startDate &&
-                  m.endDate === booking.endDate
-              )
+                  m.endDate === booking.endDate,
+              ),
           ),
           mergedBooking,
         ];
@@ -413,13 +413,13 @@ const TableDetailsPage = () => {
             {isBooked(
               chessBooking.tableId,
               chessBooking.startDate,
-              chessBooking.endDate
+              chessBooking.endDate,
             ) && (
               <div className="mt-2 text-center text-sm text-green-600">
                 {(() => {
                   const localBooking = getLocalBooking(
                     chessBooking.tableId,
-                    new Date(startDate)
+                    new Date(startDate),
                   );
                   if (localBooking) {
                     return (
@@ -557,7 +557,7 @@ const TableDetailsPage = () => {
                       isBooked(
                         chessBooking.tableId,
                         chessBooking.startDate,
-                        chessBooking.endDate
+                        chessBooking.endDate,
                       ) || addingToCart
                         ? "opacity-70 cursor-not-allowed"
                         : "hover:shadow-md transition-shadow"
@@ -566,7 +566,7 @@ const TableDetailsPage = () => {
                       isBooked(
                         chessBooking.tableId,
                         chessBooking.startDate,
-                        chessBooking.endDate
+                        chessBooking.endDate,
                       ) || addingToCart
                     }
                     onClick={handleAddToCart}
@@ -583,7 +583,7 @@ const TableDetailsPage = () => {
                     ) : isBooked(
                         chessBooking.tableId,
                         chessBooking.startDate,
-                        chessBooking.endDate
+                        chessBooking.endDate,
                       ) ? (
                       "Đã thêm vào danh sách"
                     ) : (

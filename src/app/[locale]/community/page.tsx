@@ -159,7 +159,7 @@ export default function CommunityPage() {
     try {
       setTagLoading(true);
       const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/tags"
+        "https://backend-production-ac5e.up.railway.app/api/tags",
       );
       if (!response.ok) throw new Error("Failed to fetch tags");
       const data: Tag[] = await response.json();
@@ -175,7 +175,7 @@ export default function CommunityPage() {
   const fetchMembershipPrice = async () => {
     try {
       const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/prices/membership"
+        "https://backend-production-ac5e.up.railway.app/api/prices/membership",
       );
       if (!response.ok) throw new Error("Failed to fetch membership price");
       const data: MembershipPrice = await response.json();
@@ -196,7 +196,7 @@ export default function CommunityPage() {
     setSelectedTags((prev) =>
       prev.includes(tagId)
         ? prev.filter((id) => id !== tagId)
-        : [...prev, tagId]
+        : [...prev, tagId],
     );
   };
   function getContrastColor(hexColor: string) {
@@ -223,7 +223,7 @@ export default function CommunityPage() {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       const result = await response.json();
@@ -259,7 +259,7 @@ export default function CommunityPage() {
             {
               autoClose: 3000,
               closeButton: true,
-            }
+            },
           );
 
           fetchThreads();
@@ -325,235 +325,239 @@ export default function CommunityPage() {
 
   return (
     <div>
-      <ToastContainer
-        position="top-center"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
+      <div>
+        <ToastContainer
+          position="top-center"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
 
-      <Navbar />
-      <Banner
-        title="Tham Gia Cộng Đồng Chơi Cờ"
-        subtitle="Kết nối với những người đam mê cờ vua, tham gia các giải đấu và cải thiện kỹ năng của bạn tại StrateZone!"
-      />
+        <Navbar />
+        <Banner
+          title="Tham Gia Cộng Đồng Chơi Cờ"
+          subtitle="Kết nối với những người đam mê cờ vua, tham gia các giải đấu và cải thiện kỹ năng của bạn tại StrateZone!"
+        />
 
-      <MembershipUpgradeDialog
-        open={showMembershipDialog}
-        onClose={handleCloseDialog}
-        onUpgrade={handleMembershipPayment}
-        membershipPrice={membershipPrice || undefined}
-        paymentProcessing={paymentProcessing}
-      />
+        <MembershipUpgradeDialog
+          open={showMembershipDialog}
+          onClose={handleCloseDialog}
+          onUpgrade={handleMembershipPayment}
+          membershipPrice={membershipPrice || undefined}
+          paymentProcessing={paymentProcessing}
+        />
 
-      {userRole === "Member" ? (
-        <main className="container mx-auto px-4 py-8">
-          <div className="flex flex-wrap -mx-4">
-            <div className="w-full lg:w-3/4 px-4">
-              <div className="flex flex-col md:flex-row justify-between gap-4">
-                <ButtonGroup
-                  variant="text"
-                  className="flex md:flex-row flex-col"
-                >
-                  <Button
-                    onClick={() => setOrderBy("created-at-desc")}
-                    className={
-                      orderBy === "created-at-desc"
-                        ? activeButtonClass
-                        : inactiveButtonClass
-                    }
+        {userRole === "Member" ? (
+          <main className="container mx-auto px-4 py-8">
+            <div className="flex flex-wrap -mx-4">
+              <div className="w-full lg:w-3/4 px-4">
+                <div className="flex flex-col md:flex-row justify-between gap-4">
+                  <ButtonGroup
+                    variant="text"
+                    className="flex md:flex-row flex-col"
                   >
-                    Mới Nhất
-                  </Button>
-                  <Button
-                    onClick={() => setOrderBy("popularity")}
-                    className={
-                      orderBy === "popularity"
-                        ? activeButtonClass
-                        : inactiveButtonClass
-                    }
-                  >
-                    Phổ Biến
-                  </Button>
-                  <Button
-                    onClick={() => setOrderBy("friends")}
-                    className={
-                      orderBy === "friends"
-                        ? activeButtonClass
-                        : inactiveButtonClass
-                    }
-                  >
-                    Bài Viết Bạn Bè
-                  </Button>
-                </ButtonGroup>
-
-                <Button
-                  onClick={() =>
-                    router.push(`/${locale}/community/create_post`)
-                  }
-                  variant="filled"
-                  className="md:ml-4"
-                >
-                  Tạo Bài Viết
-                </Button>
-              </div>
-
-              <div className="w-full h-px max-w-6xl mx-auto my-3 bg-gradient-to-r from-transparent via-gray-400 to-transparent"></div>
-
-              {loading ? (
-                <div className="flex justify-center items-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-                </div>
-              ) : threads.length === 0 ? (
-                <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                  <p className="text-lg">Không có bài viết nào.</p>
-                </div>
-              ) : (
-                <>
-                  {threads.map((thread) => (
-                    <CommunityCard
-                      key={thread.threadId}
-                      threadId={thread.threadId}
-                      theme={thread.threadsTags?.[0]?.tag?.tagName || "Chess"}
-                      title={thread.title}
-                      thumbnailUrl={thread.thumbnailUrl}
-                      description={cleanAndTruncate(thread.content)}
-                      dateTime={thread.createdAt}
-                      likes={thread.likesCount}
-                      commentsCount={thread.commentsCount}
-                      threadData={{
-                        likes:
-                          thread.likes?.map((like) => ({
-                            ...like,
-                            threadId: thread.threadId,
-                          })) || [],
-                      }}
-                      createdByNavigation={thread.createdByNavigation}
-                      tags={thread.threadsTags || []}
-                    />
-                  ))}
-
-                  {totalPages > 1 && (
-                    <div className="flex justify-center mt-8 mb-8">
-                      <DefaultPagination
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        onPageChange={handlePageChange}
-                      />
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            <div className="w-full lg:w-1/4 px-4">
-              <SearchInput />
-
-              <Typography variant="h4" className="my-4 text-black">
-                Chọn Chủ Đề
-              </Typography>
-
-              {selectedTags.length > 0 && (
-                <div className="mb-4">
-                  <Typography variant="small" className="mb-2 text-black">
-                    Đang lọc theo:
-                  </Typography>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedTags.map((tagId) => {
-                      const tag = tags.find((t) => t.tagId === tagId);
-                      return tag ? (
-                        <Chip
-                          key={tag.tagId}
-                          value={tag.tagName}
-                          onClose={() => toggleTag(tag.tagId)}
-                          className="cursor-pointer"
-                        />
-                      ) : null;
-                    })}
                     <Button
-                      variant="text"
-                      size="sm"
-                      onClick={() => setSelectedTags([])}
-                      className="text-blue-500 hover:text-blue-700"
+                      onClick={() => setOrderBy("created-at-desc")}
+                      className={
+                        orderBy === "created-at-desc"
+                          ? activeButtonClass
+                          : inactiveButtonClass
+                      }
                     >
-                      Xóa tất cả
+                      Mới Nhất
                     </Button>
-                  </div>
-                </div>
-              )}
-
-              {tagLoading ? (
-                <div className="flex justify-center items-center py-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <div
-                      key={tag.tagId}
-                      onClick={() => toggleTag(tag.tagId)}
-                      className="cursor-pointer"
+                    <Button
+                      onClick={() => setOrderBy("popularity")}
+                      className={
+                        orderBy === "popularity"
+                          ? activeButtonClass
+                          : inactiveButtonClass
+                      }
                     >
-                      <Chip
-                        value={tag.tagName}
-                        variant={
-                          selectedTags.includes(tag.tagId)
-                            ? "filled"
-                            : "outlined"
-                        }
-                        style={{
-                          backgroundColor: selectedTags.includes(tag.tagId)
-                            ? tag.tagColor
-                            : "transparent",
-                          color: selectedTags.includes(tag.tagId)
-                            ? getContrastColor(tag.tagColor)
-                            : tag.tagColor,
-                          borderColor: tag.tagColor,
-                        }}
-                        className="hover:shadow-md transition-all"
-                      />
-                    </div>
-                  ))}
+                      Phổ Biến
+                    </Button>
+                    <Button
+                      onClick={() => setOrderBy("friends")}
+                      className={
+                        orderBy === "friends"
+                          ? activeButtonClass
+                          : inactiveButtonClass
+                      }
+                    >
+                      Bài Viết Bạn Bè
+                    </Button>
+                  </ButtonGroup>
+
+                  <Button
+                    onClick={() =>
+                      router.push(`/${locale}/community/create_post`)
+                    }
+                    variant="filled"
+                    className="md:ml-4"
+                  >
+                    Tạo Bài Viết
+                  </Button>
                 </div>
-              )}
-            </div>
-          </div>
-        </main>
-      ) : (
-        !showMembershipDialog && (
-          <div className="flex flex-col min-h-[calc(100vh-160px)]">
-            <div className="flex-grow flex flex-col items-center justify-center container mx-auto px-4 py-8 text-center">
-              <div className="max-w-md mx-auto">
-                <Typography
-                  variant="h4"
-                  className="mb-6 text-gray-800 font-bold"
-                >
-                  Bạn cần nâng cấp tài khoản để truy cập tính năng này
+
+                <div className="w-full h-px max-w-6xl mx-auto my-3 bg-gradient-to-r from-transparent via-gray-400 to-transparent"></div>
+
+                {loading ? (
+                  <div className="flex justify-center items-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : threads.length === 0 ? (
+                  <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                    <p className="text-lg">Không có bài viết nào.</p>
+                  </div>
+                ) : (
+                  <>
+                    {threads.map((thread) => (
+                      <CommunityCard
+                        key={thread.threadId}
+                        threadId={thread.threadId}
+                        theme={thread.threadsTags?.[0]?.tag?.tagName || "Chess"}
+                        title={thread.title}
+                        thumbnailUrl={thread.thumbnailUrl}
+                        description={cleanAndTruncate(thread.content)}
+                        dateTime={thread.createdAt}
+                        likes={thread.likesCount}
+                        commentsCount={thread.commentsCount}
+                        threadData={{
+                          likes:
+                            thread.likes?.map((like) => ({
+                              ...like,
+                              threadId: thread.threadId,
+                            })) || [],
+                        }}
+                        createdByNavigation={thread.createdByNavigation}
+                        tags={thread.threadsTags || []}
+                      />
+                    ))}
+
+                    {totalPages > 1 && (
+                      <div className="flex justify-center mt-8 mb-8">
+                        <DefaultPagination
+                          currentPage={currentPage}
+                          totalPages={totalPages}
+                          onPageChange={handlePageChange}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              <div className="w-full lg:w-1/4 px-4">
+                <SearchInput />
+
+                <Typography variant="h4" className="my-4 text-black">
+                  Chọn Chủ Đề
                 </Typography>
-                <Typography variant="paragraph" className="mb-8 text-gray-600">
-                  Nâng cấp lên tài khoản Member để tham gia cộng đồng và trải
-                  nghiệm tất cả tính năng
-                </Typography>
-                <Button
-                  onClick={() => setShowMembershipDialog(true)}
-                  color="blue"
-                  size="lg"
-                  className="px-8 py-3 rounded-lg shadow-md hover:shadow-lg transition-all"
-                >
-                  Nâng cấp tài khoản
-                </Button>
+
+                {selectedTags.length > 0 && (
+                  <div className="mb-4">
+                    <Typography variant="small" className="mb-2 text-black">
+                      Đang lọc theo:
+                    </Typography>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTags.map((tagId) => {
+                        const tag = tags.find((t) => t.tagId === tagId);
+                        return tag ? (
+                          <Chip
+                            key={tag.tagId}
+                            value={tag.tagName}
+                            onClose={() => toggleTag(tag.tagId)}
+                            className="cursor-pointer"
+                          />
+                        ) : null;
+                      })}
+                      <Button
+                        variant="text"
+                        size="sm"
+                        onClick={() => setSelectedTags([])}
+                        className="text-blue-500 hover:text-blue-700"
+                      >
+                        Xóa tất cả
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {tagLoading ? (
+                  <div className="flex justify-center items-center py-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((tag) => (
+                      <div
+                        key={tag.tagId}
+                        onClick={() => toggleTag(tag.tagId)}
+                        className="cursor-pointer"
+                      >
+                        <Chip
+                          value={tag.tagName}
+                          variant={
+                            selectedTags.includes(tag.tagId)
+                              ? "filled"
+                              : "outlined"
+                          }
+                          style={{
+                            backgroundColor: selectedTags.includes(tag.tagId)
+                              ? tag.tagColor
+                              : "transparent",
+                            color: selectedTags.includes(tag.tagId)
+                              ? getContrastColor(tag.tagColor)
+                              : tag.tagColor,
+                            borderColor: tag.tagColor,
+                          }}
+                          className="hover:shadow-md transition-all"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        )
-      )}
-
+          </main>
+        ) : (
+          !showMembershipDialog && (
+            <div className="flex flex-col min-h-[calc(100vh-160px)]">
+              <div className="flex-grow flex flex-col items-center justify-center container mx-auto px-4 py-8 text-center">
+                <div className="max-w-md mx-auto">
+                  <Typography
+                    variant="h4"
+                    className="mb-6 text-gray-800 font-bold"
+                  >
+                    Bạn cần nâng cấp tài khoản để truy cập tính năng này
+                  </Typography>
+                  <Typography
+                    variant="paragraph"
+                    className="mb-8 text-gray-600"
+                  >
+                    Nâng cấp lên tài khoản Member để tham gia cộng đồng và trải
+                    nghiệm tất cả tính năng
+                  </Typography>
+                  <Button
+                    onClick={() => setShowMembershipDialog(true)}
+                    color="blue"
+                    size="lg"
+                    className="px-8 py-3 rounded-lg shadow-md hover:shadow-lg transition-all"
+                  >
+                    Nâng cấp tài khoản
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )
+        )}
+      </div>
       <Footer />
     </div>
   );

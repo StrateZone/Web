@@ -24,7 +24,7 @@ const NotificationDropdown = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedNotifications, setExpandedNotifications] = useState<number[]>(
-    []
+    [],
   );
   const [unreadCount, setUnreadCount] = useState(0);
   const router = useRouter();
@@ -55,7 +55,7 @@ const NotificationDropdown = () => {
               Accept: "application/json",
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
-          }
+          },
         );
 
         if (!response.ok) {
@@ -77,7 +77,7 @@ const NotificationDropdown = () => {
 
         setNotifications(latestNotifications);
         const unread = latestNotifications.filter(
-          (n: Notification) => n.status === 1
+          (n: Notification) => n.status === 1,
         ).length;
         setUnreadCount(unread);
       } catch (error) {
@@ -101,7 +101,7 @@ const NotificationDropdown = () => {
   const toggleExpand = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     setExpandedNotifications((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
   };
 
@@ -109,7 +109,7 @@ const NotificationDropdown = () => {
     if (notification.status === 1) {
       await markAsRead(notification.id);
       setNotifications((prev) =>
-        prev.map((n) => (n.id === notification.id ? { ...n, status: 0 } : n))
+        prev.map((n) => (n.id === notification.id ? { ...n, status: 0 } : n)),
       );
       setUnreadCount((prev) => prev - 1);
     }
@@ -133,13 +133,19 @@ const NotificationDropdown = () => {
         router.push(`/${locale}/chess_appointment/send_invitation_list`);
         break;
       case 5:
-        router.push(`/${locale}/chess_appointment/send_invitation_list`);
+        router.push(`/${locale}/community/post_history`);
         break;
       case 6:
         router.push(`/${locale}/friend_list`);
         break;
       case 7:
         router.push(`/${locale}/friend_list`);
+      case 8:
+        router.push(`/${locale}/community`);
+      case 9:
+        router.push(`/${locale}/appointment_ongoing`);
+      case 10:
+        router.push(`/${locale}/appointment_ongoing`);
         break;
       default:
         router.push(`/${locale}/appointment_history`);
@@ -156,7 +162,7 @@ const NotificationDropdown = () => {
             Accept: "application/json",
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -180,7 +186,7 @@ const NotificationDropdown = () => {
             Accept: "application/json",
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
-        }
+        },
       );
 
       if (response.ok) {

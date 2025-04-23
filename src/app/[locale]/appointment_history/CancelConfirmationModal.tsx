@@ -42,7 +42,7 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
   const renderRefundMessage = () => {
     if (
       refundInfo.message.includes(
-        "No refund. Reason: Cancellation on shared appointment will not be refund."
+        "No refund. Reason: Cancellation on shared appointment will not be refund.",
       )
     ) {
       return (

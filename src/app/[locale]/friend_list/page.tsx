@@ -147,7 +147,7 @@ export default function FriendManagementPage() {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/friendrequests/to/${userId}`
+        `https://backend-production-ac5e.up.railway.app/api/friendrequests/to/${userId}`,
       );
       const data = await response.json();
       setFriendRequests(data.pagedList || []);
@@ -164,7 +164,7 @@ export default function FriendManagementPage() {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/friendlists/user/${userId}`
+        `https://backend-production-ac5e.up.railway.app/api/friendlists/user/${userId}`,
       );
       const data = await response.json();
       setFriendList(data.pagedList || []);
@@ -188,7 +188,7 @@ export default function FriendManagementPage() {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/users/${userId}/search-friends?username=${searchTerm}`
+        `https://backend-production-ac5e.up.railway.app/api/users/${userId}/search-friends?username=${searchTerm}`,
       );
       const data = await response.json();
       setSearchResults(data.pagedList || []);
@@ -205,8 +205,8 @@ export default function FriendManagementPage() {
 
     setSearchResults((prevResults) =>
       prevResults.map((user) =>
-        user.userId === targetUserId ? { ...user, friendStatus: 1 } : user
-      )
+        user.userId === targetUserId ? { ...user, friendStatus: 1 } : user,
+      ),
     );
 
     try {
@@ -221,14 +221,14 @@ export default function FriendManagementPage() {
             fromUser: userId,
             toUser: targetUserId,
           }),
-        }
+        },
       );
 
       if (!response.ok) {
         setSearchResults((prevResults) =>
           prevResults.map((user) =>
-            user.userId === targetUserId ? { ...user, friendStatus: 0 } : user
-          )
+            user.userId === targetUserId ? { ...user, friendStatus: 0 } : user,
+          ),
         );
         const errorData = await response.json();
         throw new Error(errorData.message || "Gửi yêu cầu thất bại");
@@ -244,22 +244,22 @@ export default function FriendManagementPage() {
     try {
       setSearchResults((prevResults) =>
         prevResults.map((user) =>
-          user.userId === receiverId ? { ...user, friendStatus: 0 } : user
-        )
+          user.userId === receiverId ? { ...user, friendStatus: 0 } : user,
+        ),
       );
 
       const response = await fetch(
         `https://backend-production-ac5e.up.railway.app/api/friendrequests/sender/${userId}/receiver/${receiverId}`,
         {
           method: "DELETE",
-        }
+        },
       );
 
       if (!response.ok) {
         setSearchResults((prevResults) =>
           prevResults.map((user) =>
-            user.userId === receiverId ? { ...user, friendStatus: 1 } : user
-          )
+            user.userId === receiverId ? { ...user, friendStatus: 1 } : user,
+          ),
         );
         throw new Error("Hủy yêu cầu thất bại");
       }
@@ -273,14 +273,14 @@ export default function FriendManagementPage() {
   const acceptFriendRequest = async (requestId: number) => {
     try {
       setFriendRequests((prev) =>
-        prev.filter((request) => request.id !== requestId)
+        prev.filter((request) => request.id !== requestId),
       );
 
       const response = await fetch(
         `https://backend-production-ac5e.up.railway.app/api/friendrequests/accept/${requestId}`,
         {
           method: "PUT",
-        }
+        },
       );
 
       if (!response.ok) {
@@ -292,7 +292,7 @@ export default function FriendManagementPage() {
     } catch (err) {
       loadFriendRequests();
       setError(
-        err instanceof Error ? err.message : "Chấp nhận yêu cầu thất bại"
+        err instanceof Error ? err.message : "Chấp nhận yêu cầu thất bại",
       );
     }
   };
@@ -300,13 +300,13 @@ export default function FriendManagementPage() {
   const rejectFriendRequest = async (requestId: number) => {
     try {
       setFriendRequests((prev) =>
-        prev.filter((request) => request.id !== requestId)
+        prev.filter((request) => request.id !== requestId),
       );
       const response = await fetch(
         `https://backend-production-ac5e.up.railway.app/api/friendrequests/reject/${requestId}`,
         {
           method: "PUT",
-        }
+        },
       );
 
       if (!response.ok) {
@@ -329,7 +329,7 @@ export default function FriendManagementPage() {
         `https://backend-production-ac5e.up.railway.app/api/friendlists/${id}`,
         {
           method: "DELETE",
-        }
+        },
       );
 
       if (!response.ok) {
@@ -343,7 +343,7 @@ export default function FriendManagementPage() {
   };
 
   const pendingRequests = friendRequests.filter(
-    (request) => request.status === "pending"
+    (request) => request.status === "pending",
   );
 
   const tabsData = [
@@ -597,7 +597,7 @@ export default function FriendManagementPage() {
                                   <Typography variant="small" color="gray">
                                     Đã gửi{" "}
                                     {new Date(
-                                      request.createdAt
+                                      request.createdAt,
                                     ).toLocaleDateString()}
                                   </Typography>
                                   {isMember && (
@@ -616,7 +616,7 @@ export default function FriendManagementPage() {
                                   <IconButton
                                     onClick={() =>
                                       handleViewProfile(
-                                        request.fromUserNavigation
+                                        request.fromUserNavigation,
                                       )
                                     }
                                     color={isMember ? "purple" : "blue"}

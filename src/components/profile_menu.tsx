@@ -90,7 +90,7 @@ const useProfileMenu = () => {
 
   const handleLogout = async () => {
     ["accessToken", "refreshToken", "authData", "chessBookings"].forEach(
-      (item) => localStorage.removeItem(item)
+      (item) => localStorage.removeItem(item),
     );
     router.push("/en");
     window.location.reload(); // Tải lại trang sau khi chuyển hướng

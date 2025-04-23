@@ -70,7 +70,7 @@ export function Navbar() {
 
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading: walletLoading } = useSelector(
-    (state: RootState) => state.wallet
+    (state: RootState) => state.wallet,
   );
 
   const toggleShowBalance = () => {
@@ -126,7 +126,7 @@ export function Navbar() {
   useEffect(() => {
     window.addEventListener(
       "resize",
-      () => window.innerWidth >= 960 && setOpen(false)
+      () => window.innerWidth >= 960 && setOpen(false),
     );
   }, []);
 
@@ -258,7 +258,7 @@ export function Navbar() {
               <FaChess
                 onClick={() =>
                   router.push(
-                    `/${locale}/chess_appointment/chess_appointment_order`
+                    `/${locale}/chess_appointment/chess_appointment_order`,
                   )
                 }
                 className="h-6 w-6 text-yellow-700 cursor-pointer "
@@ -272,7 +272,7 @@ export function Navbar() {
             <FaChess
               onClick={() =>
                 router.push(
-                  `/${locale}/chess_appointment/chess_appointment_order`
+                  `/${locale}/chess_appointment/chess_appointment_order`,
                 )
               }
               className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
