@@ -152,8 +152,8 @@ const NotificationsPage = () => {
         router.push(`/${locale}/appointment_history`);
         break;
       case 1:
-        // router.push(`/${locale}/orders/${notification.orderId}`);
-        break;
+      // router.push(`/${locale}/orders/${notification.orderId}`);
+      // break;
       case 2:
         router.push(`/${locale}/appointment_history`);
         break;
@@ -164,16 +164,22 @@ const NotificationsPage = () => {
         router.push(`/${locale}/chess_appointment/send_invitation_list`);
         break;
       case 5:
-        router.push(`/${locale}/chess_appointment/send_invitation_list`);
+        router.push(`/${locale}/community/post_history`);
         break;
       case 6:
         router.push(`/${locale}/friend_list`);
         break;
       case 7:
         router.push(`/${locale}/friend_list`);
+      case 8:
+        router.push(`/${locale}/community`);
+      case 9:
+        router.push(`/${locale}/appointment_ongoing`);
+      case 10:
+        router.push(`/${locale}/appointment_ongoing`);
         break;
       default:
-        router.push(`/${locale}/chess_appointment/appointment_history`);
+        router.push(`/${locale}/appointment_history`);
     }
   };
 

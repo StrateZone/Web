@@ -96,7 +96,6 @@ const OpponentRecommendationModalWithNewInvite = ({
       const authData = JSON.parse(authDataString || "{}");
       const userId = authData.userId;
 
-      // Get already invited and selected opponents from localStorage
       const bookings = getChessBookingsInvite();
       let alreadyInvitedIds: number[] = [];
       let selectedOpponentIds: number[] = [];
@@ -117,7 +116,6 @@ const OpponentRecommendationModalWithNewInvite = ({
         );
       }
 
-      // Build the URL with query parameters
       const url = new URL(
         `https://backend-production-ac5e.up.railway.app/api/users/opponents/${userId}`
       );
@@ -138,7 +136,6 @@ const OpponentRecommendationModalWithNewInvite = ({
 
       const data: ApiResponse = await response.json();
 
-      // Mark already invited opponents
       const markedOpponents = data.matchingOpponents.map((opponent) => ({
         ...opponent,
         isInvited: alreadyInvitedIds.includes(opponent.userId),
@@ -149,12 +146,10 @@ const OpponentRecommendationModalWithNewInvite = ({
         isInvited: alreadyInvitedIds.includes(friend.userId),
       }));
 
-      // Get selected opponents from API response
       const selectedFromStorage = [...markedOpponents, ...markedFriends].filter(
         (opponent) => selectedOpponentIds.includes(opponent.userId)
       );
 
-      // Supplement with data from localStorage for missing opponents
       const missingOpponents = currentBooking?.invitedUsers
         ? currentBooking.invitedUsers
             .filter(
@@ -226,7 +221,6 @@ const OpponentRecommendationModalWithNewInvite = ({
       const newSelectedOpponents = [...selectedOpponents, opponent];
       setSelectedOpponents(newSelectedOpponents);
 
-      // Update localStorage with opponent data
       const bookingIndex = bookings.findIndex(
         (b: ChessBooking) =>
           b.tableId === tableId &&
@@ -276,7 +270,6 @@ const OpponentRecommendationModalWithNewInvite = ({
     );
     setSelectedOpponents(newSelectedOpponents);
 
-    // Update localStorage
     const bookings = getChessBookingsInvite();
     const bookingIndex = bookings.findIndex(
       (b: ChessBooking) =>
@@ -301,7 +294,6 @@ const OpponentRecommendationModalWithNewInvite = ({
   const handleRemoveAll = () => {
     setSelectedOpponents([]);
 
-    // Update localStorage
     const bookings = getChessBookingsInvite();
     const bookingIndex = bookings.findIndex(
       (b: ChessBooking) =>
@@ -327,7 +319,6 @@ const OpponentRecommendationModalWithNewInvite = ({
         ]);
         setSelectedOpponents([]);
 
-        // Clear selected opponents from localStorage
         const bookings = getChessBookingsInvite();
         const bookingIndex = bookings.findIndex(
           (b: ChessBooking) =>
@@ -341,7 +332,6 @@ const OpponentRecommendationModalWithNewInvite = ({
           saveChessBookingsInvite(bookings);
         }
 
-        // Close the modal after successful invitation
         onClose();
       }
     } catch (err) {
@@ -539,7 +529,7 @@ const OpponentRecommendationModalWithNewInvite = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 text-black">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
         <div className="flex justify-between items-center border-b p-4 sticky top-0 bg-white z-10">
           <h2 className="text-xl font-bold">Gợi ý đối thủ</h2>
           <div className="flex items-center gap-2">
@@ -577,7 +567,7 @@ const OpponentRecommendationModalWithNewInvite = ({
             />
             <Button
               onClick={fetchOpponents}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded"
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded whitespace-nowrap"
               disabled={loading}
             >
               Tìm kiếm
