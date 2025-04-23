@@ -143,7 +143,6 @@ export default function CreatePost() {
 
       const userData = localStorage.getItem("authData");
       if (userData) {
-        尝;
         const user = JSON.parse(userData);
         const updatedUser = {
           ...user,
@@ -270,7 +269,7 @@ export default function CreatePost() {
         setTitle(draft.title || "");
         setContent(draft.content || "");
         setSelectedTagIds(
-          draft.threadsTags?.map((tag: any) => tag.tagId) || []
+          draft.threadsTags?.map((tag: { tagId: number }) => tag.tagId) || []
         );
         if (draft.thumbnailUrl) {
           setPreviewImage(draft.thumbnailUrl);
