@@ -9,6 +9,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { CircularProgress } from "@mui/material";
 import Banner from "@/components/banner/banner";
+import Image from "next/image";
 
 interface ChessBooking {
   durationInHours: number;
@@ -116,7 +117,7 @@ const TableDetailsPage = () => {
               startTime: startTime ? decodeURIComponent(startTime) : undefined,
               endTime: endTime ? decodeURIComponent(endTime) : undefined,
             },
-          },
+          }
         );
 
         const data = response.data;
@@ -222,7 +223,7 @@ const TableDetailsPage = () => {
 
       if (isAlreadyBooked) {
         const existingBookings = localBookings.filter(
-          (b) => b.tableId === chessBooking.tableId,
+          (b) => b.tableId === chessBooking.tableId
         );
 
         const bookingDetails = existingBookings
@@ -242,7 +243,7 @@ const TableDetailsPage = () => {
           .join(", ");
 
         toast.warning(
-          `Bàn số ${chessBooking.tableId} đã được đặt trong khung giờ: ${bookingDetails}`,
+          `Bàn số ${chessBooking.tableId} đã được đặt trong khung giờ: ${bookingDetails}`
         );
         return;
       }
@@ -297,8 +298,8 @@ const TableDetailsPage = () => {
                 (m) =>
                   m.tableId === booking.tableId &&
                   m.startDate === booking.startDate &&
-                  m.endDate === booking.endDate,
-              ),
+                  m.endDate === booking.endDate
+              )
           ),
           mergedBooking,
         ];
@@ -413,13 +414,13 @@ const TableDetailsPage = () => {
             {isBooked(
               chessBooking.tableId,
               chessBooking.startDate,
-              chessBooking.endDate,
+              chessBooking.endDate
             ) && (
               <div className="mt-2 text-center text-sm text-green-600">
                 {(() => {
                   const localBooking = getLocalBooking(
                     chessBooking.tableId,
-                    new Date(startDate),
+                    new Date(startDate)
                   );
                   if (localBooking) {
                     return (
@@ -439,9 +440,11 @@ const TableDetailsPage = () => {
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 p-8">
               <div className="relative group overflow-hidden rounded-lg">
-                <img
-                  src={chessBooking.imageUrl}
+                <Image
+                  src={chessBooking.imageUrl || "/default-image.jpg"}
                   alt="Bàn cờ"
+                  width={800}
+                  height={320}
                   className="w-full h-80 object-cover transition duration-300 group-hover:scale-105"
                 />
               </div>
@@ -557,7 +560,7 @@ const TableDetailsPage = () => {
                       isBooked(
                         chessBooking.tableId,
                         chessBooking.startDate,
-                        chessBooking.endDate,
+                        chessBooking.endDate
                       ) || addingToCart
                         ? "opacity-70 cursor-not-allowed"
                         : "hover:shadow-md transition-shadow"
@@ -566,7 +569,7 @@ const TableDetailsPage = () => {
                       isBooked(
                         chessBooking.tableId,
                         chessBooking.startDate,
-                        chessBooking.endDate,
+                        chessBooking.endDate
                       ) || addingToCart
                     }
                     onClick={handleAddToCart}
@@ -583,7 +586,7 @@ const TableDetailsPage = () => {
                     ) : isBooked(
                         chessBooking.tableId,
                         chessBooking.startDate,
-                        chessBooking.endDate,
+                        chessBooking.endDate
                       ) ? (
                       "Đã thêm vào danh sách"
                     ) : (

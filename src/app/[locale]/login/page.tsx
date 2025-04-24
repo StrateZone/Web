@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { User, Eye, EyeOff, Mail } from "lucide-react";
+import { Eye, EyeOff, Mail } from "lucide-react";
 import Link from "next/link";
 import { useLocale } from "next-intl";
 import { Input, Button } from "@material-tailwind/react";
@@ -74,7 +74,7 @@ export default function LoginPage() {
               "Content-Type": "application/json",
               accept: "*/*",
             },
-          },
+          }
         );
 
         // Xử lý khi login thành công
@@ -104,34 +104,45 @@ export default function LoginPage() {
           localStorage.setItem("authData", JSON.stringify(authData));
           localStorage.setItem("accessToken", responseData.accessToken);
           localStorage.setItem("refreshToken", responseData.refreshToken);
+          document.cookie = `accessToken=${responseData.accessToken}; path=/; max-age=604800; Secure; SameSite=Strict`;
+          document.cookie = `refreshToken=${responseData.refreshToken}; path=/; max-age=604800; Secure; SameSite=Strict`;
 
           // Thông báo và chuyển hướng
-          toast.success(response.data.message || "Đăng nhập thành công!");
-          router.push("/chess_appointment");
+          router.push("/");
         } else if (response.data?.success === false) {
           // Xử lý các trường hợp thất bại
           if (
             response.data?.message === "Tài khoản chưa được xác thực email."
           ) {
             router.push(
-              `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`,
+              `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`
             );
             toast.warning(
-              "Tài Khoản Vẫn Chưa Được Kích Hoạt, Vui lòng xác thực email trước khi đăng nhập",
+              "Tài Khoản Vẫn Chưa Được Kích Hoạt, Vui lòng xác thực email trước khi đăng nhập"
             );
           } else if (response.data?.message === "User doesnt exist") {
             toast.error(
-              "Tài khoản không tồn tại. Vui lòng kiểm tra lại email.",
+              "Tài khoản không tồn tại. Vui lòng kiểm tra lại email."
             );
           } else if (response.data?.message === "Invalid email or password") {
             toast.error(
-              "Email hoặc mật khẩu không đúng. Vui lòng kiểm tra lại.",
+              "Email hoặc mật khẩu không đúng. Vui lòng kiểm tra lại."
             );
           } else {
             toast.error(response.data?.message || "Đăng nhập thất bại");
           }
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          console.error("Login error:", error.response?.data || error.message);
+          toast.error(
+            error.response?.data?.message ||
+              "Lỗi hệ thống. Vui lòng thử lại sau."
+          );
+        } else {
+          console.error("Unexpected error:", error);
+          toast.error("Lỗi không xác định. Vui lòng thử lại sau.");
+        }
         console.error("Login error:", error);
         toast.error("Lỗi hệ thống. Vui lòng thử lại sau.");
       } finally {

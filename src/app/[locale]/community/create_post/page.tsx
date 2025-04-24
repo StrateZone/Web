@@ -114,7 +114,7 @@ export default function CreatePost() {
   const fetchMembershipPrice = async () => {
     try {
       const response = await axios.get(
-        "https://backend-production-ac5e.up.railway.app/api/prices/membership",
+        "https://backend-production-ac5e.up.railway.app/api/prices/membership"
       );
       setMembershipPrice(response.data);
     } catch (error) {
@@ -134,7 +134,7 @@ export default function CreatePost() {
           headers: {
             "Content-Type": "application/json",
           },
-        },
+        }
       );
 
       if (!response.data.success) {
@@ -167,7 +167,7 @@ export default function CreatePost() {
           {
             autoClose: 3000,
             closeButton: true,
-          },
+          }
         );
       }
     } catch (error: any) {
@@ -213,12 +213,12 @@ export default function CreatePost() {
             headers: {
               accept: "*/*",
             },
-          },
+          }
         );
 
         // Lọc bỏ các tag "quan trọng" (tagId: 9) và "thông báo" (tagId: 8)
         const filteredTags = response.data.filter(
-          (tag: Tag) => tag.tagId !== 8 && tag.tagId !== 9,
+          (tag: Tag) => tag.tagId !== 8 && tag.tagId !== 9
         );
 
         // Thêm màu sắc mặc định nếu API không trả về
@@ -250,7 +250,7 @@ export default function CreatePost() {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
-          },
+          }
         );
 
         const draft = response.data;
@@ -269,7 +269,7 @@ export default function CreatePost() {
         setTitle(draft.title || "");
         setContent(draft.content || "");
         setSelectedTagIds(
-          draft.threadsTags?.map((tag: { tagId: number }) => tag.tagId) || [],
+          draft.threadsTags?.map((tag: { tagId: number }) => tag.tagId) || []
         );
         if (draft.thumbnailUrl) {
           setPreviewImage(draft.thumbnailUrl);
@@ -281,7 +281,7 @@ export default function CreatePost() {
       } catch (error) {
         console.error("Error fetching draft:", error);
         toast.error(
-          "Không thể tải dữ liệu nháp hoặc bạn không có quyền truy cập.",
+          "Không thể tải dữ liệu nháp hoặc bạn không có quyền truy cập."
         );
         router.push(`/${locale}/community/post_history`);
       }
@@ -322,7 +322,7 @@ export default function CreatePost() {
   };
 
   const handleThumbnailChange = async (
-    e: React.ChangeEvent<HTMLInputElement>,
+    e: React.ChangeEvent<HTMLInputElement>
   ) => {
     setTouched((prev) => ({ ...prev, thumbnail: true }));
     setError("");
@@ -376,7 +376,7 @@ export default function CreatePost() {
       return;
     }
 
-    if (!thumbnail) {
+    if (!thumbnail && !previewImage) {
       setError("Vui lòng chọn ảnh đại diện cho bài viết");
       setIsSubmitting(false);
       return;
@@ -392,8 +392,8 @@ export default function CreatePost() {
       let threadId;
       if (draftId) {
         // Cập nhật thread nháp
-        const threadResponse = await axios.put(
-          `https://backend-production-ac5e.up.railway.app/api/threads/${draftId}`,
+        const threadResponse = await axios.post(
+          `https://backend-production-ac5e.up.railway.app/api/threads`,
           {
             createdBy: userId,
             title: title,
@@ -406,7 +406,7 @@ export default function CreatePost() {
               "Content-Type": "application/json",
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
-          },
+          }
         );
         threadId = threadResponse.data.threadId;
       } else {
@@ -425,7 +425,7 @@ export default function CreatePost() {
               "Content-Type": "application/json",
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
-          },
+          }
         );
         threadId = threadResponse.data.threadId;
       }
@@ -434,7 +434,9 @@ export default function CreatePost() {
       const formData = new FormData();
       formData.append("Type", "thread");
       formData.append("EntityId", threadId.toString());
-      formData.append("ImageFile", thumbnail);
+      if (thumbnail) {
+        formData.append("ImageFile", thumbnail);
+      }
       formData.append("Width", "0");
       formData.append("Height", "0");
 
@@ -446,7 +448,7 @@ export default function CreatePost() {
             "Content-Type": "multipart/form-data",
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
-        },
+        }
       );
 
       toast.success("Bài viết đã được tạo thành công chờ Admin xét duyệt!");
@@ -494,8 +496,8 @@ export default function CreatePost() {
       let threadId;
       if (draftId) {
         // Cập nhật nháp
-        const threadResponse = await axios.put(
-          `https://backend-production-ac5e.up.railway.app/api/threads/${draftId}`,
+        const threadResponse = await axios.post(
+          `https://backend-production-ac5e.up.railway.app/api/threads`,
           {
             createdBy: userId,
             title: title,
@@ -508,7 +510,7 @@ export default function CreatePost() {
               "Content-Type": "application/json",
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
-          },
+          }
         );
         threadId = threadResponse.data.threadId;
       } else {
@@ -527,7 +529,7 @@ export default function CreatePost() {
               "Content-Type": "application/json",
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
-          },
+          }
         );
         threadId = threadResponse.data.threadId;
       }
@@ -549,7 +551,7 @@ export default function CreatePost() {
               "Content-Type": "multipart/form-data",
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
-          },
+          }
         );
       }
 
@@ -648,7 +650,7 @@ export default function CreatePost() {
                   if (!tag) return null;
 
                   const isImportantTag = ["thông báo", "quan trọng"].includes(
-                    tag.tagName,
+                    tag.tagName
                   );
                   const textColor = getContrastColor(tag.tagColor || "#6B7280");
 
@@ -770,7 +772,7 @@ export default function CreatePost() {
                         "quan trọng",
                       ].includes(tag.tagName);
                       const textColor = getContrastColor(
-                        tag.tagColor || "#6B7280",
+                        tag.tagColor || "#6B7280"
                       );
 
                       return (

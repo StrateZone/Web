@@ -41,7 +41,7 @@ export default function LoginPage() {
       setLoading(true);
       try {
         const response = await axios.post(
-          `https://backend-production-ac5e.up.railway.app/api/auth/send-otp?email=${encodeURIComponent(email)}`,
+          `https://backend-production-ac5e.up.railway.app/api/auth/send-otp?email=${encodeURIComponent(email)}`
         );
 
         if (
@@ -53,7 +53,7 @@ export default function LoginPage() {
         }
 
         router.push(
-          `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`,
+          `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`
         );
       } catch (error) {
         console.log(error);
@@ -72,7 +72,9 @@ export default function LoginPage() {
         <div className="relative w-full max-w-md mx-auto my-36 px-4 sm:px-0 ">
           <div className="bg-white bg-opacity-10 backdrop-blur-md rounded-xl shadow-xl p-8 border border-white border-opacity-20 mb-44">
             <div className="text-center mb-8">
-              <h3 className="text-3xl font-bold text-white mb-2">Đăng nhập</h3>
+              <h3 className="text-3xl font-bold text-white mb-2">
+                Đăng nhập bằng OTP
+              </h3>
               <p className="text-gray-300">
                 Chào mừng trở lại! Vui lòng nhập email của bạn.
               </p>

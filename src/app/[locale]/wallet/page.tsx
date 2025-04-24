@@ -28,12 +28,12 @@ function WalletPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [errorTransactions, setErrorTransactions] = useState<string | null>(
-    null,
+    null
   );
 
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading, error } = useSelector(
-    (state: RootState) => state.wallet,
+    (state: RootState) => state.wallet
   );
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -59,13 +59,13 @@ function WalletPage() {
   const fetchTransactions = async (
     userId: number,
     page: number,
-    size: number,
+    size: number
   ) => {
     setLoadingTransactions(true);
     setErrorTransactions(null);
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/transactions/users/${userId}?page-number=${page}&page-size=${size}`,
+        `https://backend-production-ac5e.up.railway.app/api/transactions/users/${userId}?page-number=${page}&page-size=${size}`
       );
 
       if (!response.ok) {
@@ -73,7 +73,6 @@ function WalletPage() {
       }
 
       const data = await response.json();
-      console.log("API Response:", data); // Thêm dòng này để debug
 
       setTransactions(data.pagedList);
       setCurrentPage(data.currentPage);
@@ -82,7 +81,7 @@ function WalletPage() {
     } catch (error) {
       console.error("Error fetching transactions:", error);
       setErrorTransactions(
-        "Không thể tải lịch sử giao dịch. Vui lòng thử lại sau.",
+        "Không thể tải lịch sử giao dịch. Vui lòng thử lại sau."
       );
     } finally {
       setLoadingTransactions(false);
@@ -109,7 +108,7 @@ function WalletPage() {
       }
       return content.replace(
         "Refund on booking cancellation",
-        "Hoàn tiền đặt bàn",
+        "Hoàn tiền đặt bàn"
       );
     }
 
@@ -183,7 +182,7 @@ function WalletPage() {
             description: `Nạp tiền vào ví ${amount} VND`,
             returnUrl: `${window.location.origin}/wallet?success=true`,
           }),
-        },
+        }
       );
 
       const data = await response.json();

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react"; // Added useMemo
 import {
   Typography,
   Button,
@@ -40,7 +40,7 @@ const menuConfig = [
     ],
   },
   {
-    label: "Lời Mời Và Lịch Sử Đặt Bàn",
+    label: "Lời Mời Và Lịch Sử Đặt Hẹn",
     icon: Calendar,
     items: [
       {
@@ -88,23 +88,40 @@ const useProfileMenu = () => {
   const router = useRouter();
   const localActive = useLocale();
 
-  const handleLogout = async () => {
-    ["accessToken", "refreshToken", "authData", "chessBookings"].forEach(
-      (item) => localStorage.removeItem(item),
-    );
-    router.push("/en");
-    window.location.reload(); // Tải lại trang sau khi chuyển hướng
-  };
+  const handleLogout = useCallback(async () => {
+    // Clear localStorage items
+    [
+      "accessToken",
+      "refreshToken",
+      "authData",
+      "chessBookings",
+      "chessBookingsInvite",
+    ].forEach((item) => localStorage.removeItem(item));
 
-  const getMenuConfig = () =>
-    menuConfig.map((item) => ({
-      ...item,
-      onClick: item.isLogout ? handleLogout : undefined,
-      items: item.items?.map((subItem) => ({
-        ...subItem,
-        onClick: () => router.push(`/${localActive}/${subItem.path}`),
+    // Clear frontend-set cookies
+    document.cookie =
+      "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+    document.cookie =
+      "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+    // Redirect and reload
+    router.push("/en");
+    window.location.reload();
+  }, [router]);
+
+  // Memoize getMenuConfig to prevent re-creation on every render
+  const getMenuConfig = useMemo(
+    () =>
+      menuConfig.map((item) => ({
+        ...item,
+        onClick: item.isLogout ? handleLogout : undefined,
+        items: item.items?.map((subItem) => ({
+          ...subItem,
+          onClick: () => router.push(`/${localActive}/${subItem.path}`),
+        })),
       })),
-    }));
+    [localActive, router, handleLogout] // Dependencies for memoization
+  );
 
   return { getMenuConfig };
 };
@@ -197,7 +214,7 @@ const SubMenu = ({
 export default function ProfileMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { getMenuConfig } = useProfileMenu();
-  const menuConfig = getMenuConfig();
+  const menuConfig = getMenuConfig;
 
   // Get authData and check if user is a member
   const authData = JSON.parse(localStorage.getItem("authData") || "{}");
