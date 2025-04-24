@@ -93,7 +93,7 @@ export default function RegisterPage() {
         ? "Email không được bỏ trống"
         : !emailRegex.test(value)
           ? "Email không hợp lệ"
-          : "",
+          : ""
     );
   };
 
@@ -114,19 +114,19 @@ export default function RegisterPage() {
                 ? "Mật khẩu phải chứa ít nhất 1 chữ số"
                 : !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value)
                   ? "Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt"
-                  : "",
+                  : ""
     );
 
     // Validate confirm password when password changes
     if (confirmPassword) {
       setConfirmPasswordError(
-        value !== confirmPassword ? "Mật khẩu không khớp" : "",
+        value !== confirmPassword ? "Mật khẩu không khớp" : ""
       );
     }
   };
 
   const handleConfirmPasswordChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
+    e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const value = e.target.value;
     setConfirmPassword(value);
@@ -135,7 +135,7 @@ export default function RegisterPage() {
         ? "Vui lòng nhập lại mật khẩu"
         : value !== password
           ? "Mật khẩu không khớp"
-          : "",
+          : ""
     );
   };
 
@@ -154,7 +154,7 @@ export default function RegisterPage() {
         ? "Số điện thoại không được để trống"
         : input.length !== 10
           ? "Số điện thoại phải có 10 chữ số"
-          : "",
+          : ""
     );
   };
 
@@ -203,15 +203,15 @@ export default function RegisterPage() {
           headers: {
             "Content-Type": "application/json",
           },
-        },
+        }
       );
 
       if (response.status === 200) {
         toast.success(
-          "Đăng ký thành công! Vui lòng kiểm tra email để xác thực.",
+          "Đăng ký thành công! Vui lòng kiểm tra email để xác thực."
         );
         router.push(
-          `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`,
+          `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`
         );
       }
     } catch (error: any) {

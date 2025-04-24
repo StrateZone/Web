@@ -53,7 +53,7 @@ export default function OTPVerificationPage() {
       const verifyResponse = await axios.post(
         verifyUrl,
         { email, otp: otpCode },
-        { headers: { "Content-Type": "application/json" } },
+        { headers: { "Content-Type": "application/json" } }
       );
 
       if (!verifyResponse.data.success) {
@@ -77,7 +77,11 @@ export default function OTPVerificationPage() {
       localStorage.setItem("accessToken", userData.accessToken);
       localStorage.setItem("refreshToken", userData.refreshToken);
 
-      toast.success("Xác thực thành công!");
+      // Save cookies to match handleLogin, without HttpOnly
+
+      document.cookie = `accessToken=${encodeURIComponent(userData.accessToken)}; path=/; max-age=604800; SameSite=Strict`;
+      document.cookie = `refreshToken=${encodeURIComponent(userData.refreshToken)}; path=/; max-age=604800; SameSite=Strict`;
+
       router.push("/chess_appointment");
     } catch (error) {
       if (error instanceof Error) {
@@ -102,7 +106,7 @@ export default function OTPVerificationPage() {
         {},
         {
           headers: { "Content-Type": "application/json" },
-        },
+        }
       );
 
       toast.success("Mã OTP mới đã được gửi!");

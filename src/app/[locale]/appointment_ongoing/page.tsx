@@ -13,6 +13,7 @@ import { useLocale } from "next-intl";
 import Banner from "@/components/banner/banner";
 import OpponentDetailsPopup from "../appointment_history/OpponentDetailsPopup";
 
+// Interfaces remain unchanged
 interface GameType {
   typeId: number;
   typeName: string;
@@ -63,7 +64,7 @@ interface User {
 interface AppointmentRequest {
   id: number;
   fromUser: number;
-  toUser: number[]; // Changed to number[] to match OpponentDetailsPopup
+  toUser: number[];
   status: string;
   tableId: number;
   appointmentId: number;
@@ -135,7 +136,7 @@ function Page() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [refundInfo, setRefundInfo] = useState<RefundInfo | null>(null);
   const [currentCancellingId, setCurrentCancellingId] = useState<number | null>(
-    null,
+    null
   );
   const [showOpponentDetails, setShowOpponentDetails] = useState(false);
   const [currentOpponentRequests, setCurrentOpponentRequests] = useState<
@@ -148,7 +149,7 @@ function Page() {
   const userId = authData.userId;
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading: walletLoading } = useSelector(
-    (state: RootState) => state.wallet,
+    (state: RootState) => state.wallet
   );
 
   // Fetch data from API
@@ -157,7 +158,7 @@ function Page() {
     setError(null);
     try {
       const apiUrl = new URL(
-        `https://backend-production-ac5e.up.railway.app/api/appointments/users/${userId}`,
+        `https://backend-production-ac5e.up.railway.app/api/appointments/users/${userId}`
       );
       apiUrl.searchParams.append("page-number", currentPage.toString());
       apiUrl.searchParams.append("page-size", pageSize.toString());
@@ -170,10 +171,6 @@ function Page() {
       }
 
       const result: ApiResponse = await response.json();
-      console.log(
-        "userRole sample:",
-        result.pagedList[0]?.appointmentrequests[0]?.toUserNavigation?.userRole,
-      );
 
       setData(result);
       setCurrentPage(result.currentPage);
@@ -183,7 +180,7 @@ function Page() {
       setHasNext(result.hasNext);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định",
+        err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định"
       );
     } finally {
       setIsLoading(false);
@@ -242,7 +239,7 @@ function Page() {
       const currentTime = toLocalISOString(new Date());
 
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`,
+        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`
       );
 
       if (!response.ok) {
@@ -250,7 +247,6 @@ function Page() {
       }
 
       const data = await response.json();
-      console.log("API Response:", data);
       setRefundInfo({
         message: data.message,
         refundAmount: data.refundAmount,
@@ -263,7 +259,7 @@ function Page() {
       setShowCancelConfirm(true);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Lỗi khi kiểm tra điều kiện hủy",
+        err instanceof Error ? err.message : "Lỗi khi kiểm tra điều kiện hủy"
       );
     } finally {
       setIsLoading(false);
@@ -286,26 +282,20 @@ function Page() {
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-        },
+        }
       );
       const responseData = await response.json();
-      console.log("API Response:", responseData);
       if (!response.ok) throw new Error("Hủy đơn đặt không thành công");
 
-      // ✅ Cập nhật lại số dư ví
       dispatch(fetchWallet(userId));
-
-      // Cập nhật UI trước khi hiển thị popup
       await fetchData();
       setShowCancelConfirm(false);
       setCurrentCancellingId(null);
       if (selectedAppointment) setSelectedAppointment(null);
 
-      // Hiển thị popup với số tiền hoàn lại
       const refundAmount = responseData.price;
       const isConfirmed = await SuccessCancelPopup(refundAmount);
 
-      // Điều hướng dựa trên lựa chọn
       if (isConfirmed) {
         router.push(`/${localActive}/appointment_ongoing`);
       } else {
@@ -385,7 +375,7 @@ function Page() {
 
   const handleShowOpponentDetails = (
     requests: AppointmentRequest[],
-    tableId: number,
+    tableId: number
   ) => {
     setCurrentOpponentRequests(requests);
     setCurrentTableId(tableId);
@@ -393,336 +383,323 @@ function Page() {
   };
 
   return (
-    <div>
-      <div>
-        <Navbar />
-        <div className="text-black">
-          {/* Background Banner */}
-          <Banner
-            title="Những Cuộc Hẹn Sắp Diễn Ra Của Bạn Tại StrateZone"
-            subtitle="Hãy sẵn sàng cho những trận đấu sắp tới tại StrateZone"
-          />
+    <div className="flex flex-col min-h-screen">
+      <Navbar />
+      <div className="flex-grow text-black">
+        {/* Background Banner */}
+        <Banner
+          title="Những Cuộc Hẹn Sắp Diễn Ra Của Bạn Tại StrateZone"
+          subtitle="Hãy sẵn sàng cho những trận đấu sắp tới tại StrateZone"
+        />
 
-          <div className="container mx-auto px-4 py-8 flex-grow">
-            <h1 className="text-3xl font-bold mb-8">Cuộc Hẹn Sắp Diễn Ra</h1>
+        <div className="container mx-auto px-4 py-8">
+          <h1 className="text-3xl font-bold mb-8">Cuộc Hẹn Sắp Diễn Ra</h1>
 
-            {/* Controls */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-              <div className="flex items-center gap-2">
-                <label htmlFor="orderBy" className="font-medium">
-                  Sắp xếp theo:
-                </label>
-                <select
-                  id="orderBy"
-                  value={orderBy}
-                  onChange={handleOrderByChange}
-                  className="border rounded px-2 py-1"
-                >
-                  <option value="created-at-desc">Mới nhất</option>
-                  <option value="created-at">Cũ nhất</option>
-                  <option value="total-price-desc">Giá cao nhất</option>
-                  <option value="total-price">Giá thấp nhất</option>
-                </select>
+          {/* Controls */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div className="flex items-center gap-2">
+              <label htmlFor="orderBy" className="font-medium">
+                Sắp xếp theo:
+              </label>
+              <select
+                id="orderBy"
+                value={orderBy}
+                onChange={handleOrderByChange}
+                className="border rounded px-2 py-1"
+              >
+                <option value="created-at-desc">Mới nhất</option>
+                <option value="created-at">Cũ nhất</option>
+                <option value="total-price-desc">Giá cao nhất</option>
+                <option value="total-price">Giá thấp nhất</option>
+              </select>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          ) : error ? (
+            <div
+              className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+              role="alert"
+            >
+              <strong className="font-bold">Lỗi! </strong>
+              <span className="block sm:inline">{error}</span>
+            </div>
+          ) : selectedAppointment ? (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <button
+                onClick={handleBackToList}
+                className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+              >
+                ← Quay lại danh sách
+              </button>
+
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-semibold">
+                  Chi tiết đơn đặt #{selectedAppointment.appointmentId}
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg mb-2 font-bold">Thông Tin Chung</h3>
+                  <p className="mb-2">
+                    <span className="font-medium">Trạng Thái:</span>
+                    <span
+                      className={`ml-2 px-2 py-1 rounded ${getStatusColor(selectedAppointment.status).bg} ${getStatusColor(selectedAppointment.status).text}`}
+                    >
+                      {getStatusColor(selectedAppointment.status).display}
+                    </span>
+                  </p>
+                  <p className="mb-2">
+                    <span className="font-medium">Tổng Giá:</span>{" "}
+                    {formatCurrency(selectedAppointment.totalPrice)}
+                  </p>
+                  <p>
+                    <span className="font-medium">Ngày Tạo Đơn :</span>{" "}
+                    {formatDate(selectedAppointment.createdAt)}
+                  </p>
+                </div>
+              </div>
+
+              <h3 className="font-medium text-lg mb-2">Danh sách bàn đã đặt</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full bg-white">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="py-2 px-4 border">Mã Bàn</th>
+                      <th className="py-2 px-4 border">Loại Cờ</th>
+                      <th className="py-2 px-4 border">Loại Phòng</th>
+                      <th className="py-2 px-4 border">Tên Phòng</th>
+                      <th className="py-2 px-4 border">
+                        Giờ Bắt Đầu Và Kết Thúc
+                      </th>
+                      <th className="py-2 px-4 border">Ngày</th>
+                      <th className="py-2 px-4 border">Tổng Giá</th>
+                      <th className="py-2 px-4 border">Trạng thái</th>
+                      <th className="py-2 px-4 border">Đối Thủ</th>
+                      <th className="py-2 px-4 border">Hành động</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedAppointment.tablesAppointments.map(
+                      (tableAppointment) => (
+                        <tr key={tableAppointment.id} className="border-b">
+                          <td className="py-2 px-4 border text-center">
+                            {tableAppointment.table.tableId}
+                          </td>
+                          <td className="py-2 px-4 border text-center">
+                            {tableAppointment.table.gameType.typeName ===
+                            "chess"
+                              ? "Cờ vua"
+                              : tableAppointment.table.gameType.typeName ===
+                                  "xiangqi"
+                                ? "Cờ tướng"
+                                : tableAppointment.table.gameType.typeName ===
+                                    "go"
+                                  ? "Cờ vây"
+                                  : tableAppointment.table.gameType.typeName}
+                          </td>
+                          <td className="py-2 px-4 border text-center">
+                            {" "}
+                            {tableAppointment.table.roomType === "basic"
+                              ? "Phòng thường"
+                              : tableAppointment.table.roomType === "premium"
+                                ? "Phòng cao cấp"
+                                : tableAppointment.table.roomType ===
+                                    "openspaced"
+                                  ? "không gian mở"
+                                  : tableAppointment.table.roomType}
+                          </td>
+                          <td className="py-2 px-4 border text-center">
+                            {tableAppointment.table.roomName}
+                          </td>
+                          <td className="py-2 px-4 border text-center">
+                            {formatTime(tableAppointment.scheduleTime)}
+                                -    
+                            {formatTime(tableAppointment.endTime)}
+                          </td>
+                          <td className="py-2 px-4 border text-center">
+                            {new Date(
+                              tableAppointment.scheduleTime
+                            ).toLocaleDateString("vi-VN")}
+                          </td>
+                          <td className="py-2 px-4 border text-center">
+                            {formatCurrency(tableAppointment.price)}
+                          </td>
+                          <td className="py-2 px-4 border text-center">
+                            <span
+                              className={`px-2 py-1 rounded ${getStatusColor(tableAppointment.status).bg} ${getStatusColor(tableAppointment.status).text}`}
+                            >
+                              {getStatusColor(tableAppointment.status).display}
+                            </span>
+                          </td>
+                          <td className="py-2 px-4 border text-center">
+                            {selectedAppointment.appointmentrequests.some(
+                              (req) =>
+                                req.tableId === tableAppointment.table.tableId
+                            ) && (
+                              <button
+                                onClick={() =>
+                                  handleShowOpponentDetails(
+                                    selectedAppointment.appointmentrequests,
+                                    tableAppointment.table.tableId
+                                  )
+                                }
+                                className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm"
+                              >
+                                Xem đối thủ
+                              </button>
+                            )}
+                          </td>
+                          <td className="py-2 px-4 border text-center space-x-2">
+                            {(tableAppointment.status === "confirmed" ||
+                              tableAppointment.status === "pending") && (
+                              <button
+                                onClick={() =>
+                                  checkCancelCondition(tableAppointment.id)
+                                }
+                                className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition text-sm"
+                              >
+                                Hủy
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
-
-            {isLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-              </div>
-            ) : error ? (
-              <div
-                className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
-                role="alert"
-              >
-                <strong className="font-bold">Lỗi! </strong>
-                <span className="block sm:inline">{error}</span>
-              </div>
-            ) : selectedAppointment ? (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <button
-                  onClick={handleBackToList}
-                  className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
-                >
-                  ← Quay lại danh sách
-                </button>
-
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-semibold">
-                    Chi tiết đơn đặt #{selectedAppointment.appointmentId}
-                  </h2>
+          ) : (
+            <div>
+              {data.pagedList.filter(
+                (appointment) =>
+                  appointment.status.toLowerCase() === "incompleted"
+              ).length === 0 ? (
+                <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                  <p className="text-lg">
+                    Bạn chưa có đơn đặt hẹn nào sắp diễn ra.
+                  </p>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="text-lg mb-2 font-bold">Thông Tin Chung</h3>
-                    <p className="mb-2">
-                      <span className="font-medium">Trạng Thái:</span>
-                      <span
-                        className={`ml-2 px-2 py-1 rounded ${getStatusColor(selectedAppointment.status).bg} ${getStatusColor(selectedAppointment.status).text}`}
-                      >
-                        {getStatusColor(selectedAppointment.status).display}
-                      </span>
-                    </p>
-                    <p className="mb-2">
-                      <span className="font-medium">Tổng Giá:</span>{" "}
-                      {formatCurrency(selectedAppointment.totalPrice)}
-                    </p>
-                    <p>
-                      <span className="font-medium">Ngày Tạo Đơn :</span>{" "}
-                      {formatDate(selectedAppointment.createdAt)}
-                    </p>
-                  </div>
-                </div>
-
-                <h3 className="font-medium text-lg mb-2">
-                  Danh sách bàn đã đặt
-                </h3>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full bg-white">
-                    <thead>
-                      <tr className="bg-gray-100">
-                        <th className="py-2 px-4 border">Mã Bàn</th>
-                        <th className="py-2 px-4 border">Loại Cờ</th>
-                        <th className="py-2 px-4 border">Loại Phòng</th>
-                        <th className="py-2 px-4 border">Tên Phòng</th>
-                        <th className="py-2 px-4 border">
-                          Giờ Bắt Đầu Và Kết Thúc
-                        </th>
-                        <th className="py-2 px-4 border">Ngày</th>
-                        <th className="py-2 px-4 border">Tổng Giá</th>
-                        <th className="py-2 px-4 border">Trạng thái</th>
-                        <th className="py-2 px-4 border">Đối Thủ</th>
-                        <th className="py-2 px-4 border">Hành động</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedAppointment.tablesAppointments.map(
-                        (tableAppointment) => (
-                          <tr key={tableAppointment.id} className="border-b">
-                            <td className="py-2 px-4 border text-center">
-                              {tableAppointment.table.tableId}
-                            </td>
-                            <td className="py-2 px-4 border text-center">
-                              {tableAppointment.table.gameType.typeName ===
-                              "chess"
-                                ? "Cờ vua"
-                                : tableAppointment.table.gameType.typeName ===
-                                    "xiangqi"
-                                  ? "Cờ tướng"
-                                  : tableAppointment.table.gameType.typeName ===
-                                      "go"
-                                    ? "Cờ vây"
-                                    : tableAppointment.table.gameType.typeName}
-                            </td>
-                            <td className="py-2 px-4 border text-center">
-                              {" "}
-                              {tableAppointment.table.roomType === "basic"
-                                ? "Phòng thường"
-                                : tableAppointment.table.roomType === "premium"
-                                  ? "Phòng cao cấp"
-                                  : tableAppointment.table.roomType ===
-                                      "openspaced"
-                                    ? "không gian mở"
-                                    : tableAppointment.table.roomType}
-                            </td>
-                            <td className="py-2 px-4 border text-center">
-                              {tableAppointment.table.roomName}
-                            </td>
-                            <td className="py-2 px-4 border text-center">
-                              {formatTime(tableAppointment.scheduleTime)}
-                                  -    
-                              {formatTime(tableAppointment.endTime)}
-                            </td>
-                            <td className="py-2 px-4 border text-center">
-                              {new Date(
-                                tableAppointment.scheduleTime,
-                              ).toLocaleDateString("vi-VN")}
-                            </td>
-                            <td className="py-2 px-4 border text-center">
-                              {formatCurrency(tableAppointment.price)}
-                            </td>
-                            <td className="py-2 px-4 border text-center">
-                              <span
-                                className={`px-2 py-1 rounded ${getStatusColor(tableAppointment.status).bg} ${getStatusColor(tableAppointment.status).text}`}
-                              >
-                                {
-                                  getStatusColor(tableAppointment.status)
-                                    .display
-                                }
-                              </span>
-                            </td>
-                            <td className="py-2 px-4 border text-center">
-                              {selectedAppointment.appointmentrequests.some(
-                                (req) =>
-                                  req.tableId ===
-                                  tableAppointment.table.tableId,
-                              ) && (
+              ) : (
+                <>
+                  <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
+                    <table className="min-w-full">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="py-3 px-5 text-left">Mã Đơn</th>
+                          <th className="py-3 px-5 text-left">Ngày Tạo Đơn</th>
+                          <th className="py-3 px-4 text-left">Tổng Số Bàn</th>
+                          <th className="py-3 px-4 text-left">Tổng Giá</th>
+                          <th className="py-3 px-4 text-left">Trạng Thái</th>
+                          <th className="py-3 px-12 text-left">Hành Động</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.pagedList
+                          .filter(
+                            (appointment) =>
+                              appointment.status.toLowerCase() === "incompleted"
+                          )
+                          .map((appointment) => (
+                            <tr
+                              key={appointment.appointmentId}
+                              className="border-b hover:bg-gray-50"
+                            >
+                              <td className="py-3 px-8">
+                                {appointment.appointmentId}
+                              </td>
+                              <td className="py-3 px-4">
+                                {formatDate(appointment.createdAt)}
+                              </td>
+                              <td className="py-3 px-14">
+                                {appointment.tablesAppointments.length}
+                              </td>
+                              <td className="py-3 px-4">
+                                {formatCurrency(appointment.totalPrice)}
+                              </td>
+                              <td className="py-3 px-4">
+                                <span
+                                  className={`px-2 py-1 rounded ${getStatusColor(appointment.status).bg} ${getStatusColor(appointment.status).text}`}
+                                >
+                                  {getStatusColor(appointment.status).display}
+                                </span>
+                              </td>
+                              <td className="py-3 px-10 space-x-2">
                                 <button
                                   onClick={() =>
-                                    handleShowOpponentDetails(
-                                      selectedAppointment.appointmentrequests,
-                                      tableAppointment.table.tableId,
-                                    )
+                                    handleAppointmentClick(appointment)
                                   }
-                                  className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm"
+                                  className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
                                 >
-                                  Xem đối thủ
+                                  Xem chi tiết
                                 </button>
-                              )}
-                            </td>
-                            <td className="py-2 px-4 border text-center space-x-2">
-                              {(tableAppointment.status === "confirmed" ||
-                                tableAppointment.status === "pending") && (
-                                <button
-                                  onClick={() =>
-                                    checkCancelCondition(tableAppointment.id)
-                                  }
-                                  className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition text-sm"
-                                >
-                                  Hủy
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ),
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              <div>
-                {data.pagedList.filter(
-                  (appointment) =>
-                    appointment.status.toLowerCase() === "incompleted",
-                ).length === 0 ? (
-                  <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                    <p className="text-lg">
-                      Bạn chưa có đơn đặt hẹn nào sắp diễn ra.
-                    </p>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
                   </div>
-                ) : (
-                  <>
-                    <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
-                      <table className="min-w-full">
-                        <thead className="bg-gray-100">
-                          <tr>
-                            <th className="py-3 px-5 text-left">Mã Đơn</th>
-                            <th className="py-3 px-5 text-left">
-                              Ngày Tạo Đơn
-                            </th>
-                            <th className="py-3 px-4 text-left">Tổng Số Bàn</th>
-                            <th className="py-3 px-4 text-left">Tổng Giá</th>
-                            <th className="py-3 px-4 text-left">Trạng Thái</th>
-                            <th className="py-3 px-12 text-left">Hành Động</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {data.pagedList
-                            .filter(
-                              (appointment) =>
-                                appointment.status.toLowerCase() ===
-                                "incompleted",
-                            )
-                            .map((appointment) => (
-                              <tr
-                                key={appointment.appointmentId}
-                                className="border-b hover:bg-gray-50"
-                              >
-                                <td className="py-3 px-8">
-                                  {appointment.appointmentId}
-                                </td>
-                                <td className="py-3 px-4">
-                                  {formatDate(appointment.createdAt)}
-                                </td>
-                                <td className="py-3 px-14">
-                                  {appointment.tablesAppointments.length}
-                                </td>
-                                <td className="py-3 px-4">
-                                  {formatCurrency(appointment.totalPrice)}
-                                </td>
-                                <td className="py-3 px-4">
-                                  <span
-                                    className={`px-2 py-1 rounded ${getStatusColor(appointment.status).bg} ${getStatusColor(appointment.status).text}`}
-                                  >
-                                    {getStatusColor(appointment.status).display}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-10 space-x-2">
-                                  <button
-                                    onClick={() =>
-                                      handleAppointmentClick(appointment)
-                                    }
-                                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-                                  >
-                                    Xem chi tiết
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
 
-                    {/* Pagination */}
-                    <div className="flex flex-col sm:flex-row justify-center items-center mt-4 gap-4">
-                      {totalPages >= 1 && (
-                        <div className="flex justify-center mt-8 mb-8">
-                          <DefaultPagination
-                            currentPage={currentPage}
-                            totalPages={totalPages}
-                            onPageChange={handlePageChange}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
+                  {/* Pagination */}
+                  <div className="flex flex-col sm:flex-row justify-center items-center mt-4 gap-4">
+                    {totalPages >= 1 && (
+                      <div className="flex justify-center mt-8 mb-8">
+                        <DefaultPagination
+                          currentPage={currentPage}
+                          totalPages={totalPages}
+                          onPageChange={handlePageChange}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
-            {/* Cancel Confirmation Modal */}
-            {
-              <CancelConfirmationModal
-                show={showCancelConfirm}
-                onClose={() => {
-                  setShowCancelConfirm(false);
-                  setCurrentCancellingId(null);
-                }}
-                onConfirm={confirmCancelAppointment}
-                refundInfo={refundInfo}
-                isLoading={isLoading}
-              />
+          {/* Cancel Confirmation Modal */}
+          <CancelConfirmationModal
+            show={showCancelConfirm}
+            onClose={() => {
+              setShowCancelConfirm(false);
+              setCurrentCancellingId(null);
+            }}
+            onConfirm={confirmCancelAppointment}
+            refundInfo={refundInfo}
+            isLoading={isLoading}
+          />
+
+          {/* Opponent Details Popup */}
+          <OpponentDetailsPopup
+            show={showOpponentDetails}
+            onClose={() => setShowOpponentDetails(false)}
+            requests={currentOpponentRequests}
+            tableId={currentTableId || 0}
+            tableAppointmentStatus={
+              selectedAppointment?.tablesAppointments.find(
+                (ta) => ta.table.tableId === currentTableId
+              )?.status
             }
-
-            {/* Opponent Details Popup */}
-            <OpponentDetailsPopup
-              show={showOpponentDetails}
-              onClose={() => setShowOpponentDetails(false)}
-              requests={currentOpponentRequests}
-              tableId={currentTableId || 0}
-              tableAppointmentStatus={
-                selectedAppointment?.tablesAppointments.find(
-                  (ta) => ta.table.tableId === currentTableId,
-                )?.status
-              } // Pass TablesAppointment status
-              appointmentId={selectedAppointment?.appointmentId}
-              startTime={
-                selectedAppointment?.tablesAppointments.find(
-                  (ta) => ta.table.tableId === currentTableId,
-                )?.scheduleTime
-              }
-              endTime={
-                selectedAppointment?.tablesAppointments.find(
-                  (ta) => ta.table.tableId === currentTableId,
-                )?.endTime
-              }
-            />
-          </div>
+            appointmentId={selectedAppointment?.appointmentId}
+            startTime={
+              selectedAppointment?.tablesAppointments.find(
+                (ta) => ta.table.tableId === currentTableId
+              )?.scheduleTime
+            }
+            endTime={
+              selectedAppointment?.tablesAppointments.find(
+                (ta) => ta.table.tableId === currentTableId
+              )?.endTime
+            }
+          />
         </div>
-        <Footer />
       </div>
+      <Footer />
     </div>
   );
 }

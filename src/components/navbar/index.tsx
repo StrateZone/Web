@@ -13,18 +13,11 @@ import {
   UserCircleIcon,
   XMarkIcon,
   Bars3Icon,
-  BuildingStorefrontIcon,
 } from "@heroicons/react/24/solid";
-import {
-  FaChessBoard,
-  FaBookOpen,
-  FaWallet,
-  FaUserFriends,
-} from "react-icons/fa";
+import { FaChessBoard, FaWallet, FaUserFriends } from "react-icons/fa";
 import { useParams, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import Link from "next/link";
-import { ShoppingCart } from "lucide-react";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 import ProfileMenu from "../profile_menu";
 import { FaChess } from "react-icons/fa";
@@ -52,15 +45,23 @@ function NavItem({ children, href }: NavItemProps) {
     </li>
   );
 }
+
 export function Navbar() {
   const t = useTranslations("NavBar");
   const router = useRouter();
   const localActive = useLocale();
 
-  const [showBalance, setShowBalance] = useState<boolean>(() => {
-    const saved = localStorage.getItem("showBalance");
-    return saved !== null ? JSON.parse(saved) : true;
-  });
+  // Initialize showBalance with default value (true) for SSR
+  const [showBalance, setShowBalance] = useState<boolean>(true);
+
+  // Load showBalance from localStorage only on client side
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("showBalance");
+      setShowBalance(saved !== null ? JSON.parse(saved) : true);
+    }
+  }, []); // Empty dependency array to run only once on mount
+
   const { locale } = useParams();
 
   const [open, setOpen] = useState(false);
@@ -70,7 +71,7 @@ export function Navbar() {
 
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading: walletLoading } = useSelector(
-    (state: RootState) => state.wallet,
+    (state: RootState) => state.wallet
   );
 
   const toggleShowBalance = () => {
@@ -126,7 +127,7 @@ export function Navbar() {
   useEffect(() => {
     window.addEventListener(
       "resize",
-      () => window.innerWidth >= 960 && setOpen(false),
+      () => window.innerWidth >= 960 && setOpen(false)
     );
   }, []);
 
@@ -155,17 +156,7 @@ export function Navbar() {
       href: `/${localActive}/chess_appointment/chess_category`,
     },
     {
-      name: "Giải đấu",
-      icon: FaBookOpen,
-      href: `/${localActive}/tournament`,
-    },
-    {
-      name: "Cửa Hàng",
-      icon: BuildingStorefrontIcon,
-      href: `/${localActive}/store`,
-    },
-    {
-      name: "Cộng đồng 🥇 ",
+      name: "Cộng đồng  ",
       icon: UserCircleIcon,
       href: `/${localActive}/community`,
     },
@@ -206,7 +197,7 @@ export function Navbar() {
           {t("siteTitle")}
         </Typography>
         <ul
-          className={`ml-10 hidden items-center gap-6 lg:flex ${
+          className={`ml-40 hidden items-center gap-14 lg:flex ${
             isScrolling ? "text-gray-900" : "text-white"
           }`}
         >
@@ -223,7 +214,7 @@ export function Navbar() {
               <div className="flex items-center bg-gray-100 px-3 py-1 rounded-md">
                 <FaWallet
                   onClick={() => router.push(`/${locale}/wallet`)}
-                  className="text-blue-500 mr-2  cursor-pointer "
+                  className="text-blue-500 mr-2 cursor-pointer"
                   size={16}
                 />
                 {walletLoading ? (
@@ -246,25 +237,23 @@ export function Navbar() {
                 </button>
               </div>
             </div>
-            {/* <BellIcon className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2" /> */}
-            <div className=" hover:bg-gray-200 focus:outline-none relative p-2 rounded-full">
+            <div className="hover:bg-gray-200 focus:outline-none relative p-2 rounded-full">
               <FaUserFriends
                 className="h-6 w-6 text-blue-700 cursor-pointer"
                 onClick={() => router.push(`/${locale}/friend_list`)}
               />
             </div>
             <NotificationDropdown />
-            <div className=" hover:bg-gray-200 focus:outline-none relative p-2 rounded-full">
+            <div className="hover:bg-gray-200 focus:outline-none relative p-2 rounded-full">
               <FaChess
                 onClick={() =>
                   router.push(
-                    `/${locale}/chess_appointment/chess_appointment_order`,
+                    `/${locale}/chess_appointment/chess_appointment_order`
                   )
                 }
-                className="h-6 w-6 text-yellow-700 cursor-pointer "
+                className="h-6 w-6 text-yellow-700 cursor-pointer"
               />
             </div>
-            <ShoppingCart className="h-6 w-6 text-blue-700 cursor-pointer hover:text-blue-200 mr-2" />
             <ProfileMenu />
           </div>
         ) : (
@@ -272,7 +261,7 @@ export function Navbar() {
             <FaChess
               onClick={() =>
                 router.push(
-                  `/${locale}/chess_appointment/chess_appointment_order`,
+                  `/${locale}/chess_appointment/chess_appointment_order`
                 )
               }
               className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"

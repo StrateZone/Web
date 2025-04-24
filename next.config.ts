@@ -5,7 +5,8 @@ const withNextIntl = createNextIntlPlugin();
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ["res.cloudinary.com"],
+    domains: ["res.cloudinary.com", "i.pinimg.com"],
+
     // Bạn có thể thêm các hostname khác nếu cần
     // domains: ['res.cloudinary.com', 'example.com', 'another-cdn.com'],
   },
