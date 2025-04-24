@@ -434,7 +434,9 @@ export default function CreatePost() {
       const formData = new FormData();
       formData.append("Type", "thread");
       formData.append("EntityId", threadId.toString());
-      formData.append("ImageFile", thumbnail);
+      if (thumbnail) {
+        formData.append("ImageFile", thumbnail);
+      }
       formData.append("Width", "0");
       formData.append("Height", "0");
 
