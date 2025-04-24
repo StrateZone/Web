@@ -18,11 +18,10 @@ function ProfilePage() {
     gender: "",
     bio: "",
     address: "",
-    skillLevel: "",
     ranking: "",
     status: "",
     imageUrl: null as string | null,
-    userRole: "", // Added userRole to track member status
+    userRole: "",
   });
 
   // State for edit mode and changes
@@ -39,7 +38,6 @@ function ProfilePage() {
     const loadUserData = async () => {
       const authData = JSON.parse(localStorage.getItem("authData") || "{}");
 
-      // If userInfo exists in localStorage
       if (authData.userInfo) {
         setUserData({
           username: authData.userInfo.username || "",
@@ -49,15 +47,13 @@ function ProfilePage() {
           gender: authData.userInfo.gender || "male",
           bio: authData.userInfo.bio || "",
           address: authData.userInfo.address || "",
-          skillLevel: authData.userInfo.skillLevel || "beginner",
           ranking: authData.userInfo.ranking || "basic",
           status: authData.userInfo.status || "Active",
           imageUrl: authData.userInfo.avatarUrl || null,
-          userRole: authData.userInfo.userRole || "", // Added userRole
+          userRole: authData.userInfo.userRole || "",
         });
         setPreviewImage(authData.userInfo.avatarUrl || null);
       } else {
-        // If not, try to fetch from API
         try {
           const userId = authData.userId;
           const accessToken = authData.accessToken;
@@ -69,10 +65,9 @@ function ProfilePage() {
                 headers: {
                   Authorization: `Bearer ${accessToken}`,
                 },
-              },
+              }
             );
 
-            // Update state and localStorage
             const userInfo = response.data;
             setUserData({
               username: userInfo.username || "",
@@ -82,21 +77,19 @@ function ProfilePage() {
               gender: userInfo.gender || "male",
               bio: userInfo.bio || "",
               address: userInfo.address || "",
-              skillLevel: userInfo.skillLevel || "beginner",
               ranking: userInfo.ranking || "basic",
               status: userInfo.status || "Active",
               imageUrl: userInfo.avatarUrl || null,
-              userRole: userInfo.userRole || "", // Added userRole
+              userRole: userInfo.userRole || "",
             });
             setPreviewImage(userInfo.avatarUrl || null);
 
-            // Save to localStorage
             localStorage.setItem(
               "authData",
               JSON.stringify({
                 ...authData,
                 userInfo,
-              }),
+              })
             );
           }
         } catch (error) {
@@ -112,7 +105,7 @@ function ProfilePage() {
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >,
+    >
   ) => {
     const { name, value } = e.target;
     setUserData((prev) => ({
@@ -122,22 +115,6 @@ function ProfilePage() {
     setHasChanges(true);
   };
 
-  const translateSkillLevel = (level: string) => {
-    switch (level) {
-      case "beginner":
-        return "Mới bắt đầu";
-      case "intermediate":
-        return "Trung cấp";
-      case "advanced":
-        return "Nâng cao";
-      case "expert":
-        return "Chuyên gia";
-      default:
-        return level;
-    }
-  };
-
-  // Hàm dịch giới tính
   const translateGender = (gender: string) => {
     switch (gender) {
       case "male":
@@ -154,7 +131,6 @@ function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Show preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreviewImage(reader.result as string);
@@ -167,7 +143,6 @@ function ProfilePage() {
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      // Get userId and accessToken from localStorage
       const authData = JSON.parse(localStorage.getItem("authData") || "{}");
       const userId = authData.userInfo?.userId;
       const accessToken = authData.accessToken;
@@ -178,18 +153,15 @@ function ProfilePage() {
 
       let newAvatarUrl = userData.imageUrl;
 
-      // If there's a new image (preview is a base64 string)
       if (previewImage && previewImage.startsWith("data:image")) {
         try {
           const formData = new FormData();
           formData.append("Type", "avatar");
           formData.append("EntityId", userId.toString());
 
-          // Convert base64 to blob
           const blob = await fetch(previewImage).then((r) => r.blob());
           formData.append("ImageFile", blob, "avatar.jpg");
 
-          // Upload image
           const uploadResponse = await axios.post(
             "https://backend-production-ac5e.up.railway.app/api/images/upload",
             formData,
@@ -198,18 +170,15 @@ function ProfilePage() {
                 Authorization: `Bearer ${accessToken}`,
                 "Content-Type": "multipart/form-data",
               },
-            },
+            }
           );
 
-          // Assuming API returns the URL in data.url
           newAvatarUrl = uploadResponse.data.url;
         } catch (uploadError) {
           console.error("Image upload failed:", uploadError);
-          // Continue with profile update even if image upload fails
         }
       }
 
-      // Prepare update data
       const updateData = {
         fullName: userData.fullName,
         phone: userData.phone,
@@ -219,7 +188,6 @@ function ProfilePage() {
         avatarUrl: newAvatarUrl,
       };
 
-      // Update user profile
       const response = await axios.put(
         `https://backend-production-ac5e.up.railway.app/api/users/${userId}`,
         updateData,
@@ -228,10 +196,9 @@ function ProfilePage() {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
-        },
+        }
       );
 
-      // Update localStorage with new data
       const updatedUserInfo = {
         ...authData.userInfo,
         ...updateData,
@@ -243,10 +210,9 @@ function ProfilePage() {
         JSON.stringify({
           ...authData,
           userInfo: updatedUserInfo,
-        }),
+        })
       );
 
-      // Update state
       setUserData((prev) => ({
         ...prev,
         ...updateData,
@@ -276,7 +242,6 @@ function ProfilePage() {
         gender: authData.userInfo.gender || "male",
         bio: authData.userInfo.bio || "",
         address: authData.userInfo.address || "",
-        skillLevel: authData.userInfo.skillLevel || "beginner",
         ranking: authData.userInfo.ranking || "basic",
         status: authData.userInfo.status || "Active",
         imageUrl: authData.userInfo.avatarUrl || null,
@@ -368,11 +333,6 @@ function ProfilePage() {
                   { field: "username", label: "Tên Tài Khoản" },
                   { field: "email", label: "Email" },
                   { field: "phone", label: "Số Điện Thoại" },
-                  {
-                    field: "skillLevel",
-                    label: "Trình Độ",
-                    transform: translateSkillLevel,
-                  },
                 ].map((item) => (
                   <div key={item.field} className="mb-4">
                     <label
@@ -383,15 +343,7 @@ function ProfilePage() {
                     <input
                       name={item.field}
                       value={
-                        item.transform
-                          ? item.transform(
-                              userData[
-                                item.field as keyof typeof userData
-                              ] as string,
-                            )
-                          : (userData[
-                              item.field as keyof typeof userData
-                            ] as string)
+                        userData[item.field as keyof typeof userData] as string
                       }
                       readOnly
                       className={`w-full px-3 py-2 border ${isMember ? "border-purple-300 bg-purple-50" : "border-gray-300 bg-gray-100"} rounded-md shadow-sm cursor-not-allowed`}
@@ -434,7 +386,7 @@ function ProfilePage() {
                       name="gender"
                       value={userData.gender}
                       onChange={handleInputChange}
-                      className={`w-full px-3 py-2 border ${isMember ? "border-purple-300 focus:ring9644-purple-500 focus:border-purple-500" : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"} rounded-md shadow-sm focus:outline-none`}
+                      className={`w-full px-3 py-2 border ${isMember ? "border-purple-300 focus:ring-purple-500 focus:border-purple-500" : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"} rounded-md shadow-sm focus:outline-none`}
                     >
                       <option value="male">Nam</option>
                       <option value="female">Nữ</option>

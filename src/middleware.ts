@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 
 // Các route cần bảo vệ
 const protectedRoutes = [
-  "/chess_appointment",
   "/appointment_ongoing",
   "/appointment_history",
   "/wallet",
@@ -55,7 +54,6 @@ export const config = {
     "/:locale/register",
     "/:locale/otp_verification",
     "/:locale/login_otp",
-    "/:locale/chess_appointment/:path*",
     "/:locale/appointment_ongoing",
     "/:locale/appointment_history",
     "/:locale/appointment_history/:path*",
