@@ -10,7 +10,7 @@ import { Button, Input, Typography } from "@material-tailwind/react";
 import { toast, ToastContainer } from "react-toastify";
 import { useParams, useRouter } from "next/navigation";
 import { HeartIcon as HeartIconSolid } from "@heroicons/react/24/solid";
-import { HeartIcon, ChatBubbleLeftIcon } from "@heroicons/react/24/outline";
+import { HeartIcon } from "@heroicons/react/24/outline";
 import Swal from "sweetalert2";
 import "react-toastify/dist/ReactToastify.css";
 import { InsufficientBalancePopup } from "../../chess_appointment/chess_appointment_order/InsufficientBalancePopup";
@@ -25,6 +25,7 @@ interface Thread {
   createdBy: number;
   status: "pending" | "published" | "rejected" | "deleted";
   createdByNavigation: {
+    userLabel: number;
     userId: number;
     username: string;
     fullName: string;
@@ -280,7 +281,8 @@ function PostDetailPage() {
 
       // Check if current user has liked this thread
       const userLike = threadData.likes?.find(
-        (like: any) => like.userId === currentUser.userId
+        (like: { id: number; userId: number; threadId: number }) =>
+          like.userId === currentUser.userId
       );
 
       setThread({
@@ -1020,21 +1022,6 @@ function PostDetailPage() {
     </div>
   );
 }
-
-const buttonColors: { [key: string]: string } = {
-  "cờ vua": "bg-gray-900 text-white",
-  "cờ tướng": "bg-red-700 text-white",
-  "cờ vây": "bg-yellow-600 text-black",
-  "chiến thuật": "bg-blue-600 text-white",
-  gambit: "bg-indigo-600 text-white",
-  mẹo: "bg-purple-500 text-white",
-  "thảo luận": "bg-green-600 text-white",
-  "trò chuyện": "bg-teal-500 text-white",
-  "ngoài lề": "bg-pink-500 text-white",
-  "thông báo": "bg-orange-500 text-white",
-  "quan trọng": "bg-red-600 text-white",
-  default: "bg-gray-500 text-white",
-};
 
 const getStatusBadge = (status: string) => {
   switch (status) {
