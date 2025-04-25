@@ -5,11 +5,16 @@ import {
   Card,
   CardBody,
   Typography,
+  Badge,
+  Tooltip,
 } from "@material-tailwind/react";
 import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { HeartIcon, ChatBubbleOvalLeftIcon } from "@heroicons/react/24/outline";
-import { HeartIcon as HeartIconSolid } from "@heroicons/react/24/solid";
+import {
+  HeartIcon as HeartIconSolid,
+  StarIcon,
+} from "@heroicons/react/24/solid";
 
 export type CommunityCardProps = {
   theme: string;
@@ -18,7 +23,7 @@ export type CommunityCardProps = {
   thumbnailUrl?: string;
   dateTime?: string;
   likes?: number;
-  commentsCount?: number; // Thêm prop commentsCount
+  commentsCount?: number;
   threadId?: number;
   threadData?: {
     likes: Array<{
@@ -35,13 +40,14 @@ export type CommunityCardProps = {
     bio?: string;
     skillLevel?: number;
     ranking?: number;
+    userLabel?: string | number;
   };
   tags?: Array<{
     id: number;
     tag?: {
       tagId: number;
       tagName: string;
-      tagColor?: string; // Thêm dòng này
+      tagColor?: string;
     };
   }>;
 };
@@ -53,7 +59,7 @@ export default function CommunityCard({
   dateTime,
   thumbnailUrl,
   likes = 0,
-  commentsCount = 0, // Giá trị mặc định là 0
+  commentsCount = 0,
   threadId,
   threadData,
   createdByNavigation,
@@ -63,7 +69,6 @@ export default function CommunityCard({
   const params = useParams();
   const locale = params.locale as string;
   const [userId, setUserId] = useState<number | null>(null);
-
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(likes);
   const [likeId, setLikeId] = useState<number | undefined>(undefined);
@@ -73,6 +78,12 @@ export default function CommunityCard({
     fullName: "",
     avatarUrl: "",
   });
+
+  // Mark userId: 1 as Top Contributor, in addition to userLabel
+  const isTopContributor =
+    createdByNavigation?.userLabel === 1 ||
+    createdByNavigation?.userLabel === "top_contributor";
+
   useEffect(() => {
     const fetchUserId = () => {
       const userData = localStorage.getItem("user");
@@ -84,23 +95,16 @@ export default function CommunityCard({
 
     fetchUserId();
   }, []);
-  function getContrastColor(hexColor: string) {
-    // Nếu không có màu hoặc màu không hợp lệ, trả về màu mặc định
-    if (!hexColor || !hexColor.startsWith("#")) return "#FFFFFF";
 
-    // Chuyển hex sang RGB
+  function getContrastColor(hexColor: string) {
+    if (!hexColor || !hexColor.startsWith("#")) return "#FFFFFF";
     const r = parseInt(hexColor.substr(1, 2), 16);
     const g = parseInt(hexColor.substr(3, 2), 16);
     const b = parseInt(hexColor.substr(5, 2), 16);
-
-    // Tính độ sáng (luminance)
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-    // Trả về màu trắng hoặc đen tùy độ sáng nền
     return luminance > 0.5 ? "#000000" : "#FFFFFF";
   }
 
-  // Initialize current user from localStorage
   useEffect(() => {
     const authDataString = localStorage.getItem("authData");
     if (authDataString) {
@@ -122,7 +126,7 @@ export default function CommunityCard({
     if (threadData?.likes && currentUser.userId) {
       const userLike = threadData.likes.find(
         (like) =>
-          like.userId === currentUser.userId && like.threadId === threadId,
+          like.userId === currentUser.userId && like.threadId === threadId
       );
       setIsLiked(!!userLike);
       setLikeId(userLike?.id);
@@ -143,7 +147,6 @@ export default function CommunityCard({
 
     try {
       if (isLiked && likeId) {
-        // Unlike the thread
         await fetch(
           `https://backend-production-ac5e.up.railway.app/api/likes/${likeId}`,
           {
@@ -152,13 +155,12 @@ export default function CommunityCard({
               "Content-Type": "application/json",
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
-          },
+          }
         );
         setLikeCount((prev) => prev - 1);
         setIsLiked(false);
         setLikeId(undefined);
       } else {
-        // Like the thread
         const response = await fetch(
           "https://backend-production-ac5e.up.railway.app/api/likes",
           {
@@ -171,7 +173,7 @@ export default function CommunityCard({
               userId: currentUser.userId,
               threadId: threadId,
             }),
-          },
+          }
         );
 
         if (response.ok) {
@@ -190,10 +192,8 @@ export default function CommunityCard({
     }
   };
 
-  // Format date time
   const formatDateTime = (dateString?: string) => {
     if (!dateString) return "";
-
     const date = new Date(dateString);
     return date.toLocaleDateString("vi-VN", {
       day: "2-digit",
@@ -206,8 +206,7 @@ export default function CommunityCard({
 
   return (
     <Card
-      className="w-full border-2 border-b-4 border-gray-200 rounded-xl hover:bg-gray-50 my-2 transition-all hover:shadow-sm"
-      onClick={handleCardClick}
+      className={`w-full rounded-xl hover:bg-gray-50 my-2 transition-all hover:shadow-sm border-gray-200`}
     >
       <CardBody className="flex p-5 gap-4">
         {/* Left side - Thumbnail */}
@@ -229,7 +228,7 @@ export default function CommunityCard({
                   const tagColor = tagItem.tag?.tagColor || "#6B7280";
                   const textColor = getContrastColor(tagColor);
                   const isImportantTag = ["thông báo", "quan trọng"].includes(
-                    tagItem.tag?.tagName || "",
+                    tagItem.tag?.tagName || ""
                   );
 
                   return (
@@ -249,9 +248,7 @@ export default function CommunityCard({
                       onClick={(e) => e.stopPropagation()}
                     >
                       {tagItem.tag?.tagName}
-                      {isImportantTag && (
-                        <span className="ml-1">⚠️</span> // Thêm biểu tượng cảnh báo
-                      )}
+                      {isImportantTag && <span className="ml-1">⚠️</span>}
                     </Button>
                   );
                 })}
@@ -294,6 +291,7 @@ export default function CommunityCard({
             <Typography
               variant="h5"
               className="text-black font-bold mb-2 cursor-pointer hover:text-light-green-500 transition-all duration-200 ease-in-out"
+              onClick={handleCardClick}
             >
               {title}
             </Typography>
@@ -306,11 +304,27 @@ export default function CommunityCard({
                 }
                 alt="avatar"
                 size="xs"
-                className="border border-gray-300"
+                className={`border ${
+                  isTopContributor
+                    ? "border-2 border-yellow-500 shadow-lg shadow-yellow-500/30"
+                    : "border-gray-300"
+                }`}
               />
-              <Typography className="text-gray-800 text-sm">
-                {createdByNavigation?.username || "Tác giả"}
-              </Typography>
+              {/* </Badge> */}
+              <div className="flex items-center gap-2">
+                <Typography
+                  className={`text-sm ${
+                    isTopContributor ? "text-yellow-700" : "text-gray-800"
+                  }`}
+                >
+                  {createdByNavigation?.username || "Tác giả"}
+                </Typography>
+                {isTopContributor && (
+                  <span className="px-2 py-1 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white ">
+                    TOP CONTRIBUTOR
+                  </span>
+                )}
+              </div>
               <Typography className="text-gray-800 text-xs">
                 {formatDateTime(dateTime)}
               </Typography>

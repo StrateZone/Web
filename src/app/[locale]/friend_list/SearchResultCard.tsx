@@ -11,7 +11,7 @@ import {
   Tooltip,
 } from "@material-tailwind/react";
 import { FiInfo, FiX, FiUserPlus, FiClock, FiUser } from "react-icons/fi";
-import { CheckBadgeIcon } from "@heroicons/react/24/solid"; // Thêm import này
+import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 import { SearchFriendResult } from "./page";
 
 interface SearchResultCardProps {
@@ -19,6 +19,7 @@ interface SearchResultCardProps {
   onAddFriend: () => void;
   onCancelRequest?: () => void;
   onViewProfile: () => void;
+  isSendingRequest: boolean; // Thêm prop để kiểm soát trạng thái loading
 }
 
 export function SearchResultCard({
@@ -26,19 +27,24 @@ export function SearchResultCard({
   onAddFriend,
   onCancelRequest,
   onViewProfile,
+  isSendingRequest,
 }: SearchResultCardProps) {
   const isMember = user.userRole === "Member";
+  const isTopContributor =
+    user.userLabel === 1 || user.userLabel === "top_contributor";
 
   const getFriendStatusText = () => {
     switch (user.friendStatus) {
       case 0:
-        return isMember ? "Thêm bạn" : "Thêm bạn";
+        return isMember || isTopContributor ? "Thêm bạn" : "Thêm bạn";
       case 1:
-        return isMember ? "Đã gửi yêu cầu" : "Đã gửi yêu cầu";
+        return isMember || isTopContributor
+          ? "Đã gửi yêu cầu"
+          : "Đã gửi yêu cầu";
       case 2:
-        return isMember ? "Bạn bè" : "Bạn bè";
+        return isMember || isTopContributor ? "Bạn bè" : "Bạn bè";
       default:
-        return isMember ? "Thêm bạn" : "Thêm bạn";
+        return isMember || isTopContributor ? "Thêm bạn" : "Thêm bạn";
     }
   };
 
@@ -58,18 +64,18 @@ export function SearchResultCard({
   const getButtonColor = () => {
     switch (user.friendStatus) {
       case 0:
-        return isMember ? "purple" : "blue";
+        return isMember ? "purple" : isTopContributor ? "yellow" : "blue";
       case 1:
-        return isMember ? "purple" : "amber";
+        return isMember ? "purple" : isTopContributor ? "yellow" : "amber";
       case 2:
-        return isMember ? "purple" : "gray";
+        return isMember ? "purple" : isTopContributor ? "yellow" : "gray";
       default:
-        return isMember ? "purple" : "blue";
+        return isMember ? "purple" : isTopContributor ? "yellow" : "blue";
     }
   };
 
   const getButtonIcon = () => {
-    if (isMember && user.friendStatus === 0) {
+    if ((isMember || isTopContributor) && user.friendStatus === 0) {
       return <FiUserPlus className="h-4 w-4 text-white" />;
     }
     switch (user.friendStatus) {
@@ -86,17 +92,33 @@ export function SearchResultCard({
 
   return (
     <Card
-      className={`hover:shadow-md transition-shadow ${isMember ? "border border-purple-200" : ""}`}
+      className={`hover:shadow-md transition-shadow ${
+        isMember
+          ? "border border-purple-200"
+          : isTopContributor
+            ? "border border-yellow-200"
+            : ""
+      }`}
     >
       <CardBody className="p-4">
         <div className="flex items-center gap-4">
           <Badge
             overlap="circular"
             placement="bottom-end"
-            className={`border-2 border-white ${isMember ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse" : "bg-blue-gray-100"}`}
+            className={`border-2 border-white ${
+              isMember
+                ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse"
+                : isTopContributor
+                  ? "bg-gradient-to-r from-yellow-500 to-orange-500"
+                  : "bg-blue-gray-100"
+            }`}
             content={
               isMember ? (
                 <Tooltip content="Thành viên câu lạc bộ">
+                  <CheckBadgeIcon className="h-5 w-5 text-white" />
+                </Tooltip>
+              ) : isTopContributor ? (
+                <Tooltip content="Top Contributor">
                   <CheckBadgeIcon className="h-5 w-5 text-white" />
                 </Tooltip>
               ) : null
@@ -109,20 +131,37 @@ export function SearchResultCard({
               }
               alt={user.username}
               size="lg"
-              className={`border-2 ${isMember ? "border-purple-500 shadow-lg shadow-purple-500/20" : "border-blue-100"}`}
+              className={`border-2 ${
+                isMember
+                  ? "border-purple-500 shadow-lg shadow-purple-500/20"
+                  : isTopContributor
+                    ? "border-yellow-500 shadow-lg shadow-yellow-500/30"
+                    : "border-blue-100"
+              }`}
             />
           </Badge>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <Typography
                 variant="h5"
-                className={`text-gray-900 truncate ${isMember ? "text-purple-600" : ""}`}
+                className={`text-gray-900 truncate ${
+                  isMember
+                    ? "text-purple-600"
+                    : isTopContributor
+                      ? "text-yellow-700"
+                      : ""
+                }`}
               >
                 {user.username}
               </Typography>
               {isMember && (
                 <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
                   MEMBER
+                </span>
+              )}
+              {isTopContributor && (
+                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                  TOP CONTRIBUTOR
                 </span>
               )}
             </div>
@@ -134,14 +173,27 @@ export function SearchResultCard({
                 Thành viên câu lạc bộ
               </Typography>
             )}
+            {isTopContributor && !isMember && (
+              <Typography variant="small" className="text-yellow-500 mt-1">
+                Top Contributor
+              </Typography>
+            )}
           </div>
         </div>
       </CardBody>
       <CardFooter className="pt-0 flex flex-col gap-2">
         <Button
           variant={isMember ? "gradient" : "outlined"}
-          color={isMember ? "purple" : "blue-gray"}
-          className={`flex items-center justify-center gap-2 ${isMember ? "shadow-purple-500/20" : ""}`}
+          color={
+            isMember ? "purple" : isTopContributor ? "yellow" : "blue-gray"
+          }
+          className={`flex items-center justify-center gap-2 ${
+            isMember
+              ? "shadow-purple-500/20"
+              : isTopContributor
+                ? "shadow-yellow-500/20"
+                : ""
+          }`}
           onClick={onViewProfile}
         >
           <FiInfo className="h-4 w-4" />
@@ -155,7 +207,11 @@ export function SearchResultCard({
               color={getButtonColor()}
               fullWidth
               className={`flex items-center justify-center gap-2 cursor-default ${
-                isMember ? "border-purple-500 text-purple-500" : ""
+                isMember
+                  ? "border-purple-500 text-purple-500"
+                  : isTopContributor
+                    ? "border-yellow-500 text-yellow-700"
+                    : ""
               }`}
               disabled
             >
@@ -164,16 +220,20 @@ export function SearchResultCard({
             </Button>
             <Button
               variant="outlined"
-              color={isMember ? "purple" : "red"}
+              color={isMember ? "purple" : isTopContributor ? "yellow" : "red"}
               fullWidth
               className={`flex items-center justify-center gap-2 ${
                 isMember
                   ? "border-purple-500 text-purple-500 hover:bg-purple-50"
-                  : ""
+                  : isTopContributor
+                    ? "border-yellow-500 text-yellow-700 hover:bg-yellow-50"
+                    : ""
               }`}
               onClick={onCancelRequest}
+              disabled={isSendingRequest}
+              loading={isSendingRequest}
             >
-              <FiX className="h-4 w-4" />
+              {!isSendingRequest && <FiX className="h-4 w-4" />}
               Hủy yêu cầu
             </Button>
           </>
@@ -185,10 +245,17 @@ export function SearchResultCard({
             fullWidth
             className={`flex items-center justify-center gap-2 ${
               user.friendStatus !== 0 ? "cursor-default" : ""
-            } ${isMember && user.friendStatus === 0 ? "shadow-purple-500/20" : ""}`}
-            disabled={user.friendStatus !== 0}
+            } ${
+              (isMember || isTopContributor) && user.friendStatus === 0
+                ? isMember
+                  ? "shadow-purple-500/20"
+                  : "shadow-yellow-500/20"
+                : ""
+            }`}
+            disabled={user.friendStatus !== 0 || isSendingRequest}
+            loading={isSendingRequest}
           >
-            {getButtonIcon()}
+            {!isSendingRequest && getButtonIcon()}
             {getFriendStatusText()}
           </Button>
         )}

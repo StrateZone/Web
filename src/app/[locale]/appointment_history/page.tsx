@@ -13,6 +13,7 @@ import { useLocale } from "next-intl";
 import Banner from "@/components/banner/banner";
 import OpponentDetailsPopup from "./OpponentDetailsPopup";
 
+// Interfaces remain unchanged
 interface GameType {
   typeId: number;
   typeName: string;
@@ -63,7 +64,7 @@ interface User {
 interface AppointmentRequest {
   id: number;
   fromUser: number;
-  toUser: number[]; // Changed to number[] to match OpponentDetailsPopup
+  toUser: number[];
   status: string;
   tableId: number;
   appointmentId: number;
@@ -81,6 +82,7 @@ interface Appointment {
   totalPrice: number;
   status: string;
   createdAt: string;
+  tablesCount: number;
   user: null | {
     userId: number;
     name: string;
@@ -151,7 +153,7 @@ function Page() {
     (state: RootState) => state.wallet
   );
 
-  // Fetch data from API
+  // Fetch paginated list of appointments (unchanged)
   const fetchData = async () => {
     setIsLoading(true);
     setError(null);
@@ -186,6 +188,36 @@ function Page() {
     }
   };
 
+  // Fetch appointment details by ID
+  const handleAppointmentClick = async (appointment: Appointment) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `https://backend-production-ac5e.up.railway.app/api/appointments/${appointment.appointmentId}`,
+        {
+          headers: {
+            accept: "*/*",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Không thể tải chi tiết đơn đặt");
+      }
+
+      const result: Appointment = await response.json();
+      setSelectedAppointment(result);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Đã xảy ra lỗi khi tải chi tiết"
+      );
+      setSelectedAppointment(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, [currentPage, pageSize, orderBy]);
@@ -210,10 +242,6 @@ function Page() {
       style: "currency",
       currency: "VND",
     }).format(amount);
-  };
-
-  const handleAppointmentClick = (appointment: Appointment) => {
-    setSelectedAppointment(appointment);
   };
 
   const handleBackToList = () => {
@@ -286,20 +314,16 @@ function Page() {
       const responseData = await response.json();
       if (!response.ok) throw new Error("Hủy đơn đặt không thành công");
 
-      // ✅ Cập nhật lại số dư ví
       dispatch(fetchWallet(userId));
 
-      // Cập nhật UI trước khi hiển thị popup
       await fetchData();
       setShowCancelConfirm(false);
       setCurrentCancellingId(null);
       if (selectedAppointment) setSelectedAppointment(null);
 
-      // Hiển thị popup với số tiền hoàn lại
       const refundAmount = responseData.price;
       const isConfirmed = await SuccessCancelPopup(refundAmount);
 
-      // Điều hướng dựa trên lựa chọn
       if (isConfirmed) {
         router.push(`/${localActive}/appointment_history`);
       } else {
@@ -333,6 +357,7 @@ function Page() {
           text: "text-blue-800",
           display: "Sắp diễn ra",
         };
+
       case "expired":
         return {
           bg: "bg-gray-100",
@@ -391,7 +416,6 @@ function Page() {
       <div>
         <Navbar />
         <div className="text-black">
-          {/* Background Banner */}
           <Banner
             title="Những Cuộc Hẹn Đã Diễn Ra Của Bạn Tại StrateZone"
             subtitle="Xem lại các lần bạn đã tham gia thi đấu tại StrateZone"
@@ -400,7 +424,6 @@ function Page() {
           <div className="container mx-auto px-4 py-8 flex-grow">
             <h1 className="text-3xl font-bold mb-8">Lịch Sử Đặt Hẹn</h1>
 
-            {/* Controls */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
               <div className="flex items-center gap-2">
                 <label htmlFor="orderBy" className="font-medium">
@@ -631,7 +654,7 @@ function Page() {
                                   {formatDate(appointment.createdAt)}
                                 </td>
                                 <td className="py-3 px-14">
-                                  {appointment.tablesAppointments.length}
+                                  {appointment.tablesCount}
                                 </td>
                                 <td className="py-3 px-4">
                                   {formatCurrency(appointment.totalPrice)}
@@ -659,7 +682,6 @@ function Page() {
                       </table>
                     </div>
 
-                    {/* Pagination */}
                     <div className="flex flex-col sm:flex-row justify-center items-center mt-4 gap-4">
                       {totalPages >= 1 && (
                         <div className="flex justify-center mt-8 mb-8">
@@ -676,21 +698,17 @@ function Page() {
               </div>
             )}
 
-            {/* Cancel Confirmation Modal */}
-            {
-              <CancelConfirmationModal
-                show={showCancelConfirm}
-                onClose={() => {
-                  setShowCancelConfirm(false);
-                  setCurrentCancellingId(null);
-                }}
-                onConfirm={confirmCancelAppointment}
-                refundInfo={refundInfo}
-                isLoading={isLoading}
-              />
-            }
+            <CancelConfirmationModal
+              show={showCancelConfirm}
+              onClose={() => {
+                setShowCancelConfirm(false);
+                setCurrentCancellingId(null);
+              }}
+              onConfirm={confirmCancelAppointment}
+              refundInfo={refundInfo}
+              isLoading={isLoading}
+            />
 
-            {/* Opponent Details Popup */}
             <OpponentDetailsPopup
               show={showOpponentDetails}
               onClose={() => setShowOpponentDetails(false)}

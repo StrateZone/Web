@@ -17,7 +17,7 @@ import {
 import { User, X, RefreshCw, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { FiSearch, FiUsers } from "react-icons/fi";
-import { CheckBadgeIcon } from "@heroicons/react/24/solid";
+import { CheckBadgeIcon, StarIcon } from "@heroicons/react/24/solid";
 import { toast } from "react-toastify";
 
 interface Opponent {
@@ -33,6 +33,7 @@ interface Opponent {
   isInvited?: boolean;
   ranking?: string;
   userRole?: string | number;
+  userLabel?: string; // Added userLabel for Top Contributor
 }
 
 interface ChessBooking {
@@ -104,20 +105,20 @@ const OpponentRecommendationModalWithNewInvite = ({
         (b: ChessBooking) =>
           b.tableId === tableId &&
           b.startDate === startDate &&
-          b.endDate === endDate,
+          b.endDate === endDate
       );
 
       if (currentBooking?.invitedUsers) {
         alreadyInvitedIds = currentBooking.invitedUsers.map(
-          (user: { userId: number }) => user.userId,
+          (user: { userId: number }) => user.userId
         );
         selectedOpponentIds = currentBooking.invitedUsers.map(
-          (user: { userId: number }) => user.userId,
+          (user: { userId: number }) => user.userId
         );
       }
 
       const url = new URL(
-        `https://backend-production-ac5e.up.railway.app/api/users/opponents/${userId}`,
+        `https://backend-production-ac5e.up.railway.app/api/users/opponents/${userId}`
       );
 
       if (searchTerm) {
@@ -147,14 +148,14 @@ const OpponentRecommendationModalWithNewInvite = ({
       }));
 
       const selectedFromStorage = [...markedOpponents, ...markedFriends].filter(
-        (opponent) => selectedOpponentIds.includes(opponent.userId),
+        (opponent) => selectedOpponentIds.includes(opponent.userId)
       );
 
       const missingOpponents = currentBooking?.invitedUsers
         ? currentBooking.invitedUsers
             .filter(
               (user: any) =>
-                !selectedFromStorage.some((o) => o.userId === user.userId),
+                !selectedFromStorage.some((o) => o.userId === user.userId)
             )
             .map((user: any) => ({
               userId: user.userId,
@@ -167,6 +168,8 @@ const OpponentRecommendationModalWithNewInvite = ({
               points: 0,
               gender: "",
               isInvited: alreadyInvitedIds.includes(user.userId),
+              userRole: undefined,
+              userLabel: undefined, // Initialize userLabel
             }))
         : [];
 
@@ -176,7 +179,7 @@ const OpponentRecommendationModalWithNewInvite = ({
       setInvitedOpponents(alreadyInvitedIds);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "An unknown error occurred",
+        err instanceof Error ? err.message : "An unknown error occurred"
       );
     } finally {
       setLoading(false);
@@ -206,7 +209,7 @@ const OpponentRecommendationModalWithNewInvite = ({
       (b: ChessBooking) =>
         b.tableId === tableId &&
         b.startDate === startDate &&
-        b.endDate === endDate,
+        b.endDate === endDate
     );
 
     const currentInvitedCount = currentBooking?.invitedUsers?.length || 0;
@@ -225,7 +228,7 @@ const OpponentRecommendationModalWithNewInvite = ({
         (b: ChessBooking) =>
           b.tableId === tableId &&
           b.startDate === startDate &&
-          b.endDate === endDate,
+          b.endDate === endDate
       );
 
       const opponentData = {
@@ -266,7 +269,7 @@ const OpponentRecommendationModalWithNewInvite = ({
 
   const handleRemoveOpponent = (userId: number) => {
     const newSelectedOpponents = selectedOpponents.filter(
-      (o) => o.userId !== userId,
+      (o) => o.userId !== userId
     );
     setSelectedOpponents(newSelectedOpponents);
 
@@ -275,7 +278,7 @@ const OpponentRecommendationModalWithNewInvite = ({
       (b: ChessBooking) =>
         b.tableId === tableId &&
         b.startDate === startDate &&
-        b.endDate === endDate,
+        b.endDate === endDate
     );
 
     if (bookingIndex !== -1) {
@@ -299,7 +302,7 @@ const OpponentRecommendationModalWithNewInvite = ({
       (b: ChessBooking) =>
         b.tableId === tableId &&
         b.startDate === startDate &&
-        b.endDate === endDate,
+        b.endDate === endDate
     );
 
     if (bookingIndex !== -1) {
@@ -324,7 +327,7 @@ const OpponentRecommendationModalWithNewInvite = ({
           (b: ChessBooking) =>
             b.tableId === tableId &&
             b.startDate === startDate &&
-            b.endDate === endDate,
+            b.endDate === endDate
         );
 
         if (bookingIndex !== -1) {
@@ -342,11 +345,17 @@ const OpponentRecommendationModalWithNewInvite = ({
     }
   };
 
+  const isMember = (userRole: string | number | undefined) =>
+    userRole === "Member" || userRole === 1;
+
+  const isTopContributor = (userLabel: string | undefined) =>
+    userLabel === "top_contributor";
+
   if (!open) return null;
 
   const renderOpponentList = (
     opponents: Opponent[],
-    isSelectedTab: boolean = false,
+    isSelectedTab: boolean = false
   ) => {
     if (opponents.length === 0) {
       return (
@@ -372,30 +381,38 @@ const OpponentRecommendationModalWithNewInvite = ({
     return (
       <div className="space-y-3">
         {opponents.map((opponent) => {
-          const isMember =
-            opponent.userRole === "Member" || opponent.userRole === 1;
+          const member = isMember(opponent.userRole);
+          const topContributor = isTopContributor(opponent.userLabel);
           return (
             <div
               key={opponent.userId}
               className={`border rounded-lg p-3 flex items-center gap-3 hover:bg-gray-50 transition-colors ${
-                isMember
+                member
                   ? "border-purple-200 hover:bg-purple-50"
-                  : "border-gray-200"
+                  : topContributor
+                    ? "border-yellow-200 hover:bg-yellow-50"
+                    : "border-gray-200"
               }`}
             >
               <Badge
                 overlap="circular"
                 placement="bottom-end"
                 className={`border-2 border-white ${
-                  isMember
+                  member
                     ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse !h-5 !w-5"
-                    : "bg-blue-gray-100"
+                    : topContributor
+                      ? "bg-gradient-to-r from-yellow-500 to-orange-500 animate-bounce !h-5 !w-5"
+                      : "bg-blue-gray-100"
                 }`}
                 content={
-                  isMember ? (
-                    <Tooltip content="Thành viên câu lạc bộ">
-                      <CheckBadgeIcon className="h-4 w-4 text-white" />
-                    </Tooltip>
+                  member || topContributor ? (
+                    <div className="flex gap-1">
+                      {member && (
+                        <Tooltip content="Thành viên câu lạc bộ">
+                          <CheckBadgeIcon className="h-4 w-4 text-white" />
+                        </Tooltip>
+                      )}
+                    </div>
                   ) : null
                 }
               >
@@ -406,17 +423,21 @@ const OpponentRecommendationModalWithNewInvite = ({
                     width={40}
                     height={40}
                     className={`rounded-full object-cover w-10 h-10 flex-shrink-0 ${
-                      isMember
+                      member
                         ? "border-2 border-purple-500 shadow-lg shadow-purple-500/30"
-                        : ""
+                        : topContributor
+                          ? "border-2 border-yellow-500 shadow-lg shadow-yellow-500/30"
+                          : ""
                     }`}
                   />
                 ) : (
                   <div
                     className={`bg-gray-200 text-gray-500 w-10 h-10 flex items-center justify-center rounded-full flex-shrink-0 ${
-                      isMember
+                      member
                         ? "border-2 border-purple-500 shadow-lg shadow-purple-500/30"
-                        : ""
+                        : topContributor
+                          ? "border-2 border-yellow-500 shadow-lg shadow-yellow-500/30"
+                          : ""
                     }`}
                   >
                     <User size={18} />
@@ -426,20 +447,33 @@ const OpponentRecommendationModalWithNewInvite = ({
               <div className="flex-1 min-w-0">
                 <h3
                   className={`font-semibold text-sm truncate ${
-                    isMember ? "text-purple-700" : "text-gray-800"
+                    member
+                      ? "text-purple-700"
+                      : topContributor
+                        ? "text-yellow-700"
+                        : "text-gray-800"
                   }`}
                 >
                   {opponent.username || opponent.fullName}
-                  {isMember && (
+                  {member && (
                     <span className="ml-2 px-2 py-1 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white animate-bounce">
                       MEMBER
+                    </span>
+                  )}
+                  {topContributor && (
+                    <span className="ml-2 px-2 py-1 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white animate-bounce">
+                      TOP CONTRIBUTOR
                     </span>
                   )}
                 </h3>
                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   <span
                     className={`text-xs ${
-                      isMember ? "text-purple-600" : "text-gray-500"
+                      member
+                        ? "text-purple-600"
+                        : topContributor
+                          ? "text-yellow-600"
+                          : "text-gray-500"
                     }`}
                   >
                     {opponent.gender === "male" ? "Nam" : "Nữ"}
@@ -462,19 +496,21 @@ const OpponentRecommendationModalWithNewInvite = ({
                       opponent.isInvited ||
                       loading ||
                       selectedOpponents.some(
-                        (o) => o.userId === opponent.userId,
+                        (o) => o.userId === opponent.userId
                       )
                     }
                     size="sm"
                     className={`text-white text-xs px-2.5 py-1 ${
                       opponent.isInvited ||
                       selectedOpponents.some(
-                        (o) => o.userId === opponent.userId,
+                        (o) => o.userId === opponent.userId
                       )
                         ? "bg-gray-400"
-                        : isMember
+                        : member
                           ? "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-                          : "bg-blue-500 hover:bg-blue-600"
+                          : topContributor
+                            ? "bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+                            : "bg-blue-500 hover:bg-blue-600"
                     }`}
                   >
                     {selectedOpponents.some((o) => o.userId === opponent.userId)

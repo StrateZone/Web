@@ -22,7 +22,7 @@ import { RootState, AppDispatch } from "@/app/store";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import Banner from "@/components/banner/banner";
-import { CheckBadgeIcon } from "@heroicons/react/24/solid";
+import { CheckBadgeIcon, StarIcon } from "@heroicons/react/24/solid";
 
 interface UserNavigation {
   userId: number;
@@ -40,6 +40,7 @@ interface UserNavigation {
   ranking: number;
   status: string;
   userRole: number | string; // Support both number (1) and string ("Member") for flexibility
+  userLabel?: string | number; // Updated to support string or number for Top Contributor
   wallet: any | null;
   otp: string | null;
   otpExpiry: string | null;
@@ -115,7 +116,7 @@ const AppointmentSendRequestsPage = () => {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [refundInfo, setRefundInfo] = useState<any>(null);
   const [currentCancellingId, setCurrentCancellingId] = useState<number | null>(
-    null,
+    null
   );
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -125,7 +126,7 @@ const AppointmentSendRequestsPage = () => {
   const [hasNext, setHasNext] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading: walletLoading } = useSelector(
-    (state: RootState) => state.wallet,
+    (state: RootState) => state.wallet
   );
   const getUserId = () => {
     const authDataString = localStorage.getItem("authData");
@@ -155,7 +156,7 @@ const AppointmentSendRequestsPage = () => {
         }
 
         const apiUrl = new URL(
-          `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/from/${userId}`,
+          `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/from/${userId}`
         );
         apiUrl.searchParams.append("page-number", page.toString());
         apiUrl.searchParams.append("page-size", pageSize.toString());
@@ -185,7 +186,7 @@ const AppointmentSendRequestsPage = () => {
         setIsLoading(false);
       }
     },
-    [locale, pageSize, router],
+    [locale, pageSize, router]
   );
 
   const handleRefresh = () => {
@@ -276,9 +277,9 @@ const AppointmentSendRequestsPage = () => {
         };
       case "accepted":
         return {
-          bg: "bg-blue-100",
-          text: "text-blue-700",
-          border: "border-blue-500",
+          bg: "bg-green-100",
+          text: "text-green-700",
+          border: "border-green-500",
           display: "Đã Chấp Nhận",
           icon: <CheckCircle className="w-4 h-4 mr-1" />,
         };
@@ -352,13 +353,13 @@ const AppointmentSendRequestsPage = () => {
 
     setRequests((prev) =>
       prev.map((req) =>
-        req.id === currentCancellingId ? { ...req, status: "cancelled" } : req,
-      ),
+        req.id === currentCancellingId ? { ...req, status: "cancelled" } : req
+      )
     );
 
     if (selectedRequest?.id === currentCancellingId) {
       setSelectedRequest((prev) =>
-        prev ? { ...prev, status: "cancelled" } : null,
+        prev ? { ...prev, status: "cancelled" } : null
       );
     }
 
@@ -370,7 +371,7 @@ const AppointmentSendRequestsPage = () => {
           headers: {
             "Content-Type": "application/json",
           },
-        },
+        }
       );
 
       if (!response.ok) {
@@ -382,7 +383,7 @@ const AppointmentSendRequestsPage = () => {
       setSelectedRequest(null);
 
       const isConfirmed = await SuccessCancelPopup(
-        refundInfo?.refundAmount || 0,
+        refundInfo?.refundAmount || 0
       );
 
       if (isConfirmed) {
@@ -420,6 +421,9 @@ const AppointmentSendRequestsPage = () => {
 
   const isMember = (userRole: number | string) =>
     userRole === 1 || userRole === "Member";
+
+  const isTopContributor = (userLabel: string | number | undefined) =>
+    userLabel === "top_contributor" || userLabel === 1;
 
   return (
     <div>
@@ -484,16 +488,30 @@ const AppointmentSendRequestsPage = () => {
                         selectedRequest.toUserNavigation &&
                         isMember(selectedRequest.toUserNavigation.userRole)
                           ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse !h-5 !w-5"
-                          : "bg-blue-gray-100"
+                          : selectedRequest.toUserNavigation &&
+                              isTopContributor(
+                                selectedRequest.toUserNavigation.userLabel
+                              )
+                            ? "bg-gradient-to-r from-yellow-500 to-orange-500  !h-5 !w-5"
+                            : "bg-blue-gray-100"
                       }`}
                       content={
                         selectedRequest.toUserNavigation &&
-                        isMember(selectedRequest.toUserNavigation.userRole) ? (
-                          <div className="relative group">
-                            <CheckBadgeIcon className="h-4 w-4 text-white" />
-                            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-white text-black text-sm p-2 rounded shadow-lg">
-                              Thành viên câu lạc bộ
-                            </span>
+                        (isMember(selectedRequest.toUserNavigation.userRole) ||
+                          isTopContributor(
+                            selectedRequest.toUserNavigation.userLabel
+                          )) ? (
+                          <div className="relative group flex gap-1">
+                            {isMember(
+                              selectedRequest.toUserNavigation.userRole
+                            ) && (
+                              <div className="relative">
+                                <CheckBadgeIcon className="h-4 w-4 text-white" />
+                                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-white text-black text-sm p-2 rounded shadow-lg">
+                                  Thành viên câu lạc bộ
+                                </span>
+                              </div>
+                            )}
                           </div>
                         ) : null
                       }
@@ -503,7 +521,12 @@ const AppointmentSendRequestsPage = () => {
                           selectedRequest.toUserNavigation &&
                           isMember(selectedRequest.toUserNavigation.userRole)
                             ? "border-2 border-purple-500 shadow-lg shadow-purple-500/20"
-                            : ""
+                            : selectedRequest.toUserNavigation &&
+                                isTopContributor(
+                                  selectedRequest.toUserNavigation.userLabel
+                                )
+                              ? "border-2 border-yellow-500 shadow-lg shadow-yellow-500/20"
+                              : ""
                         }`}
                       >
                         {selectedRequest.toUserNavigation?.avatarUrl ? (
@@ -524,7 +547,12 @@ const AppointmentSendRequestsPage = () => {
                             selectedRequest.toUserNavigation &&
                             isMember(selectedRequest.toUserNavigation.userRole)
                               ? "text-purple-600"
-                              : ""
+                              : selectedRequest.toUserNavigation &&
+                                  isTopContributor(
+                                    selectedRequest.toUserNavigation.userLabel
+                                  )
+                                ? "text-yellow-600"
+                                : ""
                           }`}
                         >
                           {selectedRequest.toUserNavigation?.username ||
@@ -532,23 +560,39 @@ const AppointmentSendRequestsPage = () => {
                         </h4>
                         {selectedRequest.toUserNavigation &&
                           isMember(
-                            selectedRequest.toUserNavigation.userRole,
+                            selectedRequest.toUserNavigation.userRole
                           ) && (
                             <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
                               MEMBER
+                            </span>
+                          )}
+                        {selectedRequest.toUserNavigation &&
+                          isTopContributor(
+                            selectedRequest.toUserNavigation.userLabel
+                          ) && (
+                            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white ">
+                              TOP CONTRIBUTOR
                             </span>
                           )}
                       </div>
                       <p className="text-gray-600 text-sm">
                         <strong>Trình Độ:</strong>{" "}
                         {getRankLevelText(
-                          selectedRequest.toUserNavigation?.ranking || 0,
+                          selectedRequest.toUserNavigation?.ranking || 0
                         )}
                       </p>
                       {selectedRequest.toUserNavigation &&
                         isMember(selectedRequest.toUserNavigation.userRole) && (
                           <p className="text-purple-500 text-sm mt-1">
                             Thành viên câu lạc bộ
+                          </p>
+                        )}
+                      {selectedRequest.toUserNavigation &&
+                        isTopContributor(
+                          selectedRequest.toUserNavigation.userLabel
+                        ) && (
+                          <p className="text-yellow-500 text-sm mt-1">
+                            Thành viên đóng góp hàng đầu
                           </p>
                         )}
                     </div>
@@ -640,7 +684,7 @@ const AppointmentSendRequestsPage = () => {
                       <strong>Ngày Chơi:</strong>
                     </span>{" "}
                     {new Date(selectedRequest.startTime).toLocaleDateString(
-                      "vi-VN",
+                      "vi-VN"
                     )}
                   </p>
                   <p>
@@ -649,7 +693,7 @@ const AppointmentSendRequestsPage = () => {
                     </span>{" "}
                     {formatTimeRange(
                       selectedRequest.startTime,
-                      selectedRequest.endTime,
+                      selectedRequest.endTime
                     )}
                   </p>
                   <p>
@@ -712,16 +756,30 @@ const AppointmentSendRequestsPage = () => {
                             request.toUserNavigation &&
                             isMember(request.toUserNavigation.userRole)
                               ? "bg-gradient-to-r from-purple-500 to-pink-500 !h-5 !w-5 animate-pulse"
-                              : "bg-blue-gray-100"
+                              : request.toUserNavigation &&
+                                  isTopContributor(
+                                    request.toUserNavigation.userLabel
+                                  )
+                                ? "bg-gradient-to-r from-yellow-500 to-orange-500 !h-5 !w-5 "
+                                : "bg-blue-gray-100"
                           }`}
                           content={
                             request.toUserNavigation &&
-                            isMember(request.toUserNavigation.userRole) ? (
-                              <div className="relative group">
-                                <CheckBadgeIcon className="h-4 w-4 text-white" />
-                                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-white text-black text-sm p-2 rounded shadow-lg">
-                                  Thành viên câu lạc bộ
-                                </span>
+                            (isMember(request.toUserNavigation.userRole) ||
+                              isTopContributor(
+                                request.toUserNavigation.userLabel
+                              )) ? (
+                              <div className="relative group flex gap-1">
+                                {isMember(
+                                  request.toUserNavigation.userRole
+                                ) && (
+                                  <div className="relative">
+                                    <CheckBadgeIcon className="h-4 w-4 text-white" />
+                                    <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-white text-black text-sm p-2 rounded shadow-lg">
+                                      Thành viên câu lạc bộ
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             ) : null
                           }
@@ -731,7 +789,12 @@ const AppointmentSendRequestsPage = () => {
                               request.toUserNavigation &&
                               isMember(request.toUserNavigation.userRole)
                                 ? "border-2 border-purple-500 shadow-lg shadow-purple-500/20"
-                                : ""
+                                : request.toUserNavigation &&
+                                    isTopContributor(
+                                      request.toUserNavigation.userLabel
+                                    )
+                                  ? "border-2 border-yellow-500 shadow-lg shadow-yellow-500/20"
+                                  : ""
                             }`}
                           >
                             {request.toUserNavigation?.avatarUrl ? (
@@ -752,7 +815,12 @@ const AppointmentSendRequestsPage = () => {
                                 request.toUserNavigation &&
                                 isMember(request.toUserNavigation.userRole)
                                   ? "text-purple-600"
-                                  : ""
+                                  : request.toUserNavigation &&
+                                      isTopContributor(
+                                        request.toUserNavigation.userLabel
+                                      )
+                                    ? "text-yellow-600"
+                                    : ""
                               }`}
                             >
                               Người Nhận: @
@@ -765,17 +833,33 @@ const AppointmentSendRequestsPage = () => {
                                   MEMBER
                                 </span>
                               )}
+                            {request.toUserNavigation &&
+                              isTopContributor(
+                                request.toUserNavigation.userLabel
+                              ) && (
+                                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white ">
+                                  TOP CONTRIBUTOR
+                                </span>
+                              )}
                           </div>
                           <p className="text-gray-600 text-sm">
                             <strong>Trình Độ:</strong>{" "}
                             {getRankLevelText(
-                              request.toUserNavigation?.ranking || 0,
+                              request.toUserNavigation?.ranking || 0
                             )}
                           </p>
                           {request.toUserNavigation &&
                             isMember(request.toUserNavigation.userRole) && (
                               <p className="text-purple-500 text-sm mt-1">
                                 Thành viên câu lạc bộ
+                              </p>
+                            )}
+                          {request.toUserNavigation &&
+                            isTopContributor(
+                              request.toUserNavigation.userLabel
+                            ) && (
+                              <p className="text-yellow-500 text-sm mt-1">
+                                Thành viên đóng góp hàng đầu
                               </p>
                             )}
                         </div>
@@ -807,7 +891,7 @@ const AppointmentSendRequestsPage = () => {
                     <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row justify-between items-center gap-3">
                       <div className="flex items-center">
                         {request.status === "accepted" ? (
-                          <span className="text-blue-700 flex items-center text-sm">
+                          <span className="text-green-700 flex items-center text-sm">
                             <CheckCircle className="w-4 h-4 mr-1" />
                             <strong>Đã Chấp Nhận</strong>
                           </span>

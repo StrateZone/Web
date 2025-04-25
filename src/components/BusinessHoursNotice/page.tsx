@@ -1,4 +1,3 @@
-// components/BusinessHoursNotice.tsx
 import React from "react";
 
 interface BusinessHoursNoticeProps {

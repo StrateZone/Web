@@ -491,7 +491,7 @@ export default function ChessCategoryPage() {
     <div>
       <Navbar />
       <Banner
-        title="Sẵn Sàng So Tài – Đặt Bàn Ngay Tại Strate Zone!"
+        title="Sẵn Sàng So Tài – Đặt Hẹn Ngay Tại Strate Zone!"
         subtitle="Bàn Cờ Sẵn Sàng – Thách Thức Đẳng Cấp!"
       />
       <div>

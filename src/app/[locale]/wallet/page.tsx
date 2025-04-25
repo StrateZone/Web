@@ -87,6 +87,7 @@ function WalletPage() {
       setLoadingTransactions(false);
     }
   };
+
   const formatTransactionContent = (content: string) => {
     // 1. Xử lý nạp tiền (Deposit)
     if (content.includes("Transaction for: Deposite")) {
@@ -136,6 +137,7 @@ function WalletPage() {
     // Mặc định trả về content gốc nếu không khớp pattern nào
     return content;
   };
+
   useEffect(() => {
     dispatch(fetchWallet(userId));
     fetchTransactions(userId, currentPage, pageSize);
@@ -217,7 +219,7 @@ function WalletPage() {
       />
       {/* Main Content */}
       <div className="flex-grow flex text-black">
-        <div className="w-full max-w-2xl p-6 bg-white shadow-sm rounded-lg mt-6 mb-10 ml-6">
+        <div className="w-full max-w-3xl p-6 bg-white shadow-sm rounded-lg mt-6 mb-10 ml-6">
           <div className="text-left mb-8">
             <h3 className="text-black text-lg uppercase font-bold">
               Số dư khả dụng
@@ -342,27 +344,27 @@ function WalletPage() {
                 Không có giao dịch nào
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {transactions.map((txn) => (
                   <div
                     key={txn.id}
-                    className="flex justify-between items-center p-3 hover:bg-gray-50 rounded-lg border border-gray-100"
+                    className="flex justify-between items-center p-5 hover:bg-gray-50 rounded-lg border border-gray-100"
                   >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">
+                    <div className="flex-1 min-w-[300px]">
+                      <p className="font-medium text-base truncate">
                         {formatTransactionContent(txn.content)}
                       </p>
                       <p className="text-gray-500 text-sm">
                         {formatDate(txn.createdAt)}
                       </p>
                     </div>
-                    <div className="ml-4 flex-shrink-0">
+                    <div className="ml-6 flex-shrink-0">
                       <p
                         className={`font-semibold text-right ${
                           getTransactionType(txn.transactionType) === "in"
                             ? "text-green-500"
                             : "text-red-500"
-                        }`}
+                        } text-base`}
                       >
                         {getTransactionType(txn.transactionType) === "in"
                           ? "+"

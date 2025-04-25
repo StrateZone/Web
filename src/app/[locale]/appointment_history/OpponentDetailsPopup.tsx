@@ -1,9 +1,10 @@
 "use client";
 import { Badge, Button } from "@material-tailwind/react";
-import { CheckBadgeIcon } from "@heroicons/react/24/solid";
+import { CheckBadgeIcon, StarIcon } from "@heroicons/react/24/solid";
 import OpponentRecommendationModalWithNewInvite from "../appointment_ongoing/OpponentRecommendationModal";
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
+import Image from "next/image";
 
 interface User {
   userId: number;
@@ -15,6 +16,7 @@ interface User {
   skillLevel: string;
   ranking: string;
   userRole?: number | string;
+  userLabel?: string; // Added userLabel for Top Contributor
 }
 
 interface AppointmentRequest {
@@ -61,7 +63,7 @@ function OpponentDetailsPopup({
   useEffect(() => {
     setLocalRequests((prev) => {
       const localOnlyRequests = prev.filter(
-        (req) => !requests.some((r) => r.id === req.id),
+        (req) => !requests.some((r) => r.id === req.id)
       );
       return [...requests, ...localOnlyRequests];
     });
@@ -76,14 +78,14 @@ function OpponentDetailsPopup({
   if (!show) return null;
 
   const filteredRequests = localRequests.filter(
-    (request) => request.tableId === tableId,
+    (request) => request.tableId === tableId
   );
 
   const allRequestsInvalid = filteredRequests.every(
     (request) =>
       request.status.toLowerCase() === "rejected" ||
       request.status.toLowerCase() === "expired" ||
-      request.status.toLowerCase() === "accepted_by_others",
+      request.status.toLowerCase() === "accepted_by_others"
   );
 
   const showInviteButton =
@@ -93,6 +95,9 @@ function OpponentDetailsPopup({
 
   const isMember = (userRole: number | string | undefined) =>
     userRole === 1 || userRole === "Member";
+
+  const isTopContributor = (userLabel: string | undefined) =>
+    userLabel === "top_contributor"; // Check for Top Contributor
 
   interface Opponent {
     userId: number;
@@ -140,7 +145,7 @@ function OpponentDetailsPopup({
             "Content-Type": "application/json",
           },
           body: JSON.stringify(requestBody),
-        },
+        }
       );
 
       if (!response.ok) {
@@ -148,7 +153,7 @@ function OpponentDetailsPopup({
       }
 
       const bookingIndex = bookings.findIndex(
-        (b) => b.tableId === tableId && b.startDate === startTime,
+        (b) => b.tableId === tableId && b.startDate === startTime
       );
 
       const newInvitedUsers = opponents.map((o) => ({ userId: o.userId }));
@@ -196,6 +201,7 @@ function OpponentDetailsPopup({
           skillLevel: "",
           ranking: "",
           userRole: undefined,
+          userLabel: undefined, // Initialize userLabel
         },
       }));
 
@@ -204,11 +210,11 @@ function OpponentDetailsPopup({
       toast.success(`Đã gửi lời mời đến ${opponents.length} người thành công!`);
 
       const updatedBookings = bookings.filter(
-        (b) => !(b.tableId === tableId && b.startDate === startTime),
+        (b) => !(b.tableId === tableId && b.startDate === startTime)
       );
       localStorage.setItem(
         "chessBookingsInvite",
-        JSON.stringify(updatedBookings),
+        JSON.stringify(updatedBookings)
       );
 
       return true;
@@ -266,29 +272,42 @@ function OpponentDetailsPopup({
                       className={`border-2 border-white ${
                         isMember(request.toUserNavigation.userRole)
                           ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse !h-5 !w-5"
-                          : "bg-blue-gray-100"
+                          : isTopContributor(request.toUserNavigation.userLabel)
+                            ? "bg-gradient-to-r from-yellow-500 to-orange-500 animate-bounce !h-5 !w-5"
+                            : "bg-blue-gray-100"
                       }`}
                       content={
-                        isMember(request.toUserNavigation.userRole) ? (
-                          <div className="relative group">
-                            <CheckBadgeIcon className="h-4 w-4 text-white" />
-                            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-white text-black text-sm p-2 rounded shadow-lg">
-                              Thành viên câu lạc bộ
-                            </span>
+                        isMember(request.toUserNavigation.userRole) ||
+                        isTopContributor(request.toUserNavigation.userLabel) ? (
+                          <div className="relative group flex gap-1">
+                            {isMember(request.toUserNavigation.userRole) && (
+                              <div className="relative">
+                                <CheckBadgeIcon className="h-4 w-4 text-white" />
+                                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-white text-black text-sm p-2 rounded shadow-lg">
+                                  Thành viên câu lạc bộ
+                                </span>
+                              </div>
+                            )}
                           </div>
                         ) : null
                       }
                     >
-                      <img
+                      <Image
                         src={
-                          request.toUserNavigation.avatarUrl ||
+                          request.toUserNavigation?.avatarUrl ||
                           "https://i.pinimg.com/736x/0f/68/94/0f6894e539589a50809e45833c8bb6c4.jpg"
                         }
-                        alt={request.toUserNavigation.fullName}
+                        alt={request.toUserNavigation?.fullName || "Avatar"}
+                        width={48}
+                        height={48}
                         className={`w-12 h-12 rounded-full object-cover ${
-                          isMember(request.toUserNavigation.userRole)
+                          isMember(request.toUserNavigation?.userRole)
                             ? "border-2 border-purple-500 shadow-lg shadow-purple-500/20"
-                            : ""
+                            : isTopContributor(
+                                  request.toUserNavigation?.userLabel
+                                )
+                              ? "border-2 border-yellow-500 shadow-lg shadow-yellow-500/20"
+                              : ""
                         }`}
                       />
                     </Badge>
@@ -298,7 +317,11 @@ function OpponentDetailsPopup({
                           className={`font-medium text-lg ${
                             isMember(request.toUserNavigation.userRole)
                               ? "text-purple-600"
-                              : ""
+                              : isTopContributor(
+                                    request.toUserNavigation.userLabel
+                                  )
+                                ? "text-yellow-600"
+                                : ""
                           }`}
                         >
                           {request.toUserNavigation.fullName}
@@ -308,6 +331,13 @@ function OpponentDetailsPopup({
                             MEMBER
                           </span>
                         )}
+                        {isTopContributor(
+                          request.toUserNavigation.userLabel
+                        ) && (
+                          <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white ">
+                            TOP CONTRIBUTOR
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-gray-500">
                         {request.toUserNavigation.username}
@@ -315,6 +345,11 @@ function OpponentDetailsPopup({
                       {isMember(request.toUserNavigation.userRole) && (
                         <p className="text-purple-500 text-sm mt-1">
                           Thành viên câu lạc bộ
+                        </p>
+                      )}
+                      {isTopContributor(request.toUserNavigation.userLabel) && (
+                        <p className="text-yellow-500 text-sm mt-1">
+                          Thành viên đóng góp hàng đầu
                         </p>
                       )}
                     </div>

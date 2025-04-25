@@ -82,6 +82,7 @@ interface Appointment {
   totalPrice: number;
   status: string;
   createdAt: string;
+  tablesCount: number;
   user: null | {
     userId: number;
     name: string;
@@ -187,6 +188,36 @@ function Page() {
     }
   };
 
+  // Fetch appointment details by ID
+  const handleAppointmentClick = async (appointment: Appointment) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `https://backend-production-ac5e.up.railway.app/api/appointments/${appointment.appointmentId}`,
+        {
+          headers: {
+            accept: "*/*",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Không thể tải chi tiết đơn đặt");
+      }
+
+      const result: Appointment = await response.json();
+      setSelectedAppointment(result);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Đã xảy ra lỗi khi tải chi tiết"
+      );
+      setSelectedAppointment(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, [currentPage, pageSize, orderBy]);
@@ -211,10 +242,6 @@ function Page() {
       style: "currency",
       currency: "VND",
     }).format(amount);
-  };
-
-  const handleAppointmentClick = (appointment: Appointment) => {
-    setSelectedAppointment(appointment);
   };
 
   const handleBackToList = () => {
@@ -617,7 +644,7 @@ function Page() {
                                 {formatDate(appointment.createdAt)}
                               </td>
                               <td className="py-3 px-14">
-                                {appointment.tablesAppointments.length}
+                                {appointment.tablesCount}
                               </td>
                               <td className="py-3 px-4">
                                 {formatCurrency(appointment.totalPrice)}
@@ -647,7 +674,7 @@ function Page() {
 
                   {/* Pagination */}
                   <div className="flex flex-col sm:flex-row justify-center items-center mt-4 gap-4">
-                    {totalPages >= 1 && (
+                    {totalPages >= 100 && (
                       <div className="flex justify-center mt-8 mb-8">
                         <DefaultPagination
                           currentPage={currentPage}
