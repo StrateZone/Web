@@ -1,8 +1,20 @@
 import React from "react";
 import { Button } from "@material-tailwind/react";
-import { FaMapMarkerAlt, FaBriefcase, FaUniversity } from "react-icons/fa"; // Import icons
+import { FaMapMarkerAlt, FaBriefcase, FaUniversity } from "react-icons/fa";
 
 export default function UserProfile() {
+  // Mock user data (replace with actual data source)
+  const user = {
+    fullName: "Jenna Stones",
+    location: "Los Angeles, California",
+    job: "Solution Manager - Creative Tim Officer",
+    university: "University of Computer Science",
+    friends: 22,
+    photos: 10,
+    comments: 89,
+    topContributor: true, // Add this field to indicate top contributor status
+  };
+
   return (
     <main className="profile-page">
       <section className="relative block h-[500px]">
@@ -48,7 +60,11 @@ export default function UserProfile() {
                     <img
                       alt="..."
                       src="https://demos.creative-tim.com/notus-js/assets/img/team-2-800x800.jpg"
-                      className="shadow-xl rounded-full h-auto align-middle border-none absolute -m-16 -ml-20 lg:-ml-16 max-w-[150px]"
+                      className={`shadow-xl rounded-full h-auto align-middle border-none absolute -m-16 -ml-20 lg:-ml-16 max-w-[150px] ${
+                        user.topContributor
+                          ? "border-2 border-purple-500 shadow-lg shadow-purple-500/20"
+                          : ""
+                      }`}
                     />
                   </div>
                 </div>
@@ -67,19 +83,19 @@ export default function UserProfile() {
                   <div className="flex justify-center py-4 lg:pt-4 pt-8">
                     <div className="mr-4 p-3 text-center">
                       <span className="text-xl font-bold block uppercase tracking-wide text-blueGray-600">
-                        22
+                        {user.friends}
                       </span>
                       <span className="text-sm text-blueGray-400">Friends</span>
                     </div>
                     <div className="mr-4 p-3 text-center">
                       <span className="text-xl font-bold block uppercase tracking-wide text-blueGray-600">
-                        10
+                        {user.photos}
                       </span>
                       <span className="text-sm text-blueGray-400">Photos</span>
                     </div>
                     <div className="lg:mr-4 p-3 text-center">
                       <span className="text-xl font-bold block uppercase tracking-wide text-blueGray-600">
-                        89
+                        {user.comments}
                       </span>
                       <span className="text-sm text-blueGray-400">
                         Comments
@@ -89,21 +105,37 @@ export default function UserProfile() {
                 </div>
               </div>
               <div className="text-center mt-12">
-                <h3 className="text-4xl font-semibold leading-normal mb-2 text-blueGray-700">
-                  Jenna Stones
-                </h3>
+                <div className="flex items-center justify-center gap-2">
+                  <h3
+                    className={`text-4xl font-semibold leading-normal mb-2 text-blueGray-700 ${
+                      user.topContributor ? "text-purple-600" : ""
+                    }`}
+                  >
+                    {user.fullName}
+                  </h3>
+                  {user.topContributor && (
+                    <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                      TOP CONTRIBUTOR
+                    </span>
+                  )}
+                </div>
                 <div className="text-sm leading-normal mt-0 mb-2 text-blueGray-400 font-bold uppercase">
                   <FaMapMarkerAlt className="inline-block text-lg mr-2 text-blueGray-400" />
-                  Los Angeles, California
+                  {user.location}
                 </div>
                 <div className="mb-2 text-blueGray-600 mt-10">
                   <FaBriefcase className="inline-block text-lg mr-2 text-blueGray-400" />
-                  Solution Manager - Creative Tim Officer
+                  {user.job}
                 </div>
                 <div className="mb-2 text-blueGray-600">
                   <FaUniversity className="inline-block text-lg mr-2 text-blueGray-400" />
-                  University of Computer Science
+                  {user.university}
                 </div>
+                {user.topContributor && (
+                  <p className="text-purple-500 text-sm mt-1">
+                    Top Contributor
+                  </p>
+                )}
               </div>
               <div className="mt-10 py-10 border-t border-blueGray-200 text-center">
                 <div className="flex flex-wrap justify-center">

@@ -1,10 +1,24 @@
 "use client";
+
 import { useState, useEffect, useRef } from "react";
-import { Button, Badge, Tooltip } from "@material-tailwind/react"; // Added Badge and Tooltip
+import {
+  Input,
+  Tabs,
+  TabsHeader,
+  TabsBody,
+  Tab,
+  TabPanel,
+  Spinner,
+  Typography,
+  Button,
+  Badge,
+  Tooltip,
+} from "@material-tailwind/react";
 import { User, X, RefreshCw } from "lucide-react";
 import Image from "next/image";
+import { FiSearch, FiUsers } from "react-icons/fi";
+import { CheckBadgeIcon, StarIcon } from "@heroicons/react/24/solid";
 import { toast } from "react-toastify";
-import { CheckBadgeIcon } from "@heroicons/react/24/solid"; // Added CheckBadgeIcon
 
 interface Opponent {
   userId: number;
@@ -18,14 +32,19 @@ interface Opponent {
   gender: string;
   isInvited?: boolean;
   ranking?: string;
-  userRole?: string | number; // Updated to handle both string and number
+  userRole?: string | number;
+  userLabel?: string; // Add userLabel for Top Contributor
 }
 
 interface ChessBooking {
   tableId: number;
   startDate: string;
   endDate: string;
-  invitedUsers: { userId: number }[];
+  invitedUsers: {
+    userId: number;
+    username: string;
+    avatarUrl: string | null;
+  }[];
 }
 
 interface OpponentRecommendationModalProps {
@@ -57,6 +76,7 @@ const OpponentRecommendationModal = ({
   const [invitedOpponents, setInvitedOpponents] = useState<number[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState("friends");
   const hasFetchedInitialData = useRef(false);
 
   const fetchOpponents = async () => {
@@ -78,19 +98,19 @@ const OpponentRecommendationModal = ({
           (b) =>
             b.tableId === tableId &&
             b.startDate === startDate &&
-            b.endDate === endDate,
+            b.endDate === endDate
         );
 
         if (currentBooking?.invitedUsers) {
           alreadyInvitedIds = currentBooking.invitedUsers.map(
-            (user) => user.userId,
+            (user) => user.userId
           );
         }
       }
 
       // Build the URL with query parameters
       const url = new URL(
-        `https://backend-production-ac5e.up.railway.app/api/users/opponents/${userId}`,
+        `https://backend-production-ac5e.up.railway.app/api/users/opponents/${userId}`
       );
 
       if (searchTerm) {
@@ -122,9 +142,10 @@ const OpponentRecommendationModal = ({
 
       setOpponents(markedOpponents || []);
       setFriends(markedFriends || []);
+      setInvitedOpponents(alreadyInvitedIds);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "An unknown error occurred",
+        err instanceof Error ? err.message : "An unknown error occurred"
       );
     } finally {
       setLoading(false);
@@ -148,188 +169,268 @@ const OpponentRecommendationModal = ({
     setRefreshTrigger((prev) => !prev);
   };
 
-  const handleInvite = (opponent: Opponent) => {
-    try {
-      setLoading(true);
+  const handleAddOpponent = (opponent: Opponent) => {
+    // Get current bookings from localStorage
+    const savedBookings = localStorage.getItem("chessBookings");
+    if (!savedBookings) {
+      toast.error("Không tìm thấy thông tin đặt bàn");
+      return;
+    }
 
-      // 1. Get data from localStorage
-      const savedBookings = localStorage.getItem("chessBookings");
-      if (!savedBookings) {
-        toast.error("Không tìm thấy thông tin đặt bàn");
-        return;
+    const bookings: ChessBooking[] = JSON.parse(savedBookings);
+    const currentBooking = bookings.find(
+      (b) =>
+        b.tableId === tableId &&
+        b.startDate === startDate &&
+        b.endDate === endDate
+    );
+
+    if (!currentBooking) {
+      toast.error("Không tìm thấy thông tin bàn");
+      return;
+    }
+
+    const currentInvitedCount = currentBooking.invitedUsers?.length || 0;
+    if (currentInvitedCount >= 6) {
+      toast.error("Mỗi bàn chỉ có thể mời tối đa 6 người");
+      return;
+    }
+
+    if (!invitedOpponents.includes(opponent.userId)) {
+      try {
+        setLoading(true);
+        // Update localStorage
+        const updatedBookings = bookings.map((b) => {
+          if (
+            b.tableId === tableId &&
+            b.startDate === startDate &&
+            b.endDate === endDate
+          ) {
+            const newInvitedUsers = [
+              ...(b.invitedUsers || []),
+              {
+                userId: opponent.userId,
+                username: opponent.username,
+                avatarUrl: opponent.avatarUrl,
+              },
+            ];
+            return {
+              ...b,
+              invitedUsers: newInvitedUsers,
+            };
+          }
+          return b;
+        });
+
+        localStorage.setItem("chessBookings", JSON.stringify(updatedBookings));
+
+        // Update state to mark opponent as invited
+        setOpponents((prev) =>
+          prev.map((o) =>
+            o.userId === opponent.userId ? { ...o, isInvited: true } : o
+          )
+        );
+        setFriends((prev) =>
+          prev.map((f) =>
+            f.userId === opponent.userId ? { ...f, isInvited: true } : f
+          )
+        );
+        setInvitedOpponents((prev) => [...prev, opponent.userId]);
+
+        // Call onInviteSuccess to update parent component
+        onInviteSuccess(opponent);
+
+        toast.success(`Đã mời ${opponent.username} vào bàn!`);
+      } catch (err) {
+        console.error("Error adding opponent:", err);
+        toast.error("Có lỗi khi mời đối thủ");
+      } finally {
+        setLoading(false);
       }
-
-      const bookings: ChessBooking[] = JSON.parse(savedBookings);
-
-      // 2. Find booking for current table
-      const currentBooking = bookings.find(
-        (b) =>
-          b.tableId === tableId &&
-          b.startDate === startDate &&
-          b.endDate === endDate,
-      );
-
-      if (!currentBooking) {
-        toast.error("Không tìm thấy thông tin bàn");
-        return;
-      }
-
-      // 3. Check number of invited users (max 6)
-      const currentInvitedCount = currentBooking.invitedUsers?.length || 0;
-      if (currentInvitedCount >= 6) {
-        toast.error("Mỗi bàn chỉ có thể mời tối đa 6 người");
-        return;
-      }
-
-      // 4. Check if already invited this user
-      const isAlreadyInvited = currentBooking.invitedUsers?.some(
-        (u) => u.userId === opponent.userId,
-      );
-
-      if (isAlreadyInvited) {
-        toast.warning(`Bạn đã mời ${opponent.username} rồi`);
-        return;
-      }
-
-      // 5. Update UI state
-      const updatedOpponents = opponents.map((o) =>
-        o.userId === opponent.userId ? { ...o, isInvited: true } : o,
-      );
-      setOpponents(updatedOpponents);
-
-      const updatedFriends = friends.map((f) =>
-        f.userId === opponent.userId ? { ...f, isInvited: true } : f,
-      );
-      setFriends(updatedFriends);
-
-      // 6. Call callback to update localStorage
-      onInviteSuccess(opponent);
-
-      toast.success(`Đã gửi lời mời đến ${opponent.username} thành công!`);
-    } catch (err) {
-      console.error("Error details:", err);
-      setError(err instanceof Error ? err.message : "Lỗi khi gửi lời mời");
-      toast.error("Có lỗi xảy ra khi gửi lời mời");
-    } finally {
-      setLoading(false);
+    } else {
+      toast.warning(`${opponent.username} đã được mời!`);
     }
   };
 
+  const isMember = (userRole: string | number | undefined) =>
+    userRole === "Member" || userRole === 1;
+
+  const isTopContributor = (userLabel: string | undefined) =>
+    userLabel === "top_contributor";
+
   if (!open) return null;
 
-  const renderOpponentList = (opponents: Opponent[], title?: string) => {
-    if (opponents.length === 0) return null;
+  const renderOpponentList = (opponents: Opponent[]) => {
+    if (opponents.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <User className="mx-auto h-12 w-12 text-gray-400" />
+          <Typography
+            variant="h3"
+            className="mt-2 text-lg font-medium text-gray-900"
+          >
+            Không tìm thấy đối thủ
+          </Typography>
+          <Typography variant="paragraph" className="mt-1 text-gray-500">
+            Hãy thử tìm kiếm với từ khóa khác hoặc làm mới danh sách
+          </Typography>
+        </div>
+      );
+    }
 
     return (
-      <>
-        {title && (
-          <div className="text-sm font-semibold text-gray-500 mt-4 mb-2">
-            {title}
-          </div>
-        )}
-        <div className="space-y-3">
-          {opponents.map((opponent) => {
-            const isMember =
-              opponent.userRole === "Member" || opponent.userRole === 1; // Handle both string and number
-            return (
-              <div
-                key={opponent.userId}
-                className={`border rounded-lg p-3 flex items-center gap-3 hover:bg-gray-50 transition-colors ${
-                  isMember
-                    ? "border-purple-200 hover:bg-purple-50"
+      <div className="space-y-3">
+        {opponents.map((opponent) => {
+          const member = isMember(opponent.userRole);
+          const topContributor = isTopContributor(opponent.userLabel);
+          return (
+            <div
+              key={opponent.userId}
+              className={`border rounded-lg p-3 flex items-center gap-3 hover:bg-gray-50 transition-colors ${
+                member
+                  ? "border-purple-200 hover:bg-purple-50"
+                  : topContributor
+                    ? "border-yellow-200 hover:bg-yellow-50"
                     : "border-gray-200"
-                }`}
-              >
-                <Badge
-                  overlap="circular"
-                  placement="bottom-end"
-                  className={`border-2 border-white ${
-                    isMember
-                      ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse !h-5 !w-5"
+              }`}
+            >
+              <Badge
+                overlap="circular"
+                placement="bottom-end"
+                className={`border-2 border-white ${
+                  member
+                    ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse !h-5 !w-5"
+                    : topContributor
+                      ? "bg-gradient-to-r from-yellow-500 to-orange-500  !h-5 !w-5"
                       : "bg-blue-gray-100"
-                  }`}
-                  content={
-                    isMember ? (
-                      <Tooltip content="Thành viên câu lạc bộ">
-                        <CheckBadgeIcon className="h-4 w-4 text-white" />
-                      </Tooltip>
-                    ) : null
-                  }
-                >
-                  {opponent.avatarUrl ? (
-                    <Image
-                      src={opponent.avatarUrl}
-                      alt={opponent.fullName}
-                      width={40}
-                      height={40}
-                      className={`rounded-full object-cover w-10 h-10 flex-shrink-0 ${
-                        isMember
-                          ? "border-2 border-purple-500 shadow-lg shadow-purple-500/30"
-                          : ""
-                      }`}
-                    />
-                  ) : (
-                    <div
-                      className={`bg-gray-200 text-gray-500 w-10 h-10 flex items-center justify-center rounded-full flex-shrink-0 ${
-                        isMember
-                          ? "border-2 border-purple-500 shadow-lg shadow-purple-500/30"
-                          : ""
-                      }`}
-                    >
-                      <User size={18} />
+                }`}
+                content={
+                  member || topContributor ? (
+                    <div className="flex gap-1">
+                      {member && (
+                        <Tooltip content="Thành viên câu lạc bộ">
+                          <CheckBadgeIcon className="h-4 w-4 text-white" />
+                        </Tooltip>
+                      )}
                     </div>
-                  )}
-                </Badge>
-                <div className="flex-1 min-w-0">
+                  ) : null
+                }
+              >
+                {opponent.avatarUrl ? (
+                  <Image
+                    src={opponent.avatarUrl}
+                    alt={opponent.fullName}
+                    width={40}
+                    height={40}
+                    className={`rounded-full object-cover w-10 h-10 flex-shrink-0 ${
+                      member
+                        ? "border-2 border-purple-500 shadow-lg shadow-purple-500/30"
+                        : topContributor
+                          ? "border-2 border-yellow-500 shadow-lg shadow-yellow-500/30"
+                          : ""
+                    }`}
+                  />
+                ) : (
+                  <div
+                    className={`bg-gray-200 text-gray-500 w-10 h-10 flex items-center justify-center rounded-full flex-shrink-0 ${
+                      member
+                        ? "border-2 border-purple-500 shadow-lg shadow-purple-500/30"
+                        : topContributor
+                          ? "border-2 border-yellow-500 shadow-lg shadow-yellow-500/30"
+                          : ""
+                    }`}
+                  >
+                    <User size={18} />
+                  </div>
+                )}
+              </Badge>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
                   <h3
                     className={`font-semibold text-sm truncate ${
-                      isMember ? "text-purple-700" : "text-gray-800"
+                      member
+                        ? "text-purple-700"
+                        : topContributor
+                          ? "text-yellow-700"
+                          : "text-gray-800"
                     }`}
                   >
                     {opponent.username || opponent.fullName}
-                    {isMember && (
-                      <span className="ml-2 px-2 py-1 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white animate-bounce">
-                        MEMBER
-                      </span>
-                    )}
                   </h3>
-                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                    <span
-                      className={`text-xs ${
-                        isMember ? "text-purple-600" : "text-gray-500"
-                      }`}
-                    >
-                      {opponent.gender === "male" ? "Nam" : "Nữ"}
+                  {member && (
+                    <span className="px-2 py-1 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white ">
+                      MEMBER
                     </span>
-                  </div>
+                  )}
+                  {topContributor && (
+                    <span className="px-2 py-1 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white ">
+                      TOP CONTRIBUTOR
+                    </span>
+                  )}
                 </div>
-                <div className="flex-shrink-0">
-                  <Button
-                    onClick={() => handleInvite(opponent)}
-                    disabled={opponent.isInvited || loading}
-                    size="sm"
-                    className={`text-white text-xs px-2.5 py-1 ${
-                      opponent.isInvited
-                        ? "bg-gray-400"
-                        : isMember
-                          ? "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-                          : "bg-blue-500 hover:bg-blue-600"
+                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  <span
+                    className={`text-xs ${
+                      member
+                        ? "text-purple-600"
+                        : topContributor
+                          ? "text-yellow-600"
+                          : "text-gray-500"
                     }`}
                   >
-                    {opponent.isInvited ? "Đã mời" : "Mời"}
-                  </Button>
+                    {opponent.gender === "male" ? "Nam" : "Nữ"}
+                  </span>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </>
+              <div className="flex-shrink-0">
+                <Button
+                  onClick={() => handleAddOpponent(opponent)}
+                  disabled={opponent.isInvited || loading}
+                  size="sm"
+                  className={`text-white text-xs px-2.5 py-1 ${
+                    opponent.isInvited
+                      ? "bg-gray-400"
+                      : member
+                        ? "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                        : topContributor
+                          ? "bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+                          : "bg-blue-500 hover:bg-blue-600"
+                  }`}
+                >
+                  {opponent.isInvited ? "Đã mời" : "Thêm"}
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     );
   };
 
+  const tabsData = [
+    {
+      label: (
+        <div className="flex items-center gap-2">
+          <FiUsers className="h-5 w-5" />
+          Bạn bè
+        </div>
+      ),
+      value: "friends",
+    },
+    {
+      label: (
+        <div className="flex items-center gap-2">
+          <FiSearch className="h-5 w-5" />
+          Đối thủ khác
+        </div>
+      ),
+      value: "opponents",
+    },
+  ];
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 text-black">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
         <div className="flex justify-between items-center border-b p-4 sticky top-0 bg-white z-10">
           <h2 className="text-xl font-bold">Gợi ý đối thủ</h2>
           <div className="flex items-center gap-2">
@@ -352,10 +453,10 @@ const OpponentRecommendationModal = ({
 
         <div className="p-4">
           <div className="mb-4 flex gap-2">
-            <input
+            <Input
               type="text"
-              placeholder="Tìm kiếm đối thủ..."
-              className="flex-1 p-2 border rounded"
+              label="Tìm kiếm đối thủ..."
+              className="flex-1"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyPress={(e) => {
@@ -363,30 +464,55 @@ const OpponentRecommendationModal = ({
                   fetchOpponents();
                 }
               }}
+              crossOrigin="anonymous"
             />
             <Button
               onClick={fetchOpponents}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded"
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded whitespace-nowrap"
               disabled={loading}
             >
               Tìm kiếm
             </Button>
           </div>
 
-          {loading ? (
-            <div className="text-center text-gray-500 py-4">Đang tải...</div>
-          ) : error ? (
-            <div className="text-center text-red-500 py-4">{error}</div>
-          ) : opponents.length === 0 && friends.length === 0 ? (
-            <div className="text-center text-gray-500 py-4">
-              Không tìm thấy đối thủ phù hợp.
-            </div>
-          ) : (
-            <>
-              {renderOpponentList(friends, "Bạn bè")}
-              {renderOpponentList(opponents, "Đối thủ khác")}
-            </>
-          )}
+          <Tabs value={activeTab} className="mb-4">
+            <TabsHeader>
+              {tabsData.map(({ label, value }) => (
+                <Tab
+                  key={value}
+                  value={value}
+                  onClick={() => setActiveTab(value)}
+                  className="flex items-center gap-2"
+                >
+                  {label}
+                </Tab>
+              ))}
+            </TabsHeader>
+            <TabsBody>
+              <TabPanel value="friends" className="p-0 mt-4">
+                {loading ? (
+                  <div className="flex justify-center py-8">
+                    <Spinner className="h-12 w-12" />
+                  </div>
+                ) : error ? (
+                  <div className="text-center text-red-500 py-4">{error}</div>
+                ) : (
+                  renderOpponentList(friends)
+                )}
+              </TabPanel>
+              <TabPanel value="opponents" className="p-0 mt-4">
+                {loading ? (
+                  <div className="flex justify-center py-8">
+                    <Spinner className="h-12 w-12" />
+                  </div>
+                ) : error ? (
+                  <div className="text-center text-red-500 py-4">{error}</div>
+                ) : (
+                  renderOpponentList(opponents)
+                )}
+              </TabPanel>
+            </TabsBody>
+          </Tabs>
         </div>
       </div>
     </div>

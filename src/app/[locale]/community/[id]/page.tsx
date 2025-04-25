@@ -22,7 +22,7 @@ interface Thread {
   content: string;
   thumbnailUrl: string | null;
   createdAt: string;
-  createdBy: number; // Thêm createdBy
+  createdBy: number;
   status: "pending" | "published" | "rejected" | "deleted";
   createdByNavigation: {
     userId: number;
@@ -54,6 +54,7 @@ interface Comment {
   content: string;
   createdAt: string;
   user: {
+    userLabel: number;
     userId: number;
     username: string;
     fullName: string;
@@ -106,7 +107,7 @@ function PostDetailPage() {
   const [membershipPrice, setMembershipPrice] =
     useState<MembershipPrice | null>(null);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null); // Kiểm tra quyền truy cập
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 
   // Get user data from localStorage
   const authDataString =
@@ -124,6 +125,9 @@ function PostDetailPage() {
 
   const [mainCommentContent, setMainCommentContent] = useState("");
   const [replyCommentContent, setReplyCommentContent] = useState("");
+
+  // Xác định Top Contributor
+  const isTopContributor = thread?.createdByNavigation?.userLabel === 1;
 
   useEffect(() => {
     const checkUserMembership = () => {
@@ -150,7 +154,7 @@ function PostDetailPage() {
   const fetchMembershipPrice = async () => {
     try {
       const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/prices/membership",
+        "https://backend-production-ac5e.up.railway.app/api/prices/membership"
       );
       if (!response.ok) throw new Error("Failed to fetch membership price");
       const data: MembershipPrice = await response.json();
@@ -172,7 +176,7 @@ function PostDetailPage() {
           headers: {
             "Content-Type": "application/json",
           },
-        },
+        }
       );
 
       const result = await response.json();
@@ -208,7 +212,7 @@ function PostDetailPage() {
             {
               autoClose: 3000,
               closeButton: true,
-            },
+            }
           );
 
           // Reload thread data
@@ -256,7 +260,7 @@ function PostDetailPage() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        },
+        }
       );
       if (!threadResponse.ok) {
         throw new Error(`HTTP error! status: ${threadResponse.status}`);
@@ -276,7 +280,7 @@ function PostDetailPage() {
 
       // Check if current user has liked this thread
       const userLike = threadData.likes?.find(
-        (like: any) => like.userId === currentUser.userId,
+        (like: any) => like.userId === currentUser.userId
       );
 
       setThread({
@@ -289,7 +293,7 @@ function PostDetailPage() {
       // Fetch comments (only for published threads)
       if (threadData.status === "published") {
         const commentsResponse = await fetch(
-          `https://backend-production-ac5e.up.railway.app/api/comments/thread/${id}`,
+          `https://backend-production-ac5e.up.railway.app/api/comments/thread/${id}`
         );
         let commentsData = await commentsResponse.json();
 
@@ -304,11 +308,11 @@ function PostDetailPage() {
             inverseReplyToNavigation: [],
             isLiked:
               comment.likes?.some(
-                (like: any) => like.userId === currentUser.userId,
+                (like: any) => like.userId === currentUser.userId
               ) || false,
             likeId:
               comment.likes?.find(
-                (like: any) => like.userId === currentUser.userId,
+                (like: any) => like.userId === currentUser.userId
               )?.id || null,
             likesCount: comment.likes?.length || 0,
           };
@@ -364,7 +368,7 @@ function PostDetailPage() {
             content: mainCommentContent,
             replyTo: null,
           }),
-        },
+        }
       );
 
       if (response.ok) {
@@ -408,7 +412,7 @@ function PostDetailPage() {
             content: replyCommentContent,
             replyTo: replyingTo,
           }),
-        },
+        }
       );
 
       if (response.ok) {
@@ -446,7 +450,7 @@ function PostDetailPage() {
                   };
                 }
                 return reply;
-              },
+              }
             );
 
             if (updatedInverseReplies !== comment.inverseReplyToNavigation) {
@@ -456,7 +460,7 @@ function PostDetailPage() {
               };
             }
             return comment;
-          }),
+          })
         );
 
         setReplyCommentContent("");
@@ -483,7 +487,7 @@ function PostDetailPage() {
             headers: {
               Authorization: `Bearer ${token}`,
             },
-          },
+          }
         );
         setThread({
           ...thread,
@@ -505,7 +509,7 @@ function PostDetailPage() {
               userId: currentUser.userId,
               threadId: thread.threadId,
             }),
-          },
+          }
         );
         const data = await response.json();
         setThread({
@@ -526,7 +530,7 @@ function PostDetailPage() {
   const handleLikeComment = async (
     commentId: number,
     currentLikeStatus: boolean,
-    currentLikeId: number | null,
+    currentLikeId: number | null
   ) => {
     if (isLoadingCommentLike) return;
     setIsLoadingCommentLike(true);
@@ -541,12 +545,12 @@ function PostDetailPage() {
             headers: {
               Authorization: `Bearer ${token}`,
             },
-          },
+          }
         );
 
         // Update state
         setComments((prevComments) =>
-          updateCommentLikes(prevComments, commentId, false, null, -1),
+          updateCommentLikes(prevComments, commentId, false, null, -1)
         );
       } else {
         // Like
@@ -562,13 +566,13 @@ function PostDetailPage() {
               userId: currentUser.userId,
               commentId: commentId,
             }),
-          },
+          }
         );
         const data = await response.json();
 
         // Update state
         setComments((prevComments) =>
-          updateCommentLikes(prevComments, commentId, true, data.id, 1),
+          updateCommentLikes(prevComments, commentId, true, data.id, 1)
         );
       }
     } catch (error) {
@@ -584,7 +588,7 @@ function PostDetailPage() {
     commentId: number,
     isLiked: boolean,
     likeId: number | null,
-    countChange: number,
+    countChange: number
   ): Comment[] => {
     return comments.map((comment) => {
       if (comment.commentId === commentId) {
@@ -605,7 +609,7 @@ function PostDetailPage() {
             commentId,
             isLiked,
             likeId,
-            countChange,
+            countChange
           ),
         };
       }
@@ -649,7 +653,7 @@ function PostDetailPage() {
               <button
                 onClick={() =>
                   setReplyingTo(
-                    comment.commentId === replyingTo ? null : comment.commentId,
+                    comment.commentId === replyingTo ? null : comment.commentId
                   )
                 }
                 className="text-blue-500 text-sm hover:underline"
@@ -663,7 +667,7 @@ function PostDetailPage() {
                   handleLikeComment(
                     comment.commentId,
                     comment.isLiked,
-                    comment.likeId,
+                    comment.likeId
                   );
                 }}
                 className="flex items-center gap-1 text-sm"
@@ -718,7 +722,7 @@ function PostDetailPage() {
 
   const totalComments = comments.reduce(
     (total, comment) => total + 1 + comment.inverseReplyToNavigation.length,
-    0,
+    0
   );
 
   if (initialLoading) {
@@ -830,11 +834,26 @@ function PostDetailPage() {
                       <Image
                         width={40}
                         height={40}
-                        className="rounded-full object-cover w-10 h-10 flex-shrink-0"
+                        className={`rounded-full object-cover w-10 h-10 flex-shrink-0 ${
+                          isTopContributor
+                            ? "border-2 border-yellow-500 shadow-lg shadow-yellow-500/30"
+                            : ""
+                        }`}
                         src={thread.createdByNavigation.avatarUrl}
                         alt={thread.createdByNavigation.fullName}
                       />
-                      <span>{thread.createdByNavigation.username}</span>
+                      <span
+                        className={
+                          isTopContributor ? "text-yellow-700" : "text-gray-600"
+                        }
+                      >
+                        {thread.createdByNavigation.username}
+                      </span>
+                      {isTopContributor && (
+                        <span className="px-2 py-1 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                          TOP CONTRIBUTOR
+                        </span>
+                      )}
                       <span>•</span>
                       <span>
                         {formatDistanceToNow(new Date(thread.createdAt), {

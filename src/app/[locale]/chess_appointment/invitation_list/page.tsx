@@ -27,7 +27,7 @@ import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import Banner from "@/components/banner/banner";
 import { AlreadyRejectedPopup } from "./AcceptedByOtherPopup";
-import { CheckBadgeIcon } from "@heroicons/react/24/solid";
+import { CheckBadgeIcon, StarIcon } from "@heroicons/react/24/solid";
 
 interface UserNavigation {
   userId: number;
@@ -45,6 +45,7 @@ interface UserNavigation {
   ranking: number;
   status: string;
   userRole: number | string; // Support both number (1) and string ("Member") for flexibility
+  userLabel?: string | number; // Support string or number for Top Contributor
   wallet: any | null;
   otp: string | null;
   otpExpiry: string | null;
@@ -120,13 +121,13 @@ const AppointmentRequestsPage = () => {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [refundInfo, setRefundInfo] = useState<any>(null);
   const [currentCancellingId, setCurrentCancellingId] = useState<number | null>(
-    null,
+    null
   );
   const [processingRequestId, setProcessingRequestId] = useState<number | null>(
-    null,
+    null
   );
   const [processingAcceptId, setProcessingAcceptId] = useState<number | null>(
-    null,
+    null
   );
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -137,7 +138,7 @@ const AppointmentRequestsPage = () => {
   const [hasNext, setHasNext] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading: walletLoading } = useSelector(
-    (state: RootState) => state.wallet,
+    (state: RootState) => state.wallet
   );
   const getUserId = () => {
     const authDataString = localStorage.getItem("authData");
@@ -167,7 +168,7 @@ const AppointmentRequestsPage = () => {
         }
 
         const apiUrl = new URL(
-          `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/to/${userId}`,
+          `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/to/${userId}`
         );
         apiUrl.searchParams.append("page-number", page.toString());
         apiUrl.searchParams.append("page-size", pageSize.toString());
@@ -197,7 +198,7 @@ const AppointmentRequestsPage = () => {
         setIsLoading(false);
       }
     },
-    [locale, pageSize, router],
+    [locale, pageSize, router]
   );
 
   const handleRefresh = () => {
@@ -218,7 +219,7 @@ const AppointmentRequestsPage = () => {
           headers: {
             accept: "*/*",
           },
-        },
+        }
       );
 
       if (!response.ok) {
@@ -293,7 +294,7 @@ const AppointmentRequestsPage = () => {
             tableId: request.tableId,
             appointmentId: request.appointmentId,
           }),
-        },
+        }
       );
 
       const result = await response.json();
@@ -519,7 +520,7 @@ const AppointmentRequestsPage = () => {
       const currentTime = toLocalISOString(new Date());
 
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`,
+        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`
       );
 
       if (!response.ok) {
@@ -539,7 +540,7 @@ const AppointmentRequestsPage = () => {
       setShowCancelConfirm(true);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Lỗi khi kiểm tra điều kiện hủy",
+        err instanceof Error ? err.message : "Lỗi khi kiểm tra điều kiện hủy"
       );
     } finally {
       setIsLoading(false);
@@ -563,7 +564,7 @@ const AppointmentRequestsPage = () => {
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-        },
+        }
       );
 
       const responseData = await response.json();
@@ -598,6 +599,9 @@ const AppointmentRequestsPage = () => {
 
   const isMember = (userRole: number | string) =>
     userRole === 1 || userRole === "Member";
+
+  const isTopContributor = (userLabel: string | number | undefined) =>
+    userLabel === "top_contributor" || userLabel === 1;
 
   return (
     <div>
@@ -661,17 +665,38 @@ const AppointmentRequestsPage = () => {
                       className={`border-2 border-white ${
                         isMember(selectedRequest.fromUserNavigation.userRole)
                           ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse !h-5 !w-5"
-                          : "bg-blue-gray-100"
+                          : isTopContributor(
+                                selectedRequest.fromUserNavigation.userLabel
+                              )
+                            ? "bg-gradient-to-r from-yellow-500 to-orange-500 !h-5 !w-5"
+                            : "bg-blue-gray-100"
                       }`}
                       content={
-                        isMember(
-                          selectedRequest.fromUserNavigation.userRole,
+                        isMember(selectedRequest.fromUserNavigation.userRole) ||
+                        isTopContributor(
+                          selectedRequest.fromUserNavigation.userLabel
                         ) ? (
-                          <div className="relative group">
-                            <CheckBadgeIcon className="h-4 w-4 text-white" />
-                            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-white text-black text-sm p-2 rounded shadow-lg">
-                              Thành viên câu lạc bộ
-                            </span>
+                          <div className="relative group flex gap-1">
+                            {isMember(
+                              selectedRequest.fromUserNavigation.userRole
+                            ) && (
+                              <div className="relative">
+                                <CheckBadgeIcon className="h-4 w-4 text-white" />
+                                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-white text-black text-sm p-2 rounded shadow-lg">
+                                  Thành viên câu lạc bộ
+                                </span>
+                              </div>
+                            )}
+                            {isTopContributor(
+                              selectedRequest.fromUserNavigation.userLabel
+                            ) && (
+                              <div className="relative">
+                                <StarIcon className="h-4 w-4 text-white" />
+                                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-white text-black text-sm p-2 rounded shadow-lg">
+                                  Top Contributor
+                                </span>
+                              </div>
+                            )}
                           </div>
                         ) : null
                       }
@@ -680,7 +705,11 @@ const AppointmentRequestsPage = () => {
                         className={`w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden ${
                           isMember(selectedRequest.fromUserNavigation.userRole)
                             ? "border-2 border-purple-500 shadow-lg shadow-purple-500/20"
-                            : ""
+                            : isTopContributor(
+                                  selectedRequest.fromUserNavigation.userLabel
+                                )
+                              ? "border-2 border-yellow-500 shadow-lg shadow-yellow-500/20"
+                              : ""
                         }`}
                       >
                         {selectedRequest.fromUserNavigation.avatarUrl ? (
@@ -699,32 +728,53 @@ const AppointmentRequestsPage = () => {
                         <h4
                           className={`font-bold ${
                             isMember(
-                              selectedRequest.fromUserNavigation.userRole,
+                              selectedRequest.fromUserNavigation.userRole
                             )
                               ? "text-purple-600"
-                              : ""
+                              : isTopContributor(
+                                    selectedRequest.fromUserNavigation.userLabel
+                                  )
+                                ? "text-yellow-600"
+                                : ""
                           }`}
                         >
                           {selectedRequest.fromUserNavigation.username ||
-                            selectedRequest.fromUserNavigation.username}
+                            selectedRequest.fromUserNavigation.fullName ||
+                            "Người dùng ẩn danh"}
                         </h4>
                         {isMember(
-                          selectedRequest.fromUserNavigation.userRole,
+                          selectedRequest.fromUserNavigation.userRole
                         ) && (
                           <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
                             MEMBER
                           </span>
                         )}
+                        {isTopContributor(
+                          selectedRequest.fromUserNavigation.userLabel
+                        ) && (
+                          <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                            TOP CONTRIBUTOR
+                          </span>
+                        )}
                       </div>
                       <p className="text-gray-600 text-sm">
-                        <strong>Họ Và Tên:</strong>{" "}
-                        {selectedRequest.fromUserNavigation.fullName}
+                        <strong>Trình Độ:</strong>{" "}
+                        {getRankLevelText(
+                          selectedRequest.fromUserNavigation.ranking || 0
+                        )}
                       </p>
                       {isMember(
-                        selectedRequest.fromUserNavigation.userRole,
+                        selectedRequest.fromUserNavigation.userRole
                       ) && (
                         <p className="text-purple-500 text-sm mt-1">
                           Thành viên câu lạc bộ
+                        </p>
+                      )}
+                      {isTopContributor(
+                        selectedRequest.fromUserNavigation.userLabel
+                      ) && (
+                        <p className="text-yellow-500 text-sm mt-1">
+                          Top Contributor
                         </p>
                       )}
                     </div>
@@ -734,7 +784,8 @@ const AppointmentRequestsPage = () => {
                       <span className="font-medium">
                         <strong>Email:</strong>
                       </span>{" "}
-                      {selectedRequest.fromUserNavigation.email}
+                      {selectedRequest.fromUserNavigation.email ||
+                        "Không có thông tin"}
                     </p>
                     <p>
                       <span className="font-medium">
@@ -785,13 +836,13 @@ const AppointmentRequestsPage = () => {
                       <span className="font-medium">
                         <strong>Tên Phòng:</strong>
                       </span>{" "}
-                      {selectedRequest.table?.roomName}
+                      {selectedRequest.table?.roomName || "N/A"}
                     </p>
                     <p>
                       <span className="font-medium">
                         <strong>Mã Bàn:</strong>
                       </span>{" "}
-                      {selectedRequest.tableId}
+                      {selectedRequest.tableId || "N/A"}
                     </p>
                     {selectedRequest.totalPrice && (
                       <p>
@@ -815,7 +866,7 @@ const AppointmentRequestsPage = () => {
                       <strong>Ngày Chơi:</strong>
                     </span>{" "}
                     {new Date(selectedRequest.startTime).toLocaleDateString(
-                      "vi-VN",
+                      "vi-VN"
                     )}
                   </p>
                   <p>
@@ -824,7 +875,7 @@ const AppointmentRequestsPage = () => {
                     </span>{" "}
                     {formatTimeRange(
                       selectedRequest.startTime,
-                      selectedRequest.endTime,
+                      selectedRequest.endTime
                     )}
                   </p>
                   <p>
@@ -853,12 +904,10 @@ const AppointmentRequestsPage = () => {
                 <Clock className="w-8 h-8 text-gray-400" />
               </div>
               <h2 className="text-lg font-medium text-gray-600">
-                <strong>No appointment requests</strong>
+                <strong>Không có lời mời nào</strong>
               </h2>
               <p className="text-gray-500 mt-1 text-sm">
-                <strong>
-                  You don't have any chess appointment requests yet
-                </strong>
+                <strong>Bạn chưa nhận được lời mời đánh cờ nào</strong>
               </p>
             </div>
           ) : (
@@ -868,13 +917,16 @@ const AppointmentRequestsPage = () => {
                   <div
                     key={request.id}
                     className={`bg-white rounded-md shadow-sm p-4 border-l-4 ${
-                      request.status === "accepted" ||
-                      request.status === "rejected"
-                        ? "border-red-500"
-                        : isExpired(request.expireAt) ||
-                            request.status === "cancelled"
-                          ? "border-gray-400"
-                          : "border-blue-500"
+                      request.status === "accepted"
+                        ? "border-blue-500"
+                        : request.status === "rejected"
+                          ? "border-red-500"
+                          : isExpired(request.expireAt) ||
+                              request.status === "cancelled"
+                            ? "border-gray-400"
+                            : request.status === "accepted_by_others"
+                              ? "border-pink-500"
+                              : "border-blue-500"
                     }`}
                   >
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -885,15 +937,38 @@ const AppointmentRequestsPage = () => {
                           className={`border-2 border-white ${
                             isMember(request.fromUserNavigation.userRole)
                               ? "bg-gradient-to-r from-purple-500 to-pink-500 !h-5 !w-5 animate-pulse"
-                              : "bg-blue-gray-100"
+                              : isTopContributor(
+                                    request.fromUserNavigation.userLabel
+                                  )
+                                ? "bg-gradient-to-r from-yellow-500 to-orange-500 !h-5 !w-5"
+                                : "bg-blue-gray-100"
                           }`}
                           content={
-                            isMember(request.fromUserNavigation.userRole) ? (
-                              <div className="relative group">
-                                <CheckBadgeIcon className="h-4 w-4 text-white" />
-                                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-white text-black text-sm p-2 rounded shadow-lg">
-                                  Thành viên câu lạc bộ
-                                </span>
+                            isMember(request.fromUserNavigation.userRole) ||
+                            isTopContributor(
+                              request.fromUserNavigation.userLabel
+                            ) ? (
+                              <div className="relative group flex gap-1">
+                                {isMember(
+                                  request.fromUserNavigation.userRole
+                                ) && (
+                                  <div className="relative">
+                                    <CheckBadgeIcon className="h-4 w-4 text-white" />
+                                    <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-white text-black text-sm p-2 rounded shadow-lg">
+                                      Thành viên câu lạc bộ
+                                    </span>
+                                  </div>
+                                )}
+                                {isTopContributor(
+                                  request.fromUserNavigation.userLabel
+                                ) && (
+                                  <div className="relative">
+                                    <StarIcon className="h-4 w-4 text-white" />
+                                    <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-white text-black text-sm p-2 rounded shadow-lg">
+                                      Top Contributor
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             ) : null
                           }
@@ -902,7 +977,11 @@ const AppointmentRequestsPage = () => {
                             className={`w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden ${
                               isMember(request.fromUserNavigation.userRole)
                                 ? "border-2 border-purple-500 shadow-lg shadow-purple-500/20"
-                                : ""
+                                : isTopContributor(
+                                      request.fromUserNavigation.userLabel
+                                    )
+                                  ? "border-2 border-yellow-500 shadow-lg shadow-yellow-500/20"
+                                  : ""
                             }`}
                           >
                             {request.fromUserNavigation.avatarUrl ? (
@@ -922,26 +1001,47 @@ const AppointmentRequestsPage = () => {
                               className={`font-bold text-base ${
                                 isMember(request.fromUserNavigation.userRole)
                                   ? "text-purple-600"
-                                  : ""
+                                  : isTopContributor(
+                                        request.fromUserNavigation.userLabel
+                                      )
+                                    ? "text-yellow-600"
+                                    : ""
                               }`}
                             >
-                              Người Gửi:{" "}
+                              Người Gửi: @
                               {request.fromUserNavigation.username ||
-                                request.fromUserNavigation.username}
+                                request.fromUserNavigation.fullName ||
+                                "Người dùng ẩn danh"}
                             </h3>
                             {isMember(request.fromUserNavigation.userRole) && (
                               <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
                                 MEMBER
                               </span>
                             )}
+                            {isTopContributor(
+                              request.fromUserNavigation.userLabel
+                            ) && (
+                              <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                                TOP CONTRIBUTOR
+                              </span>
+                            )}
                           </div>
                           <p className="text-gray-600 text-sm">
-                            <strong>Họ Và Tên:</strong>{" "}
-                            {request.fromUserNavigation.fullName}
+                            <strong>Trình Độ:</strong>{" "}
+                            {getRankLevelText(
+                              request.fromUserNavigation.ranking || 0
+                            )}
                           </p>
                           {isMember(request.fromUserNavigation.userRole) && (
                             <p className="text-purple-500 text-sm mt-1">
                               Thành viên câu lạc bộ
+                            </p>
+                          )}
+                          {isTopContributor(
+                            request.fromUserNavigation.userLabel
+                          ) && (
+                            <p className="text-yellow-500 text-sm mt-1">
+                              Top Contributor
                             </p>
                           )}
                         </div>
@@ -1056,7 +1156,7 @@ const AppointmentRequestsPage = () => {
                               disabled={isRejecting}
                               onClick={() =>
                                 checkCancelCondition(
-                                  request.tablesAppointmentId!,
+                                  request.tablesAppointmentId!
                                 )
                               }
                             >
