@@ -152,7 +152,6 @@ export function ChessContent() {
               subTitle={game.subTitle}
               description={game.description}
               imageUrl={game.imageUrl}
-              className="relative transform transition-all duration-500 group-hover:-translate-y-3 group-hover:shadow-2xl rounded-xl overflow-hidden bg-white/90 backdrop-blur-sm animate-wild-shake"
             />
             <motion.div
               className="absolute top-2 right-2 bg-teal-500 text-white text-xs font-bold px-2 py-1 rounded-full"
