@@ -233,6 +233,7 @@ function ProfilePage() {
         }
       }
 
+      // Include userRole in the updateData payload
       const updateData = {
         fullName: userData.fullName,
         phone: userData.phone,
@@ -240,6 +241,7 @@ function ProfilePage() {
         bio: userData.bio,
         address: userData.address,
         avatarUrl: newAvatarUrl,
+        userRole: userData.userRole, // Add userRole here
         ...(newPassword && { password: newPassword }),
       };
 
@@ -258,6 +260,7 @@ function ProfilePage() {
         ...authData.userInfo,
         ...updateData,
         avatarUrl: newAvatarUrl,
+        userRole: userData.userRole, // Update userRole in local storage
         ...(newPassword && { password: newPassword }),
       };
 
@@ -372,11 +375,6 @@ function ProfilePage() {
                     {isMember && (
                       <Tooltip content="Thành viên câu lạc bộ">
                         <CheckBadgeIcon className="h-4 w-4 text-white" />
-                      </Tooltip>
-                    )}
-                    {isTopContributor && (
-                      <Tooltip content="Top Contributor">
-                        <StarIcon className="h-4 w-4 text-white" />
                       </Tooltip>
                     )}
                   </div>

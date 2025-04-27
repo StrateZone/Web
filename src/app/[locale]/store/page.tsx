@@ -6,7 +6,6 @@ import { Select, Option, Button } from "@material-tailwind/react";
 import { FaShoppingCart } from "react-icons/fa";
 
 import Footer from "@/components/footer";
-import SearchInput from "@/components/input/search_input";
 
 import Navbar from "@/components/navbar";
 
@@ -16,17 +15,12 @@ import { Navigation, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
-import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
-import { DefaultPagination } from "@/components/pagination";
 import { useRouter } from "next/navigation"; // Dùng next/navigation thay vì next/router
 
 export default function Store() {
-  const t = useTranslations("communityPage"); //Will update for store translation
   const { locale } = useParams(); // Lấy locale từ URL
   const router = useRouter(); // Khởi tạo router
-
-  const [searchTerm, setSearchTerm] = useState("");
 
   const products = [
     {
@@ -113,16 +107,6 @@ export default function Store() {
       </div>
 
       {/* Thanh tìm kiếm */}
-      <div className="flex justify-center mt-10">
-        <SearchInput />
-        <div className="w-30 ml-2">
-          <Select label="Chọn loại cờ">
-            <Option>Cờ vua</Option>
-            <Option>Cờ tướng</Option>
-            <Option>Cờ vây</Option>
-          </Select>
-        </div>
-      </div>
 
       {/* Sản phẩm nổi bật */}
       <div className="container mx-auto px-4 ">
@@ -188,9 +172,7 @@ export default function Store() {
             </SwiperSlide>
           ))}
         </Swiper>
-        <div className="flex justify-center mt-8 mb-8">
-          {/* <DefaultPagination /> */}
-        </div>
+        <div className="flex justify-center mt-8 mb-8"></div>
       </div>
 
       <Footer />

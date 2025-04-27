@@ -231,34 +231,34 @@ export default function ProfileMenu() {
           color="blue-gray"
           className="flex items-center gap-1 rounded-full py-0.5 pr-2 pl-0.5 lg:ml-auto"
         >
-          <Badge
-            overlap="circular"
-            placement="bottom-end"
-            className={`border-1 border-white ${
-              isMember
-                ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse !h-5 !w-5"
-                : "bg-blue-gray-100"
-            }`}
-            content={
-              isMember ? (
+          {isMember ? (
+            <Badge
+              overlap="circular"
+              placement="bottom-end"
+              className="border-1 border-white bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse !h-5 !w-5"
+              content={
                 <Tooltip content="Thành viên câu lạc bộ">
                   <CheckBadgeIcon className="h-4 w-4 text-white" />
                 </Tooltip>
-              ) : null
-            }
-          >
+              }
+            >
+              <Avatar
+                variant="circular"
+                size="sm"
+                alt="user avatar"
+                className="p-0.5 border-2 border-purple-500 shadow-lg shadow-purple-500/30"
+                src={avatarUrl}
+              />
+            </Badge>
+          ) : (
             <Avatar
               variant="circular"
               size="sm"
               alt="user avatar"
-              className={`p-0.5 ${
-                isMember
-                  ? "border-2 border-purple-500 shadow-lg shadow-purple-500/30 "
-                  : "border border-gray-900"
-              }`}
+              className="p-0.5 border border-gray-900"
               src={avatarUrl}
             />
-          </Badge>
+          )}
           <ChevronDownIcon
             strokeWidth={2.5}
             className={`h-3 w-3 transition-transform ${isMenuOpen ? "rotate-180" : ""}`}

@@ -17,7 +17,7 @@ import {
 import { User, X, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import { FiSearch, FiUsers } from "react-icons/fi";
-import { CheckBadgeIcon, StarIcon } from "@heroicons/react/24/solid";
+import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 import { toast } from "react-toastify";
 
 interface Opponent {
@@ -33,7 +33,7 @@ interface Opponent {
   isInvited?: boolean;
   ranking?: string;
   userRole?: string | number;
-  userLabel?: string; // Add userLabel for Top Contributor
+  userLabel?: string;
 }
 
 interface ChessBooking {
@@ -77,6 +77,7 @@ const OpponentRecommendationModal = ({
   const [refreshTrigger, setRefreshTrigger] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("friends");
+  const [hasSearched, setHasSearched] = useState(false);
   const hasFetchedInitialData = useRef(false);
 
   const fetchOpponents = async () => {
@@ -88,7 +89,6 @@ const OpponentRecommendationModal = ({
       const authData = JSON.parse(authDataString || "{}");
       const userId = authData.userId;
 
-      // Get already invited opponents from localStorage for this specific table
       const savedBookings = localStorage.getItem("chessBookings");
       let alreadyInvitedIds: number[] = [];
 
@@ -108,13 +108,16 @@ const OpponentRecommendationModal = ({
         }
       }
 
-      // Build the URL with query parameters
       const url = new URL(
         `https://backend-production-ac5e.up.railway.app/api/users/opponents/${userId}`
       );
 
       if (searchTerm) {
         url.searchParams.append("SearchTerm", searchTerm);
+        setHasSearched(true);
+        setActiveTab("opponents"); // Auto-switch to opponents tab on search
+      } else {
+        setHasSearched(false); // Reset hasSearched when no search term
       }
 
       const response = await fetch(url.toString(), {
@@ -129,7 +132,6 @@ const OpponentRecommendationModal = ({
 
       const data: ApiResponse = await response.json();
 
-      // Mark already invited opponents
       const markedOpponents = data.matchingOpponents.map((opponent) => ({
         ...opponent,
         isInvited: alreadyInvitedIds.includes(opponent.userId),
@@ -155,22 +157,26 @@ const OpponentRecommendationModal = ({
   useEffect(() => {
     if (open && !hasFetchedInitialData.current) {
       hasFetchedInitialData.current = true;
+      setHasSearched(false);
+      setActiveTab("friends"); // Reset to friends tab when modal opens
       fetchOpponents();
     }
   }, [open]);
 
   useEffect(() => {
     if (refreshTrigger && open) {
+      setHasSearched(false);
+      setActiveTab("friends"); // Reset to friends tab on refresh
       fetchOpponents();
     }
   }, [refreshTrigger]);
 
   const handleRefresh = () => {
     setRefreshTrigger((prev) => !prev);
+    setSearchTerm(""); // Clear search term on refresh
   };
 
   const handleAddOpponent = (opponent: Opponent) => {
-    // Get current bookings from localStorage
     const savedBookings = localStorage.getItem("chessBookings");
     if (!savedBookings) {
       toast.error("Không tìm thấy thông tin đặt bàn");
@@ -199,7 +205,6 @@ const OpponentRecommendationModal = ({
     if (!invitedOpponents.includes(opponent.userId)) {
       try {
         setLoading(true);
-        // Update localStorage
         const updatedBookings = bookings.map((b) => {
           if (
             b.tableId === tableId &&
@@ -224,7 +229,6 @@ const OpponentRecommendationModal = ({
 
         localStorage.setItem("chessBookings", JSON.stringify(updatedBookings));
 
-        // Update state to mark opponent as invited
         setOpponents((prev) =>
           prev.map((o) =>
             o.userId === opponent.userId ? { ...o, isInvited: true } : o
@@ -237,7 +241,6 @@ const OpponentRecommendationModal = ({
         );
         setInvitedOpponents((prev) => [...prev, opponent.userId]);
 
-        // Call onInviteSuccess to update parent component
         onInviteSuccess(opponent);
 
         toast.success(`Đã mời ${opponent.username} vào bàn!`);
@@ -407,26 +410,39 @@ const OpponentRecommendationModal = ({
     );
   };
 
-  const tabsData = [
-    {
-      label: (
-        <div className="flex items-center gap-2">
-          <FiUsers className="h-5 w-5" />
-          Bạn bè
-        </div>
-      ),
-      value: "friends",
-    },
-    {
-      label: (
-        <div className="flex items-center gap-2">
-          <FiSearch className="h-5 w-5" />
-          Đối thủ khác
-        </div>
-      ),
-      value: "opponents",
-    },
-  ];
+  // Conditionally show tabs: only "Đối thủ khác" after search, otherwise both
+  const tabsData = hasSearched
+    ? [
+        {
+          label: (
+            <div className="flex items-center gap-2">
+              <FiSearch className="h-5 w-5" />
+              Đối thủ khác
+            </div>
+          ),
+          value: "opponents",
+        },
+      ]
+    : [
+        {
+          label: (
+            <div className="flex items-center gap-2">
+              <FiUsers className="h-5 w-5" />
+              Bạn bè
+            </div>
+          ),
+          value: "friends",
+        },
+        {
+          label: (
+            <div className="flex items-center gap-2">
+              <FiSearch className="h-5 w-5" />
+              Đối thủ khác
+            </div>
+          ),
+          value: "opponents",
+        },
+      ];
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 text-black">
@@ -489,17 +505,19 @@ const OpponentRecommendationModal = ({
               ))}
             </TabsHeader>
             <TabsBody>
-              <TabPanel value="friends" className="p-0 mt-4">
-                {loading ? (
-                  <div className="flex justify-center py-8">
-                    <Spinner className="h-12 w-12" />
-                  </div>
-                ) : error ? (
-                  <div className="text-center text-red-500 py-4">{error}</div>
-                ) : (
-                  renderOpponentList(friends)
-                )}
-              </TabPanel>
+              {!hasSearched && (
+                <TabPanel value="friends" className="p-0 mt-4">
+                  {loading ? (
+                    <div className="flex justify-center py-8">
+                      <Spinner className="h-12 w-12" />
+                    </div>
+                  ) : error ? (
+                    <div className="text-center text-red-500 py-4">{error}</div>
+                  ) : (
+                    renderOpponentList(friends)
+                  )}
+                </TabPanel>
+              )}
               <TabPanel value="opponents" className="p-0 mt-4">
                 {loading ? (
                   <div className="flex justify-center py-8">

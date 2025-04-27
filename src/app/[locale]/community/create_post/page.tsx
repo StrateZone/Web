@@ -81,7 +81,6 @@ export default function CreatePost() {
   useEffect(() => {
     const checkUserMembership = () => {
       if (!authDataString) {
-        toast.error("Vui lòng đăng nhập để tạo bài viết");
         router.push(`/${locale}/login`);
         return;
       }
@@ -918,11 +917,13 @@ export default function CreatePost() {
                   type="button"
                   onClick={handleSaveDraft}
                   disabled={isSubmitting}
-                  className={`px-6 py-3 bg-yellow-600 text-white rounded-lg font-medium ${
-                    isSubmitting
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:bg-yellow-700"
-                  }`}
+                  style={{
+                    backgroundColor: "#004080",
+                    color: "white",
+                    opacity: isSubmitting ? 0.5 : 1,
+                    cursor: isSubmitting ? "not-allowed" : "pointer",
+                  }}
+                  className="px-6 py-3 rounded-lg font-medium hover:brightness-110"
                 >
                   {isSubmitting ? "Đang lưu nháp..." : "Lưu nháp"}
                 </Button>

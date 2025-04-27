@@ -104,6 +104,7 @@ function PostDetailPage() {
   const [isLoadingCommentLike, setIsLoadingCommentLike] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null); // New state for login status
   const [showMembershipDialog, setShowMembershipDialog] = useState(false);
   const [membershipPrice, setMembershipPrice] =
     useState<MembershipPrice | null>(null);
@@ -132,9 +133,16 @@ function PostDetailPage() {
 
   useEffect(() => {
     const checkUserMembership = () => {
-      const userData = localStorage.getItem("authData");
-      if (userData) {
-        const user = JSON.parse(userData);
+      const authDataString = localStorage.getItem("authData");
+      if (!authDataString) {
+        setIsLoggedIn(false); // User is not logged in
+        setInitialLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoggedIn(true); // User is logged in
+        const user = JSON.parse(authDataString);
         setUserId(user.userId);
         setUserRole(user.userRole);
 
@@ -142,15 +150,17 @@ function PostDetailPage() {
           fetchMembershipPrice();
           setShowMembershipDialog(true);
         }
-      } else {
-        toast.error("Vui lòng đăng nhập để xem chi tiết bài viết");
-        router.push(`/${locale}/login`);
+      } catch (error) {
+        console.error("Error parsing auth data:", error);
+        setIsLoggedIn(false); // Treat as not logged in on error
+        toast.error("Dữ liệu xác thực không hợp lệ. Vui lòng đăng nhập lại.");
+      } finally {
+        setInitialLoading(false);
       }
-      setInitialLoading(false);
     };
 
     checkUserMembership();
-  }, [router, locale]);
+  }, [locale]);
 
   const fetchMembershipPrice = async () => {
     try {
@@ -346,10 +356,10 @@ function PostDetailPage() {
   };
 
   useEffect(() => {
-    if (userRole === "Member" && id) {
+    if (userRole === "Member" && id && isLoggedIn) {
       fetchData();
     }
-  }, [id, currentUser.userId, userRole]);
+  }, [id, currentUser.userId, userRole, isLoggedIn]);
 
   const handleSubmitMainComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -727,12 +737,51 @@ function PostDetailPage() {
     0
   );
 
-  if (initialLoading) {
+  if (initialLoading || isLoggedIn === null) {
     return (
       <div className="flex flex-col min-h-screen">
         <Navbar />
         <div className="flex-grow flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // If not logged in, show login prompt
+  if (!isLoggedIn) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+        <div className="flex-grow flex flex-col items-center justify-center container mx-auto px-4 py-8 text-center">
+          <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8">
+            <Typography variant="h4" className="mb-6 text-gray-800 font-bold">
+              Vui lòng đăng nhập để xem chi tiết bài viết
+            </Typography>
+            <Typography variant="paragraph" className="mb-8 text-gray-600">
+              Bạn cần đăng nhập để xem chi tiết bài viết và tham gia thảo luận
+              trên StrateZone.
+            </Typography>
+            <div className="flex justify-center gap-4">
+              <Button
+                onClick={() => router.push(`/${locale}/login`)}
+                color="blue"
+                size="lg"
+                className="px-8 py-3 rounded-lg shadow-md hover:shadow-lg transition-all"
+              >
+                Đăng nhập
+              </Button>
+              <Button
+                onClick={() => router.push(`/${locale}/register`)}
+                variant="outlined"
+                color="blue"
+                size="lg"
+                className="px-8 py-3 rounded-lg shadow-md hover:shadow-lg transition-all"
+              >
+                Đăng ký
+              </Button>
+            </div>
+          </div>
         </div>
         <Footer />
       </div>
@@ -767,8 +816,8 @@ function PostDetailPage() {
       {userRole === "Member" ? (
         <main className="flex-1 max-w-7xl mx-auto p-4 space-y-6">
           {loading ? (
-            <div className="flex-1 flex items-center justify-center">
-              <p>Đang tải...</p>
+            <div className="flex-1 flex items-center justify-center mt-10">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
             </div>
           ) : hasPermission === false ? (
             <div className="text-center py-12">

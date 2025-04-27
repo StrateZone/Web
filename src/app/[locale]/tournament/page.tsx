@@ -9,15 +9,12 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import dayjs from "dayjs";
 
-import SearchInput from "@/components/input/search_input";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
-import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
-import { DefaultPagination } from "@/components/pagination";
 import { useRouter } from "next/navigation";
 function Page() {
   const { locale } = useParams(); // Lấy locale từ URL
@@ -109,7 +106,6 @@ function Page() {
         <div>
           {/* Thanh tìm kiếm */}
           <div className="flex justify-center mt-10">
-            <SearchInput />
             <div className="w-30 ml-2">
               <Select label="Chọn loại cờ">
                 <Option>Cờ Vua</Option>

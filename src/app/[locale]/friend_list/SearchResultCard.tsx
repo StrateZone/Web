@@ -19,7 +19,7 @@ interface SearchResultCardProps {
   onAddFriend: () => void;
   onCancelRequest?: () => void;
   onViewProfile: () => void;
-  isSendingRequest: boolean; // Thêm prop để kiểm soát trạng thái loading
+  isSendingRequest: boolean;
 }
 
 export function SearchResultCard({
@@ -141,19 +141,19 @@ export function SearchResultCard({
             />
           </Badge>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <Typography
-                variant="h5"
-                className={`text-gray-900 truncate ${
-                  isMember
-                    ? "text-purple-600"
-                    : isTopContributor
-                      ? "text-yellow-700"
-                      : ""
-                }`}
-              >
-                {user.username}
-              </Typography>
+            <Typography
+              variant="h5"
+              className={`text-gray-900 truncate ${
+                isMember
+                  ? "text-purple-600"
+                  : isTopContributor
+                    ? "text-yellow-700"
+                    : ""
+              }`}
+            >
+              {user.username}
+            </Typography>
+            <div className="flex items-center gap-2 mt-1">
               {isMember && (
                 <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
                   MEMBER
@@ -165,19 +165,9 @@ export function SearchResultCard({
                 </span>
               )}
             </div>
-            <Typography variant="small" color="gray" className="truncate">
+            <Typography variant="small" color="gray" className="truncate mt-1">
               {user.fullName || "Không có tên hiển thị"}
             </Typography>
-            {isMember && (
-              <Typography variant="small" className="text-purple-500 mt-1">
-                Thành viên câu lạc bộ
-              </Typography>
-            )}
-            {isTopContributor && !isMember && (
-              <Typography variant="small" className="text-yellow-500 mt-1">
-                Top Contributor
-              </Typography>
-            )}
           </div>
         </div>
       </CardBody>
