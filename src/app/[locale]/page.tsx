@@ -1,15 +1,15 @@
 import ChessContent from "@/components/chess-content";
-import CourseContent from "@/components/courses-content";
 import Footer from "@/components/footer";
 import BannerHero from "@/components/banner_hero";
 import Navbar from "@/components/navbar";
+import CommunitySection from "@/components/courses-content";
 export default function Home() {
   return (
     <>
       <Navbar />
       <BannerHero />
       <ChessContent />
-      <CourseContent />
+      <CommunitySection /> {/* Thay thế CourseContent */}
       <Footer />
     </>
   );

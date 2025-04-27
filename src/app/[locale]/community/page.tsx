@@ -51,7 +51,7 @@ interface Tag {
   tagName: string;
   description?: string;
   postCount: number;
-  tagColor: string; // Thêm dòng này
+  tagColor: string;
 }
 
 interface PaginatedResponse {
@@ -79,6 +79,7 @@ export default function CommunityPage() {
   const [pageSize] = useState(8);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedTags, setSelectedTags] = useState<number[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const router = useRouter();
   const { locale } = useParams();
   const [orderBy, setOrderBy] = useState<
@@ -86,20 +87,28 @@ export default function CommunityPage() {
   >("created-at-desc");
   const [userId, setUserId] = useState<number | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null); // New state for login status
   const [showMembershipDialog, setShowMembershipDialog] = useState(false);
   const [membershipPrice, setMembershipPrice] =
     useState<MembershipPrice | null>(null);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true); // Added for initial loading state
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const activeButtonClass = "bg-blue-100 font-semibold text-blue-800";
   const inactiveButtonClass = "text-gray-700 hover:bg-gray-100";
 
   useEffect(() => {
     const checkUserMembership = () => {
-      const userData = localStorage.getItem("authData");
-      if (userData) {
-        const user = JSON.parse(userData);
+      const authDataString = localStorage.getItem("authData");
+      if (!authDataString) {
+        setIsLoggedIn(false); // User is not logged in
+        setInitialLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoggedIn(true); // User is logged in
+        const user = JSON.parse(authDataString);
         setUserId(user.userId);
         setUserRole(user.userRole);
 
@@ -107,19 +116,33 @@ export default function CommunityPage() {
           fetchMembershipPrice();
           setShowMembershipDialog(true);
         }
+      } catch (error) {
+        console.error("Error parsing auth data:", error);
+        setIsLoggedIn(false); // Treat as not logged in on error
+        toast.error("Dữ liệu xác thực không hợp lệ. Vui lòng đăng nhập lại.");
+      } finally {
+        setInitialLoading(false);
       }
-      setInitialLoading(false); // Set initial loading to false after checking
     };
 
     checkUserMembership();
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
-    if (userRole === "Member") {
+    if (userRole === "Member" && isLoggedIn) {
       fetchThreads();
       fetchTags();
     }
-  }, [currentPage, pageSize, selectedTags, orderBy, userId, userRole]);
+  }, [
+    currentPage,
+    pageSize,
+    selectedTags,
+    orderBy,
+    userId,
+    userRole,
+    searchQuery,
+    isLoggedIn,
+  ]);
 
   const fetchThreads = async () => {
     try {
@@ -136,6 +159,10 @@ export default function CommunityPage() {
         url += `&TagIds=${selectedTags.join(",")}`;
       }
 
+      if (searchQuery.trim()) {
+        url += `&search=${encodeURIComponent(searchQuery.trim())}`;
+      }
+
       const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to fetch threads");
       const data: PaginatedResponse = await response.json();
@@ -150,6 +177,7 @@ export default function CommunityPage() {
     } catch (error) {
       console.error("Error fetching threads:", error);
       setThreads([]);
+      toast.error("Không thể tải bài viết. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -159,7 +187,7 @@ export default function CommunityPage() {
     try {
       setTagLoading(true);
       const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/tags",
+        "https://backend-production-ac5e.up.railway.app/api/tags"
       );
       if (!response.ok) throw new Error("Failed to fetch tags");
       const data: Tag[] = await response.json();
@@ -175,7 +203,7 @@ export default function CommunityPage() {
   const fetchMembershipPrice = async () => {
     try {
       const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/prices/membership",
+        "https://backend-production-ac5e.up.railway.app/api/prices/membership"
       );
       if (!response.ok) throw new Error("Failed to fetch membership price");
       const data: MembershipPrice = await response.json();
@@ -196,21 +224,18 @@ export default function CommunityPage() {
     setSelectedTags((prev) =>
       prev.includes(tagId)
         ? prev.filter((id) => id !== tagId)
-        : [...prev, tagId],
+        : [...prev, tagId]
     );
   };
+
   function getContrastColor(hexColor: string) {
-    // Chuyển hex sang RGB
     const r = parseInt(hexColor.substr(1, 2), 16);
     const g = parseInt(hexColor.substr(3, 2), 16);
     const b = parseInt(hexColor.substr(5, 2), 16);
-
-    // Tính độ sáng (luminance)
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-    // Trả về màu trắng hoặc đen tùy độ sáng nền
     return luminance > 0.5 ? "#000000" : "#FFFFFF";
   }
+
   const handleMembershipPayment = async () => {
     if (!userId) return;
 
@@ -223,7 +248,7 @@ export default function CommunityPage() {
           headers: {
             "Content-Type": "application/json",
           },
-        },
+        }
       );
 
       const result = await response.json();
@@ -259,7 +284,7 @@ export default function CommunityPage() {
             {
               autoClose: 3000,
               closeButton: true,
-            },
+            }
           );
 
           fetchThreads();
@@ -310,8 +335,12 @@ export default function CommunityPage() {
     return truncated + "...";
   };
 
-  // Show loading state while checking user role
-  if (initialLoading) {
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1); // Reset to first page on new search
+  };
+
+  if (initialLoading || isLoggedIn === null) {
     return (
       <div className="flex flex-col min-h-screen">
         <Navbar />
@@ -323,241 +352,281 @@ export default function CommunityPage() {
     );
   }
 
-  return (
-    <div>
-      <div>
-        <ToastContainer
-          position="top-center"
-          autoClose={5000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-        />
-
-        <Navbar />
-        <Banner
-          title="Tham Gia Cộng Đồng Chơi Cờ"
-          subtitle="Kết nối với những người đam mê cờ vua, tham gia các giải đấu và cải thiện kỹ năng của bạn tại StrateZone!"
-        />
-
-        <MembershipUpgradeDialog
-          open={showMembershipDialog}
-          onClose={handleCloseDialog}
-          onUpgrade={handleMembershipPayment}
-          membershipPrice={membershipPrice || undefined}
-          paymentProcessing={paymentProcessing}
-        />
-
-        {userRole === "Member" ? (
-          <main className="container mx-auto px-4 py-8">
-            <div className="flex flex-wrap -mx-4">
-              <div className="w-full lg:w-3/4 px-4">
-                <div className="flex flex-col md:flex-row justify-between gap-4">
-                  <ButtonGroup
-                    variant="text"
-                    className="flex md:flex-row flex-col"
-                  >
-                    <Button
-                      onClick={() => setOrderBy("created-at-desc")}
-                      className={
-                        orderBy === "created-at-desc"
-                          ? activeButtonClass
-                          : inactiveButtonClass
-                      }
-                    >
-                      Mới Nhất
-                    </Button>
-                    <Button
-                      onClick={() => setOrderBy("popularity")}
-                      className={
-                        orderBy === "popularity"
-                          ? activeButtonClass
-                          : inactiveButtonClass
-                      }
-                    >
-                      Phổ Biến
-                    </Button>
-                    <Button
-                      onClick={() => setOrderBy("friends")}
-                      className={
-                        orderBy === "friends"
-                          ? activeButtonClass
-                          : inactiveButtonClass
-                      }
-                    >
-                      Bài Viết Bạn Bè
-                    </Button>
-                  </ButtonGroup>
-
-                  <Button
-                    onClick={() =>
-                      router.push(`/${locale}/community/create_post`)
-                    }
-                    variant="filled"
-                    className="md:ml-4"
-                  >
-                    Tạo Bài Viết
-                  </Button>
-                </div>
-
-                <div className="w-full h-px max-w-6xl mx-auto my-3 bg-gradient-to-r from-transparent via-gray-400 to-transparent"></div>
-
-                {loading ? (
-                  <div className="flex justify-center items-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-                  </div>
-                ) : threads.length === 0 ? (
-                  <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                    <p className="text-lg">Không có bài viết nào.</p>
-                  </div>
-                ) : (
-                  <>
-                    {threads.map((thread) => (
-                      <CommunityCard
-                        key={thread.threadId}
-                        threadId={thread.threadId}
-                        theme={thread.threadsTags?.[0]?.tag?.tagName || "Chess"}
-                        title={thread.title}
-                        thumbnailUrl={thread.thumbnailUrl}
-                        description={cleanAndTruncate(thread.content)}
-                        dateTime={thread.createdAt}
-                        likes={thread.likesCount}
-                        commentsCount={thread.commentsCount}
-                        threadData={{
-                          likes:
-                            thread.likes?.map((like) => ({
-                              ...like,
-                              threadId: thread.threadId,
-                            })) || [],
-                        }}
-                        createdByNavigation={thread.createdByNavigation}
-                        tags={thread.threadsTags || []}
-                      />
-                    ))}
-
-                    {totalPages > 1 && (
-                      <div className="flex justify-center mt-8 mb-8">
-                        <DefaultPagination
-                          currentPage={currentPage}
-                          totalPages={totalPages}
-                          onPageChange={handlePageChange}
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              <div className="w-full lg:w-1/4 px-4">
-                <SearchInput />
-
-                <Typography variant="h4" className="my-4 text-black">
-                  Chọn Chủ Đề
-                </Typography>
-
-                {selectedTags.length > 0 && (
-                  <div className="mb-4">
-                    <Typography variant="small" className="mb-2 text-black">
-                      Đang lọc theo:
-                    </Typography>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedTags.map((tagId) => {
-                        const tag = tags.find((t) => t.tagId === tagId);
-                        return tag ? (
-                          <Chip
-                            key={tag.tagId}
-                            value={tag.tagName}
-                            onClose={() => toggleTag(tag.tagId)}
-                            className="cursor-pointer"
-                          />
-                        ) : null;
-                      })}
-                      <Button
-                        variant="text"
-                        size="sm"
-                        onClick={() => setSelectedTags([])}
-                        className="text-blue-500 hover:text-blue-700"
-                      >
-                        Xóa tất cả
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {tagLoading ? (
-                  <div className="flex justify-center items-center py-4">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {tags.map((tag) => (
-                      <div
-                        key={tag.tagId}
-                        onClick={() => toggleTag(tag.tagId)}
-                        className="cursor-pointer"
-                      >
-                        <Chip
-                          value={tag.tagName}
-                          variant={
-                            selectedTags.includes(tag.tagId)
-                              ? "filled"
-                              : "outlined"
-                          }
-                          style={{
-                            backgroundColor: selectedTags.includes(tag.tagId)
-                              ? tag.tagColor
-                              : "transparent",
-                            color: selectedTags.includes(tag.tagId)
-                              ? getContrastColor(tag.tagColor)
-                              : tag.tagColor,
-                            borderColor: tag.tagColor,
-                          }}
-                          className="hover:shadow-md transition-all"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+  // If not logged in, show login prompt
+  if (!isLoggedIn) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+        <div className="flex-grow flex flex-col items-center justify-center container mx-auto px-4 py-8 text-center">
+          <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8">
+            <Typography variant="h4" className="mb-6 text-gray-800 font-bold">
+              Vui lòng đăng nhập để tham gia cộng đồng
+            </Typography>
+            <Typography variant="paragraph" className="mb-8 text-gray-600">
+              Bạn cần đăng nhập để tham gia cộng đồng và trải nghiệm tất cả tính
+              năng trên StrateZone.
+            </Typography>
+            <div className="flex justify-center gap-4">
+              <Button
+                onClick={() => router.push(`/${locale}/login`)}
+                color="blue"
+                size="lg"
+                className="px-8 py-3 rounded-lg shadow-md hover:shadow-lg transition-all"
+              >
+                Đăng nhập
+              </Button>
+              <Button
+                onClick={() => router.push(`/${locale}/register`)}
+                variant="outlined"
+                color="blue"
+                size="lg"
+                className="px-8 py-3 rounded-lg shadow-md hover:shadow-lg transition-all"
+              >
+                Đăng ký
+              </Button>
             </div>
-          </main>
-        ) : (
-          !showMembershipDialog && (
-            <div className="flex flex-col min-h-[calc(100vh-160px)]">
-              <div className="flex-grow flex flex-col items-center justify-center container mx-auto px-4 py-8 text-center">
-                <div className="max-w-md mx-auto">
-                  <Typography
-                    variant="h4"
-                    className="mb-6 text-gray-800 font-bold"
-                  >
-                    Bạn cần nâng cấp tài khoản để truy cập tính năng này
-                  </Typography>
-                  <Typography
-                    variant="paragraph"
-                    className="mb-8 text-gray-600"
-                  >
-                    Nâng cấp lên tài khoản Member để tham gia cộng đồng và trải
-                    nghiệm tất cả tính năng
-                  </Typography>
-                  <Button
-                    onClick={() => setShowMembershipDialog(true)}
-                    color="blue"
-                    size="lg"
-                    className="px-8 py-3 rounded-lg shadow-md hover:shadow-lg transition-all"
-                  >
-                    Nâng cấp tài khoản
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )
-        )}
+          </div>
+        </div>
+        <Footer />
       </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <ToastContainer
+        position="top-center"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+
+      <Navbar />
+      <Banner
+        title="Tham Gia Cộng Đồng Chơi Cờ"
+        subtitle="Kết nối với những người đam mê cờ vua, tham gia các giải đấu và cải thiện kỹ năng của bạn tại StrateZone!"
+      />
+
+      <MembershipUpgradeDialog
+        open={showMembershipDialog}
+        onClose={handleCloseDialog}
+        onUpgrade={handleMembershipPayment}
+        membershipPrice={membershipPrice || undefined}
+        paymentProcessing={paymentProcessing}
+      />
+
+      {userRole === "Member" ? (
+        <main className="container mx-auto px-4 py-8 flex-grow">
+          <div className="flex flex-wrap -mx-4">
+            <div className="w-full lg:w-3/4 px-4">
+              <div className="flex flex-col md:flex-row justify-between gap-4">
+                <ButtonGroup
+                  variant="text"
+                  className="flex md:flex-row flex-col"
+                >
+                  <Button
+                    onClick={() => setOrderBy("created-at-desc")}
+                    className={
+                      orderBy === "created-at-desc"
+                        ? activeButtonClass
+                        : inactiveButtonClass
+                    }
+                  >
+                    Mới Nhất
+                  </Button>
+                  <Button
+                    onClick={() => setOrderBy("popularity")}
+                    className={
+                      orderBy === "popularity"
+                        ? activeButtonClass
+                        : inactiveButtonClass
+                    }
+                  >
+                    Phổ Biến
+                  </Button>
+                  <Button
+                    onClick={() => setOrderBy("friends")}
+                    className={
+                      orderBy === "friends"
+                        ? activeButtonClass
+                        : inactiveButtonClass
+                    }
+                  >
+                    Bài Viết Bạn Bè
+                  </Button>
+                </ButtonGroup>
+
+                <Button
+                  onClick={() =>
+                    router.push(`/${locale}/community/create_post`)
+                  }
+                  variant="filled"
+                  className="md:ml-4"
+                >
+                  Tạo Bài Viết
+                </Button>
+              </div>
+
+              <div className="w-full h-px max-w-6xl mx-auto my-3 bg-gradient-to-r from-transparent via-gray-400 to-transparent"></div>
+
+              {searchQuery && (
+                <Typography variant="small" className="mb-4 text-black">
+                  Kết quả tìm kiếm cho: "{searchQuery}"
+                </Typography>
+              )}
+
+              {loading ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+              ) : threads.length === 0 ? (
+                <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                  <p className="text-lg">Không có bài viết nào.</p>
+                </div>
+              ) : (
+                <>
+                  {threads.map((thread) => (
+                    <CommunityCard
+                      key={thread.threadId}
+                      threadId={thread.threadId}
+                      theme={thread.threadsTags?.[0]?.tag?.tagName || "Chess"}
+                      title={thread.title}
+                      thumbnailUrl={thread.thumbnailUrl}
+                      description={cleanAndTruncate(thread.content)}
+                      dateTime={thread.createdAt}
+                      likes={thread.likesCount}
+                      commentsCount={thread.commentsCount}
+                      threadData={{
+                        likes:
+                          thread.likes?.map((like) => ({
+                            ...like,
+                            threadId: thread.threadId,
+                          })) || [],
+                      }}
+                      createdByNavigation={thread.createdByNavigation}
+                      tags={thread.threadsTags || []}
+                    />
+                  ))}
+
+                  {totalPages > 1 && (
+                    <div className="flex justify-center mt-8 mb-8">
+                      <DefaultPagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={handlePageChange}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="w-full lg:w-1/4 px-4">
+              <SearchInput onSearch={handleSearch} />
+
+              <Typography variant="h4" className="my-4 text-black">
+                Chọn Chủ Đề
+              </Typography>
+
+              {selectedTags.length > 0 && (
+                <div className="mb-4">
+                  <Typography variant="small" className="mb-2 text-black">
+                    Đang lọc theo:
+                  </Typography>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTags.map((tagId) => {
+                      const tag = tags.find((t) => t.tagId === tagId);
+                      return tag ? (
+                        <Chip
+                          key={tag.tagId}
+                          value={tag.tagName}
+                          onClose={() => toggleTag(tag.tagId)}
+                          className="cursor-pointer"
+                        />
+                      ) : null;
+                    })}
+                    <Button
+                      variant="text"
+                      size="sm"
+                      onClick={() => setSelectedTags([])}
+                      className="text-blue-500 hover:text-blue-700"
+                    >
+                      Xóa tất cả
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {tagLoading ? (
+                <div className="flex justify-center items-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => (
+                    <div
+                      key={tag.tagId}
+                      onClick={() => toggleTag(tag.tagId)}
+                      className="cursor-pointer"
+                    >
+                      <Chip
+                        value={tag.tagName}
+                        variant={
+                          selectedTags.includes(tag.tagId)
+                            ? "filled"
+                            : "outlined"
+                        }
+                        style={{
+                          backgroundColor: selectedTags.includes(tag.tagId)
+                            ? tag.tagColor
+                            : "transparent",
+                          color: selectedTags.includes(tag.tagId)
+                            ? getContrastColor(tag.tagColor)
+                            : tag.tagColor,
+                          borderColor: tag.tagColor,
+                        }}
+                        className="hover:shadow-md transition-all"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </main>
+      ) : (
+        !showMembershipDialog && (
+          <div className="flex flex-col min-h-[calc(100vh-160px)] flex-grow">
+            <div className="flex-grow flex flex-col items-center justify-center container mx-auto px-4 py-8 text-center">
+              <div className="max-w-md mx-auto">
+                <Typography
+                  variant="h4"
+                  className="mb-6 text-gray-800 font-bold"
+                >
+                  Bạn cần nâng cấp tài khoản để truy cập tính năng này
+                </Typography>
+                <Typography variant="paragraph" className="mb-8 text-gray-600">
+                  Nâng cấp lên tài khoản Member để tham gia cộng đồng và trải
+                  nghiệm tất cả tính năng
+                </Typography>
+                <Button
+                  onClick={() => setShowMembershipDialog(true)}
+                  color="blue"
+                  size="lg"
+                  className="px-8 py-3 rounded-lg shadow-md hover:shadow-lg transition-all"
+                >
+                  Nâng cấp tài khoản
+                </Button>
+              </div>
+            </div>
+          </div>
+        )
+      )}
       <Footer />
     </div>
   );

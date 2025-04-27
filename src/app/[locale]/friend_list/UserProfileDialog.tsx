@@ -1,4 +1,3 @@
-// components/friends/UserProfileDialog.tsx
 "use client";
 
 import {
@@ -28,6 +27,9 @@ export function UserProfileDialog({
   user,
 }: UserProfileDialogProps) {
   const isMember = user?.userRole === "Member" || user?.userRole === 1;
+  const isTopContributor =
+    user?.userLabel === 1 || user?.userLabel === "top_contributor";
+
   return (
     <Dialog open={open} handler={onClose} size="md" className="rounded-lg">
       <DialogHeader className="justify-between p-4 border-b">
@@ -52,10 +54,20 @@ export function UserProfileDialog({
               <Badge
                 overlap="circular"
                 placement="bottom-end"
-                className={`border-2 border-white ${isMember ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse" : "bg-blue-gray-100"}`}
+                className={`border-2 border-white ${
+                  isMember
+                    ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse"
+                    : isTopContributor
+                      ? "bg-gradient-to-r from-amber-500 to-orange-500 animate-pulse"
+                      : "bg-blue-gray-100"
+                }`}
                 content={
                   isMember ? (
                     <Tooltip content="Thành viên câu lạc bộ">
+                      <CheckBadgeIcon className="h-5 w-5 text-white" />
+                    </Tooltip>
+                  ) : isTopContributor ? (
+                    <Tooltip content="Top Contributor">
                       <CheckBadgeIcon className="h-5 w-5 text-white" />
                     </Tooltip>
                   ) : null
@@ -68,20 +80,37 @@ export function UserProfileDialog({
                   }
                   alt={user.username}
                   size="xxl"
-                  className={`border-2 ${isMember ? "border-purple-500 shadow-lg shadow-purple-500/30" : "border-blue-500 shadow-lg shadow-blue-500/20"}`}
+                  className={`border-2 ${
+                    isMember
+                      ? "border-purple-500 shadow-lg shadow-purple-500/30"
+                      : isTopContributor
+                        ? "border-amber-500 shadow-lg shadow-amber-500/30"
+                        : "border-blue-500 shadow-lg shadow-blue-500/20"
+                  }`}
                 />
               </Badge>
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
                   <Typography
                     variant="h4"
-                    color={isMember ? "purple" : "blue-gray"}
+                    color={
+                      isMember
+                        ? "purple"
+                        : isTopContributor
+                          ? "amber"
+                          : "blue-gray"
+                    }
                   >
                     {user.username}
                   </Typography>
                   {isMember && (
                     <span className="px-2 py-1 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white animate-bounce">
                       MEMBER
+                    </span>
+                  )}
+                  {isTopContributor && (
+                    <span className="px-2 py-1 text-xs font-bold rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white animate-bounce">
+                      TOP CONTRIBUTOR
                     </span>
                   )}
                 </div>
@@ -94,17 +123,25 @@ export function UserProfileDialog({
             {/* Joined Date */}
             <Typography
               variant="small"
-              color={isMember ? "purple" : "blue-gray"}
-              className={`-mt-4 ${isMember ? "font-bold" : ""}`}
+              color={
+                isMember ? "purple" : isTopContributor ? "amber" : "blue-gray"
+              }
+              className={`-mt-4 ${isMember || isTopContributor ? "font-bold" : ""}`}
             >
               Người dùng đã tạo tài khoản vào ngày{" "}
               {new Date(user.createdAt).toLocaleDateString("vi-VN")}
-              {isMember && " 🎉"}
+              {(isMember || isTopContributor) && " 🎉"}
             </Typography>
 
             {/* Divider */}
             <div
-              className={`border-t ${isMember ? "border-purple-200" : "border-blue-gray-100"}`}
+              className={`border-t ${
+                isMember
+                  ? "border-purple-200"
+                  : isTopContributor
+                    ? "border-amber-200"
+                    : "border-blue-gray-100"
+              }`}
             ></div>
 
             {/* Personal Info - Horizontal Layout */}
@@ -112,7 +149,13 @@ export function UserProfileDialog({
               <div className="space-y-1">
                 <Typography
                   variant="small"
-                  color={isMember ? "purple" : "blue-gray"}
+                  color={
+                    isMember
+                      ? "purple"
+                      : isTopContributor
+                        ? "amber"
+                        : "blue-gray"
+                  }
                   className="font-bold"
                 >
                   Giới tính
@@ -129,7 +172,13 @@ export function UserProfileDialog({
               <div className="space-y-1">
                 <Typography
                   variant="small"
-                  color={isMember ? "purple" : "blue-gray"}
+                  color={
+                    isMember
+                      ? "purple"
+                      : isTopContributor
+                        ? "amber"
+                        : "blue-gray"
+                  }
                   className="font-bold"
                 >
                   Địa chỉ
@@ -145,29 +194,48 @@ export function UserProfileDialog({
               <div className="space-y-1">
                 <Typography
                   variant="small"
-                  color={isMember ? "purple" : "blue-gray"}
+                  color={
+                    isMember
+                      ? "purple"
+                      : isTopContributor
+                        ? "amber"
+                        : "blue-gray"
+                  }
                   className="font-bold"
                 >
                   Giới thiệu
                 </Typography>
                 <Typography
                   variant="paragraph"
-                  className={`${isMember ? "text-purple-900 bg-purple-50 px-3 py-2 rounded-lg" : "text-gray-700"}`}
+                  className={`${
+                    isMember
+                      ? "text-purple-900 bg-purple-50 px-3 py-2 rounded-lg"
+                      : isTopContributor
+                        ? "text-amber-900 bg-amber-50 px-3 py-2 rounded-lg"
+                        : "text-gray-700"
+                  }`}
                 >
                   {user.bio}
                 </Typography>
               </div>
             )}
 
-            {/* Special Member Badge */}
+            {/* Special Badges */}
             {isMember && (
-              <div className="mt-4 p-3 rounded-lg bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 text-center animate-pulse">
+              <div className="mt-4 p-3 rounded-lg bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 text-center ">
                 <Typography
                   variant="small"
                   color="purple"
                   className="font-bold"
                 >
                   ✨ Thành viên câu lạc bộ với nhiều ưu đãi độc quyền ✨
+                </Typography>
+              </div>
+            )}
+            {isTopContributor && (
+              <div className="p-3 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 text-center ">
+                <Typography variant="small" color="amber" className="font-bold">
+                  🌟 Top Contributor với những đóng góp nổi bật 🌟
                 </Typography>
               </div>
             )}
@@ -178,7 +246,7 @@ export function UserProfileDialog({
       <DialogFooter className="px-6 py-4 border-t">
         <Button
           variant="gradient"
-          color={isMember ? "purple" : "blue"}
+          color={isMember ? "purple" : isTopContributor ? "amber" : "blue"}
           onClick={onClose}
           className="mr-2"
         >

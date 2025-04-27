@@ -1,61 +1,121 @@
 "use client";
 
 import { Typography } from "@material-tailwind/react";
+import Image from "next/image";
 
-import CoursesContentCard from "./card/home-course-card";
-
-import { useTranslations } from "next-intl";
-
-export function CourseContent() {
-  const t = useTranslations("CourseContent");
-
-  const COURSE_CONTENT = [
-    {
-      title: "Cờ Vua Cho Người Mới",
-      des: "Giải đấu này dành cho những người mới làm quen với cờ vua, bao gồm các quy tắc, cách di chuyển quân cờ, chiến lược và các chiến thuật cơ bản. Dù bạn là người mới hoàn toàn hay muốn ôn lại kiến thức, giải đấu này là điểm khởi đầu hoàn hảo.",
-      name: "John Doe",
-      position: t("InternationalChessMaster"),
-      panel: t("BeginnerCourse"),
-      img: "/image/avatar1.jpg",
-    },
-    {
-      title: t("IntermediateChessStrategies"),
-      des: t("IntermediateChessStrategiesDescription"),
-      name: "Jane Smith",
-      position: t("ChessGrandmaster"),
-      panel: t("IntermediateChessCourse"),
-      img: "/image/avatar2.jpg",
-    },
-    {
-      title: t("GoTheArtOfStrategy"),
-      des: t("GoTheArtOfStrategyDescription"),
-      name: "Alice Johnson",
-      position: t("GoExpert"),
-      panel: "Workshop",
-      img: "/image/avatar3.jpg",
-    },
-  ];
-
+function CommunitySection() {
   return (
-    <section className="container mx-auto flex flex-col items-center px-4 py-10">
-      <Typography variant="h3" className="text-center" color="blue-gray">
-        Tham Gia Giải Đấu Để Nâng Cao Trình Độ
-      </Typography>
-      <Typography
-        variant="lead"
-        className="mt-2 lg:max-w-4xl mb-8 w-full text-center font-normal !text-gray-500"
-      >
-        Tham gia các giải đấu để nâng cao kỹ năng cờ của bạn, dù bạn là người
-        mới bắt đầu hay người chơi nâng cao. Giải đấu có các bộ môn Cờ Vua, Cờ
-        Tướng và Cờ Vây.
-      </Typography>
-      <div className="mx-auto container">
-        {COURSE_CONTENT.map((props, idx) => (
-          <CoursesContentCard key={idx} {...props} />
-        ))}
+    <section className="py-20 px-6 bg-gradient-to-b from-blue-50 to-white">
+      <style jsx>{`
+        @keyframes wildPulse {
+          0%,
+          100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.1);
+          }
+        }
+        @keyframes spinIn {
+          0% {
+            transform: rotateY(90deg);
+            opacity: 0;
+          }
+          100% {
+            transform: rotateY(0);
+            opacity: 1;
+          }
+        }
+        .animate-wild-pulse {
+          animation: wildPulse 2s infinite ease-in-out;
+        }
+        .animate-spin-in {
+          animation: spinIn 0.6s ease-out forwards;
+        }
+      `}</style>
+      <div className="container mx-auto max-w-7xl">
+        {/* Header */}
+        <div className="text-center mb-16 ">
+          <Typography
+            variant="h2"
+            color="blue-gray"
+            className="font-sans tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-teal-500 animate-glow-pulse"
+          >
+            Đắm Chìm Trong Thế Giới Cờ
+          </Typography>
+          <p className="text-lg md:text-xl text-gray-700 max-w-2xl mx-auto leading-relaxed font-serif animate-slide-in-up">
+            Đọc các bài blog độc quyền về cờ vua, cờ tướng, cờ vây và hơn thế
+            nữa. Tham gia cộng đồng hơn 1000 kỳ thủ đam mê!
+          </p>
+        </div>
+
+        {/* Feature Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {[
+            {
+              title: "Bí Mật Của Các Kỳ Thủ",
+              desc: "Khám phá chiến thuật và câu chuyện đằng sau các ván cờ huyền thoại.",
+              img: "https://i.pinimg.com/736x/57/27/e5/5727e5b00fdebcf42182e6eff38fb836.jpg",
+              stat: "Hàng trăm bài blog độc quyền",
+            },
+            {
+              title: "Cờ Qua Góc Nhìn Mới",
+              desc: "Đọc phân tích chuyên sâu về cờ vua, cờ tướng và cờ vây từ các chuyên gia.",
+              img: "https://i.pinimg.com/736x/01/5d/58/015d588d14ea1461942b774f9ed83be9.jpg",
+              stat: "Cập nhật hàng tuần",
+            },
+            {
+              title: "Cộng Đồng Kỳ Thủ",
+              desc: "Kết nối, thảo luận và chia sẻ đam mê với những người yêu cờ trên toàn cầu.",
+              img: "https://i.pinimg.com/736x/06/31/18/063118e78b9950a9ef9c97aa4b46c1c2.jpg",
+              stat: "1k+ thành viên",
+            },
+          ].map((item, idx) => (
+            <div
+              key={idx}
+              className="relative bg-white rounded-2xl shadow-xl overflow-hidden transform hover:-translate-y-4 transition-all duration-500 "
+              // style={{ animationDelay: `${idx * 0.2}s` }}
+            >
+              <Image
+                width={500}
+                height={192}
+                src={item.img}
+                alt={item.title}
+                className="w-full h-48 object-cover transition-transform duration-500 hover:scale-110"
+              />
+              <div className="p-6">
+                <h3 className="text-2xl text-gray-900 mb-3 font-sans animate-slide-in-left">
+                  {item.title}
+                </h3>
+                <p className="text-gray-600 mb-4 leading-relaxed font-serif animate-slide-in-right">
+                  {item.desc}
+                </p>
+                <p className="text-sm font-semibold text-blue-600 font-serif">
+                  {item.stat}
+                </p>
+              </div>
+              <div className="absolute top-4 right-4 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full ">
+                Độc Quyền
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* CTA Button */}
+        <div className="text-center mt-16">
+          <a
+            href="/vi/community"
+            className="font-sans inline-block px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-lg font-semibold rounded-full hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-lg animate-wild-pulse"
+          >
+            Đăng Ký Ngay Để Đọc Blog Độc Quyền
+          </a>
+          <p className="font-serif mt-4 text-sm text-gray-500 animate-fade-in-up">
+            Bắt đầu hành trình chinh phục cờ cùng chúng tôi hôm nay!
+          </p>
+        </div>
       </div>
     </section>
   );
 }
 
-export default CourseContent;
+export default CommunitySection;

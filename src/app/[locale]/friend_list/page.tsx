@@ -13,10 +13,12 @@ import {
   FiUser,
   FiClock,
   FiUsers,
+  FiInfo,
 } from "react-icons/fi";
 import {
   Card,
   CardBody,
+  CardFooter,
   Input,
   Tabs,
   TabsHeader,
@@ -24,7 +26,6 @@ import {
   Tab,
   TabPanel,
   Avatar,
-  IconButton,
   Chip,
   Spinner,
   Typography,
@@ -75,7 +76,7 @@ export interface User {
     walletId: number;
     balance: number;
   };
-  userLabel?: string | number; // Thêm userLabel
+  userLabel?: string | number;
 }
 
 export interface FriendList {
@@ -105,7 +106,7 @@ export interface SearchFriendResult {
   skillLevel: string;
   ranking: string;
   createdAt: string;
-  userLabel?: string | number; // Thêm userLabel
+  userLabel?: string | number;
 }
 
 export default function FriendManagementPage() {
@@ -125,6 +126,9 @@ export default function FriendManagementPage() {
   const [isSendingRequest, setIsSendingRequest] = useState<{
     [key: number]: boolean;
   }>({}); // Trạng thái loading cho từng yêu cầu kết bạn
+  const [isProcessingRequest, setIsProcessingRequest] = useState<{
+    [key: number]: boolean;
+  }>({}); // Trạng thái loading cho chấp nhận/từ chối yêu cầu
 
   useEffect(() => {
     const authDataString = localStorage.getItem("authData");
@@ -273,11 +277,8 @@ export default function FriendManagementPage() {
   };
 
   const acceptFriendRequest = async (requestId: number) => {
+    setIsProcessingRequest((prev) => ({ ...prev, [requestId]: true }));
     try {
-      setFriendRequests((prev) =>
-        prev.filter((request) => request.id !== requestId)
-      );
-
       const response = await fetch(
         `https://backend-production-ac5e.up.railway.app/api/friendrequests/accept/${requestId}`,
         {
@@ -297,14 +298,14 @@ export default function FriendManagementPage() {
       toast.error(
         err instanceof Error ? err.message : "Chấp nhận yêu cầu thất bại"
       );
+    } finally {
+      setIsProcessingRequest((prev) => ({ ...prev, [requestId]: false }));
     }
   };
 
   const rejectFriendRequest = async (requestId: number) => {
+    setIsProcessingRequest((prev) => ({ ...prev, [requestId]: true }));
     try {
-      setFriendRequests((prev) =>
-        prev.filter((request) => request.id !== requestId)
-      );
       const response = await fetch(
         `https://backend-production-ac5e.up.railway.app/api/friendrequests/reject/${requestId}`,
         {
@@ -324,6 +325,8 @@ export default function FriendManagementPage() {
       toast.error(
         err instanceof Error ? err.message : "Từ chối yêu cầu thất bại"
       );
+    } finally {
+      setIsProcessingRequest((prev) => ({ ...prev, [requestId]: false }));
     }
   };
 
@@ -536,10 +539,11 @@ export default function FriendManagementPage() {
                     </CardBody>
                   </Card>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {pendingRequests.map((request) => {
                       const isMember =
-                        request.fromUserNavigation.userRole === "Member";
+                        request.fromUserNavigation.userRole === "Member" ||
+                        request.fromUserNavigation.userRole === 1;
                       const isTopContributor =
                         request.fromUserNavigation.userLabel === 1 ||
                         request.fromUserNavigation.userLabel ===
@@ -552,161 +556,175 @@ export default function FriendManagementPage() {
                             isMember
                               ? "border border-purple-200"
                               : isTopContributor
-                                ? "border border-yellow-200"
+                                ? "border border-amber-200"
                                 : ""
                           }`}
                         >
                           <CardBody className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-4">
-                                <div className="relative">
-                                  <Badge
-                                    overlap="circular"
-                                    placement="bottom-end"
-                                    className={`border-2 border-white ${
+                            <div className="flex items-center gap-4">
+                              <Badge
+                                overlap="circular"
+                                placement="bottom-end"
+                                className={`border-2 border-white ${
+                                  isMember
+                                    ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse"
+                                    : isTopContributor
+                                      ? "bg-gradient-to-r from-amber-500 to-orange-500 animate-pulse"
+                                      : "bg-blue-gray-100"
+                                }`}
+                                content={
+                                  isMember ? (
+                                    <Tooltip content="Thành viên câu lạc bộ">
+                                      <CheckBadgeIcon className="h-5 w-5 text-white" />
+                                    </Tooltip>
+                                  ) : isTopContributor ? (
+                                    <Tooltip content="Top Contributor">
+                                      <CheckBadgeIcon className="h-5 w-5 text-white" />
+                                    </Tooltip>
+                                  ) : null
+                                }
+                              >
+                                <Avatar
+                                  src={
+                                    request.fromUserNavigation?.avatarUrl ||
+                                    "https://i.pinimg.com/736x/0f/68/94/0f6894e539589a50809e45833c8bb6c4.jpg"
+                                  }
+                                  alt={
+                                    request.fromUserNavigation?.username ||
+                                    "Người dùng ẩn danh"
+                                  }
+                                  size="lg"
+                                  className={`border-2 ${
+                                    isMember
+                                      ? "border-purple-500 shadow-lg shadow-purple-500/20"
+                                      : isTopContributor
+                                        ? "border-amber-500 shadow-lg shadow-amber-500/20"
+                                        : "border-blue-100"
+                                  }`}
+                                />
+                              </Badge>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex flex-col items-start gap-1">
+                                  <Typography
+                                    variant="h5"
+                                    className={`text-gray-900 truncate ${
                                       isMember
-                                        ? "bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse"
+                                        ? "text-purple-600"
                                         : isTopContributor
-                                          ? "bg-gradient-to-r from-yellow-500 to-orange-500"
-                                          : "bg-blue-gray-100"
+                                          ? "text-amber-700"
+                                          : ""
                                     }`}
-                                    content={
-                                      isMember ? (
-                                        <Tooltip content="Thành viên câu lạc bộ">
-                                          <CheckBadgeIcon className="h-5 w-5 text-white" />
-                                        </Tooltip>
-                                      ) : isTopContributor ? (
-                                        <Tooltip content="Top Contributor">
-                                          <CheckBadgeIcon className="h-5 w-5 text-white" />
-                                        </Tooltip>
-                                      ) : null
-                                    }
                                   >
-                                    <Avatar
-                                      src={
-                                        request.fromUserNavigation?.avatarUrl ||
-                                        "https://i.pinimg.com/736x/0f/68/94/0f6894e539589a50809e45833c8bb6c4.jpg"
-                                      }
-                                      alt={
-                                        request.fromUserNavigation?.username ||
-                                        "Người dùng ẩn danh"
-                                      }
-                                      size="md"
-                                      className={`border-2 ${
-                                        isMember
-                                          ? "border-purple-500 shadow-lg shadow-purple-500/20"
-                                          : isTopContributor
-                                            ? "border-yellow-500 shadow-lg shadow-yellow-500/30"
-                                            : "border-blue-100"
-                                      }`}
-                                    />
-                                  </Badge>
-                                </div>
-                                <div>
+                                    {request.fromUserNavigation.username}
+                                  </Typography>
                                   <div className="flex items-center gap-2">
-                                    <Typography
-                                      variant="h6"
-                                      className={`text-gray-900 ${
-                                        isMember
-                                          ? "text-purple-600"
-                                          : isTopContributor
-                                            ? "text-yellow-700"
-                                            : ""
-                                      }`}
-                                    >
-                                      {request.fromUserNavigation.username}
-                                    </Typography>
                                     {isMember && (
-                                      <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white animate-bounce">
+                                      <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
                                         MEMBER
                                       </span>
                                     )}
                                     {isTopContributor && (
-                                      <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                                      <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white">
                                         TOP CONTRIBUTOR
                                       </span>
                                     )}
                                   </div>
-                                  <Typography variant="small" color="gray">
-                                    Đã gửi{" "}
-                                    {new Date(
-                                      request.createdAt
-                                    ).toLocaleDateString()}
-                                  </Typography>
-                                  {isMember && (
-                                    <Typography
-                                      variant="small"
-                                      className="text-purple-500 mt-1"
-                                    >
-                                      Thành viên Câu Lạc Bộ
-                                    </Typography>
-                                  )}
-                                  {isTopContributor && !isMember && (
-                                    <Typography
-                                      variant="small"
-                                      className="text-yellow-500 mt-1"
-                                    >
-                                      Top Contributor
-                                    </Typography>
-                                  )}
                                 </div>
-                              </div>
-                              <div className="flex gap-2 items-center">
-                                <Tooltip content="Xem hồ sơ">
-                                  <IconButton
-                                    onClick={() =>
-                                      handleViewProfile(
-                                        request.fromUserNavigation
-                                      )
-                                    }
-                                    color={
-                                      isMember
-                                        ? "purple"
-                                        : isTopContributor
-                                          ? "yellow"
-                                          : "blue"
-                                    }
-                                    variant="text"
-                                    size="sm"
-                                  >
-                                    <FiUser className="h-5 w-5" />
-                                  </IconButton>
-                                </Tooltip>
-                                <IconButton
-                                  onClick={() =>
-                                    acceptFriendRequest(request.id)
-                                  }
-                                  color={
-                                    isMember
-                                      ? "purple"
-                                      : isTopContributor
-                                        ? "yellow"
-                                        : "green"
-                                  }
-                                  variant={isMember ? "gradient" : "outlined"}
-                                  title="Chấp nhận"
+                                <Typography
+                                  variant="small"
+                                  color="gray"
+                                  className="truncate"
                                 >
-                                  <FiCheck className="h-5 w-5" />
-                                </IconButton>
-                                <IconButton
-                                  onClick={() =>
-                                    rejectFriendRequest(request.id)
-                                  }
-                                  color={
-                                    isMember
-                                      ? "pink"
-                                      : isTopContributor
-                                        ? "yellow"
-                                        : "red"
-                                  }
-                                  variant={isMember ? "gradient" : "outlined"}
-                                  title="Từ chối"
-                                >
-                                  <FiX className="h-5 w-5" />
-                                </IconButton>
+                                  {request.fromUserNavigation.fullName ||
+                                    "Không có tên hiển thị"}
+                                </Typography>
                               </div>
                             </div>
                           </CardBody>
+                          <CardFooter className="pt-0 flex flex-col gap-2">
+                            <Button
+                              fullWidth
+                              variant={
+                                isMember || isTopContributor
+                                  ? "gradient"
+                                  : "outlined"
+                              }
+                              color={
+                                isMember
+                                  ? "purple"
+                                  : isTopContributor
+                                    ? "amber"
+                                    : "blue-gray"
+                              }
+                              className={`flex items-center justify-center gap-2 ${
+                                isMember
+                                  ? "shadow-purple-500/20"
+                                  : isTopContributor
+                                    ? "shadow-amber-500/20"
+                                    : ""
+                              }`}
+                              onClick={() =>
+                                handleViewProfile(request.fromUserNavigation)
+                              }
+                            >
+                              <FiInfo className="h-4 w-4" />
+                              Xem thông tin
+                            </Button>
+                            <Button
+                              fullWidth
+                              variant={
+                                isMember || isTopContributor
+                                  ? "gradient"
+                                  : "filled"
+                              }
+                              color={
+                                isMember
+                                  ? "purple"
+                                  : isTopContributor
+                                    ? "amber"
+                                    : "blue"
+                              }
+                              className={`flex items-center justify-center gap-2 ${
+                                isMember
+                                  ? "shadow-purple-500/20"
+                                  : isTopContributor
+                                    ? "shadow-amber-500/20"
+                                    : ""
+                              }`}
+                              onClick={() => acceptFriendRequest(request.id)}
+                              loading={isProcessingRequest[request.id] || false}
+                            >
+                              {!isProcessingRequest[request.id] && (
+                                <FiCheck className="h-4 w-4" />
+                              )}
+                              Chấp nhận
+                            </Button>
+                            <Button
+                              fullWidth
+                              variant="outlined"
+                              color={
+                                isMember
+                                  ? "purple"
+                                  : isTopContributor
+                                    ? "amber"
+                                    : "red"
+                              }
+                              className={`flex items-center justify-center gap-2 ${
+                                isMember
+                                  ? "border-purple-500 text-purple-500 hover:bg-purple-50"
+                                  : isTopContributor
+                                    ? "border-amber-500 text-amber-700 hover:bg-amber-50"
+                                    : "border-red-500 text-red-500 hover:bg-red-50"
+                              }`}
+                              onClick={() => rejectFriendRequest(request.id)}
+                              loading={isProcessingRequest[request.id] || false}
+                            >
+                              {!isProcessingRequest[request.id] && (
+                                <FiX className="h-4 w-4" />
+                              )}
+                              Từ chối
+                            </Button>
+                          </CardFooter>
                         </Card>
                       );
                     })}

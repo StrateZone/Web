@@ -118,7 +118,6 @@ export default function EditPost() {
     const checkUserMembership = () => {
       const authDataString = localStorage.getItem("authData");
       if (!authDataString) {
-        toast.error("Vui lòng đăng nhập để chỉnh sửa bài viết");
         router.push(`/${locale}/login`);
         return;
       }
@@ -158,7 +157,7 @@ export default function EditPost() {
   const fetchMembershipPrice = async () => {
     try {
       const response = await axios.get(
-        "https://backend-production-ac5e.up.railway.app/api/prices/membership",
+        "https://backend-production-ac5e.up.railway.app/api/prices/membership"
       );
       if (!response.status) throw new Error("Failed to fetch membership price");
       const data: MembershipPrice = response.data;
@@ -181,7 +180,7 @@ export default function EditPost() {
           headers: {
             "Content-Type": "application/json",
           },
-        },
+        }
       );
 
       if (!response.status || !response.data.success) {
@@ -214,7 +213,7 @@ export default function EditPost() {
           {
             autoClose: 3000,
             closeButton: true,
-          },
+          }
         );
       }
     } catch (error: any) {
@@ -265,7 +264,7 @@ export default function EditPost() {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
-          },
+          }
         );
 
         const thread: Thread = response.data;
@@ -287,7 +286,7 @@ export default function EditPost() {
         setHasPermission(false);
         setError("Không thể tải bài viết hoặc bạn không có quyền chỉnh sửa.");
         toast.error(
-          "Không thể tải bài viết hoặc bạn không có quyền chỉnh sửa.",
+          "Không thể tải bài viết hoặc bạn không có quyền chỉnh sửa."
         );
         router.push(`/${locale}/community/post_history`);
       } finally {
@@ -310,11 +309,11 @@ export default function EditPost() {
             headers: {
               accept: "*/*",
             },
-          },
+          }
         );
 
         const filteredTags = response.data.filter(
-          (tag: Tag) => tag.tagId !== 8 && tag.tagId !== 9,
+          (tag: Tag) => tag.tagId !== 8 && tag.tagId !== 9
         );
 
         const tagsWithColor = filteredTags.map((tag: Tag) => ({
@@ -366,7 +365,7 @@ export default function EditPost() {
   };
 
   const handleThumbnailChange = async (
-    e: React.ChangeEvent<HTMLInputElement>,
+    e: React.ChangeEvent<HTMLInputElement>
   ) => {
     setTouched((prev) => ({ ...prev, thumbnail: true }));
     setError("");
@@ -452,7 +451,7 @@ export default function EditPost() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-        },
+        }
       );
 
       if (thumbnail) {
@@ -475,14 +474,14 @@ export default function EditPost() {
               "Content-Type": "multipart/form-data",
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
-          },
+          }
         );
       }
 
       toast.success(
         newStatus === "edit_pending" || newStatus === "pending"
           ? "Bài viết đã được cập nhật thành công, chờ Admin xét duyệt!"
-          : "Bài viết đã được cập nhật thành công!",
+          : "Bài viết đã được cập nhật thành công!"
       );
       router.push(`/${locale}/community/post_history/`);
     } catch (err: unknown) {
@@ -541,7 +540,7 @@ export default function EditPost() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-        },
+        }
       );
 
       const newThreadId = threadResponse.data.threadId;
@@ -562,7 +561,7 @@ export default function EditPost() {
               "Content-Type": "multipart/form-data",
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
-          },
+          }
         );
       }
 
@@ -677,7 +676,7 @@ export default function EditPost() {
                         "quan trọng",
                       ].includes(tag.tagName);
                       const textColor = getContrastColor(
-                        tag.tagColor || "#6B7280",
+                        tag.tagColor || "#6B7280"
                       );
 
                       return (
@@ -800,7 +799,7 @@ export default function EditPost() {
                             "quan trọng",
                           ].includes(tag.tagName);
                           const textColor = getContrastColor(
-                            tag.tagColor || "#6B7280",
+                            tag.tagColor || "#6B7280"
                           );
 
                           return (
@@ -933,7 +932,7 @@ export default function EditPost() {
                         }
                         if (!content.trim() || content.length < 500) {
                           setError(
-                            "Nội dung bài viết phải có ít nhất 500 ký tự",
+                            "Nội dung bài viết phải có ít nhất 500 ký tự"
                           );
                           return;
                         }
@@ -949,11 +948,13 @@ export default function EditPost() {
                       type="button"
                       onClick={handleSaveDraft}
                       disabled={isSubmitting}
-                      className={`px-6 py-3 bg-yellow-600 text-white rounded-lg font-medium ${
-                        isSubmitting
-                          ? "opacity-50 cursor-not-allowed"
-                          : "hover:bg-yellow-700"
-                      }`}
+                      style={{
+                        backgroundColor: "#004080",
+                        color: "white",
+                        opacity: isSubmitting ? 0.5 : 1,
+                        cursor: isSubmitting ? "not-allowed" : "pointer",
+                      }}
+                      className="px-6 py-3 rounded-lg font-medium hover:brightness-110"
                     >
                       {isSubmitting ? "Đang lưu nháp..." : "Lưu nháp"}
                     </Button>
