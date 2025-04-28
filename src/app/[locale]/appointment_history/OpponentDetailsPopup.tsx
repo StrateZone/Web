@@ -1,6 +1,6 @@
 "use client";
 import { Badge, Button } from "@material-tailwind/react";
-import { CheckBadgeIcon, StarIcon } from "@heroicons/react/24/solid";
+import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 import OpponentRecommendationModalWithNewInvite from "../appointment_ongoing/OpponentRecommendationModal";
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
@@ -312,38 +312,36 @@ function OpponentDetailsPopup({
                       />
                     </Badge>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <p
-                          className={`font-medium text-lg ${
-                            isMember(request.toUserNavigation.userRole)
-                              ? "text-purple-600"
-                              : isTopContributor(
-                                    request.toUserNavigation.userLabel
-                                  )
-                                ? "text-yellow-600"
-                                : ""
-                          }`}
-                        >
-                          {request.toUserNavigation.fullName}
-                        </p>
-                        <div className="flex flex-row gap-2">
-                          {isMember(request.toUserNavigation.userRole) && (
-                            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-                              MEMBER
-                            </span>
-                          )}
-                          {isTopContributor(
-                            request.toUserNavigation.userLabel
-                          ) && (
-                            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
-                              TOP CONTRIBUTOR
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                      <p
+                        className={`font-medium text-lg ${
+                          isMember(request.toUserNavigation.userRole)
+                            ? "text-purple-600"
+                            : isTopContributor(
+                                  request.toUserNavigation.userLabel
+                                )
+                              ? "text-yellow-600"
+                              : ""
+                        }`}
+                      >
+                        {request.toUserNavigation.fullName}
+                      </p>
                       <p className="text-sm text-gray-500">
                         {request.toUserNavigation.username}
                       </p>
+                      <div className="flex flex-row gap-2 mt-1">
+                        {isMember(request.toUserNavigation.userRole) && (
+                          <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                            MEMBER
+                          </span>
+                        )}
+                        {isTopContributor(
+                          request.toUserNavigation.userLabel
+                        ) && (
+                          <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                            TOP CONTRIBUTOR
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex flex-col items-end">

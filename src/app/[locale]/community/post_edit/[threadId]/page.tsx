@@ -437,14 +437,11 @@ export default function EditPost() {
       }
 
       await axios.put(
-        `https://backend-production-ac5e.up.railway.app/api/threads/${threadId}`,
+        `https://backend-production-ac5e.up.railway.app/api/threads/edit/${threadId}`,
         {
-          createdBy: userId,
           title: title,
           content: content,
           tagIds: selectedTagIds,
-          isDrafted: false,
-          status: newStatus,
         },
         {
           headers: {
