@@ -27,7 +27,7 @@ const GAME_INFO: GameInfo[] = [
       "Một trong những trò chơi bàn cổ xưa, cờ Vây mang đến những khả năng vô tận và yêu cầu tư duy chiến lược sâu sắc.",
     subTitle: "Vô Số Biến Thể",
     imageUrl:
-      "https://cdnphoto.dantri.com.vn/mvXVVkYqDvrUE23jW_mNI-a5TlM=/thumb_w/1020/2024/02/26/nuthancovay-3-1708892742007.jpeg",
+      "https://cdnphoto.dantri.com.vn/2DpHYIRSWtIjLQymDSX2nCBQti8=/thumb_w/1360/2024/02/26/nuthancovay-5-1708893310790.jpg",
   },
   {
     title: "Cờ Vua",

@@ -347,8 +347,8 @@ function Page() {
         };
       case "confirmed":
         return {
-          bg: "bg-green-100",
-          text: "text-green-800",
+          bg: "bg-cyan-100",
+          text: "text-cyan-800",
           display: "Đã thanh toán",
         };
       case "incoming":
@@ -387,6 +387,12 @@ function Page() {
           bg: "bg-orange-100",
           text: "text-orange-800",
           display: "Không hoàn thành",
+        };
+      case "checked_in":
+        return {
+          bg: "bg-green-100",
+          text: "text-green-800",
+          display: "Đã điểm danh",
         };
       default:
         return {

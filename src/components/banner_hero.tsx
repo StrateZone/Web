@@ -74,7 +74,8 @@ export default function BannerHero() {
             >
               StrateZone là một ứng dụng kết nối những người yêu các bộ môn cờ,
               giúp dễ dàng tìm kiếm đối thủ phù hợp, sắp xếp các trận đấu tại
-              câu lạc bộ, tham gia các giải đấu hấp dẫn và gây cấn
+              câu lạc bộ, tham gia cộng đồng cờ thủ với những trãi nghiệm hấp
+              dẫn và gây cấn
             </Typography>
           </motion.div>
 

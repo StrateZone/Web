@@ -11,6 +11,7 @@ import {
   Loader2,
   RefreshCw,
   Circle,
+  UserCheck,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
@@ -86,8 +87,8 @@ interface AppointmentRequest {
     | "rejected"
     | "expired"
     | "cancelled"
-    | "payment_required"
-    | "await_appointment_creation";
+    | "accepted_by_others"
+    | "table_cancelled";
   startTime: string;
   endTime: string;
   expireAt: string;
@@ -280,15 +281,7 @@ const AppointmentSendRequestsPage = () => {
           bg: "bg-green-100",
           text: "text-green-700",
           border: "border-green-500",
-          display: "Đã Chấp Nhận",
-          icon: <CheckCircle className="w-4 h-4 mr-1" />,
-        };
-      case "payment_required":
-        return {
-          bg: "bg-indigo-100",
-          text: "text-indigo-700",
-          border: "border-indigo-500",
-          display: "Yêu Cầu Thanh Toán",
+          display: "Đã Chấp Nhận Lời Mời",
           icon: <CheckCircle className="w-4 h-4 mr-1" />,
         };
       case "rejected":
@@ -296,23 +289,15 @@ const AppointmentSendRequestsPage = () => {
           bg: "bg-red-100",
           text: "text-red-700",
           border: "border-red-500",
-          display: "Đã Từ Chối",
+          display: "Đã Từ Chối Lời Mời",
           icon: <XCircle className="w-4 h-4 mr-1" />,
-        };
-      case "await_appointment_creation":
-        return {
-          bg: "bg-yellow-100",
-          text: "text-yellow-600",
-          border: "border-yellow-500",
-          display: "Chờ Tạo Cuộc Hẹn",
-          icon: <Clock className="w-4 h-4 mr-1" />,
         };
       case "expired":
         return {
           bg: "bg-orange-100",
           text: "text-orange-600",
           border: "border-orange-500",
-          display: "Đã Hết Hạn",
+          display: "Lời Mời Đã Hết Hạn",
           icon: <Clock className="w-4 h-4 mr-1" />,
         };
       case "cancelled":
@@ -320,8 +305,24 @@ const AppointmentSendRequestsPage = () => {
           bg: "bg-gray-100",
           text: "text-gray-600",
           border: "border-gray-400",
-          display: "Đã Hủy",
+          display: "Lời Mời Đã Bị Hủy",
           icon: <XCircle className="w-4 h-4 mr-1" />,
+        };
+      case "accepted_by_others":
+        return {
+          bg: "bg-pink-100",
+          text: "text-pink-700",
+          border: "border-pink-500",
+          display: "Lời Mời Đã Được Người Khác Chấp Nhận",
+          icon: <CheckCircle className="w-4 h-4 mr-1" />,
+        };
+      case "table_cancelled":
+        return {
+          bg: "bg-orange-100",
+          text: "text-orange-700",
+          border: "border-orange-500",
+          display: "Bàn đã bị hủy",
+          icon: <CheckCircle className="w-4 h-4 mr-1" />,
         };
       default:
         return {
@@ -437,7 +438,7 @@ const AppointmentSendRequestsPage = () => {
         <div className="container mx-auto px-2 py-4">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-2xl font-bold">
-              Những Lời Mời Của Bạn Đã Gửi Đi Cho Người Khác
+              Những Lời Mời Bạn Đã Gửi Cho Người Khác
             </h1>
             <Button
               onClick={handleRefresh}
@@ -576,25 +577,11 @@ const AppointmentSendRequestsPage = () => {
                           )}
                       </div>
                       <p className="text-gray-600 text-sm">
-                        <strong>Trình Độ:</strong>{" "}
-                        {getRankLevelText(
-                          selectedRequest.toUserNavigation?.ranking || 0
-                        )}
+                        <strong>Giới Tính:</strong>{" "}
+                        {selectedRequest.toUserNavigation?.gender === 0
+                          ? "Nam"
+                          : "Nữ"}
                       </p>
-                      {selectedRequest.toUserNavigation &&
-                        isMember(selectedRequest.toUserNavigation.userRole) && (
-                          <p className="text-purple-500 text-sm mt-1">
-                            Thành viên câu lạc bộ
-                          </p>
-                        )}
-                      {selectedRequest.toUserNavigation &&
-                        isTopContributor(
-                          selectedRequest.toUserNavigation.userLabel
-                        ) && (
-                          <p className="text-yellow-500 text-sm mt-1">
-                            Thành viên đóng góp hàng đầu
-                          </p>
-                        )}
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -736,16 +723,7 @@ const AppointmentSendRequestsPage = () => {
                 {requests.map((request) => (
                   <div
                     key={request.id}
-                    className={`bg-white rounded-md shadow-sm p-4 border-l-4 ${
-                      request.status === "accepted"
-                        ? "border-green-500"
-                        : request.status === "rejected"
-                          ? "border-red-500"
-                          : isExpired(request.expireAt) ||
-                              request.status === "cancelled"
-                            ? "border-gray-400"
-                            : "border-blue-500"
-                    }`}
+                    className="bg-gray-200 rounded-md shadow-sm p-4"
                   >
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                       <div className="flex items-center space-x-3">
@@ -843,25 +821,11 @@ const AppointmentSendRequestsPage = () => {
                               )}
                           </div>
                           <p className="text-gray-600 text-sm">
-                            <strong>Trình Độ:</strong>{" "}
-                            {getRankLevelText(
-                              request.toUserNavigation?.ranking || 0
-                            )}
+                            <strong>Giới Tính:</strong>{" "}
+                            {request.toUserNavigation?.gender === 0
+                              ? "Nam"
+                              : "Nữ"}
                           </p>
-                          {request.toUserNavigation &&
-                            isMember(request.toUserNavigation.userRole) && (
-                              <p className="text-purple-500 text-sm mt-1">
-                                Thành viên câu lạc bộ
-                              </p>
-                            )}
-                          {request.toUserNavigation &&
-                            isTopContributor(
-                              request.toUserNavigation.userLabel
-                            ) && (
-                              <p className="text-yellow-500 text-sm mt-1">
-                                Thành viên đóng góp hàng đầu
-                              </p>
-                            )}
                         </div>
                       </div>
 
@@ -890,42 +854,44 @@ const AppointmentSendRequestsPage = () => {
 
                     <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row justify-between items-center gap-3">
                       <div className="flex items-center">
-                        {request.status === "accepted" ? (
-                          <span className="text-green-700 flex items-center text-sm">
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            <strong>Đã Chấp Nhận</strong>
-                          </span>
-                        ) : request.status === "payment_required" ? (
-                          <span className="text-indigo-700 flex items-center text-sm">
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            <strong>Yêu Cầu Thanh Toán</strong>
-                          </span>
-                        ) : request.status === "rejected" ? (
-                          <span className="text-red-700 flex items-center text-sm">
-                            <XCircle className="w-4 h-4 mr-1" />
-                            <strong>Đã Từ Chối</strong>
-                          </span>
-                        ) : request.status === "expired" ? (
-                          <span className="text-orange-600 flex items-center text-sm">
-                            <Clock className="w-4 h-4 mr-1" />
-                            <strong>Đã Hết Hạn</strong>
-                          </span>
-                        ) : request.status === "cancelled" ? (
-                          <span className="text-gray-600 flex items-center text-sm">
-                            <XCircle className="w-4 h-4 mr-1" />
-                            <strong>Đã Hủy</strong>
-                          </span>
-                        ) : request.status === "await_appointment_creation" ? (
-                          <span className="text-yellow-600 flex items-center text-sm">
-                            <Clock className="w-4 h-4 mr-1" />
-                            <strong>Chờ Tạo Cuộc Hẹn</strong>
-                          </span>
-                        ) : (
+                        {request.status === "pending" ? (
                           <span className="text-yellow-700 flex items-center text-sm">
                             <Clock className="w-4 h-4 mr-1" />
                             <strong>Chờ Phản Hồi</strong>
                           </span>
-                        )}
+                        ) : request.status === "accepted" ? (
+                          <span className="text-green-700 flex items-center text-sm">
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            <strong>Đã Chấp Nhận Lời Mời</strong>
+                          </span>
+                        ) : request.status === "accepted_by_others" ? (
+                          <span className="text-pink-700 flex items-center text-sm">
+                            <UserCheck className="w-4 h-4 mr-1" />
+                            <strong>
+                              Lời Mời Đã Được Người Khác Chấp Nhận
+                            </strong>
+                          </span>
+                        ) : request.status === "rejected" ? (
+                          <span className="text-red-700 flex items-center text-sm">
+                            <XCircle className="w-4 h-4 mr-1" />
+                            <strong>Đã Từ Chối Lời Mời</strong>
+                          </span>
+                        ) : request.status === "expired" ? (
+                          <span className="text-orange-600 flex items-center text-sm">
+                            <Clock className="w-4 h-4 mr-1" />
+                            <strong>Lời Mời Đã Hết Hạn</strong>
+                          </span>
+                        ) : request.status === "cancelled" ? (
+                          <span className="text-gray-600 flex items-center text-sm">
+                            <XCircle className="w-4 h-4 mr-1" />
+                            <strong>Lời Mời Đã Bị Hủy</strong>
+                          </span>
+                        ) : request.status === "table_cancelled" ? (
+                          <span className="text-orange-500 flex items-center text-sm">
+                            <XCircle className="w-4 h-4 mr-1" />
+                            <strong>Bàn Đã Bị Hủy</strong>
+                          </span>
+                        ) : null}
                       </div>
 
                       <div className="flex space-x-2">

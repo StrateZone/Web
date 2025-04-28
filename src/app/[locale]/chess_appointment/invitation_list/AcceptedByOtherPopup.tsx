@@ -8,6 +8,7 @@ interface AlreadyRejectedPopupProps {
   tableId: number;
   startTime: string;
   endTime: string;
+  onConfirm?: () => void; // Thêm callback tùy chọn
 }
 
 export const AlreadyRejectedPopup = async ({
@@ -15,45 +16,32 @@ export const AlreadyRejectedPopup = async ({
   tableId,
   startTime,
   endTime,
+  onConfirm,
 }: AlreadyRejectedPopupProps): Promise<void> => {
   await MySwal.fire({
-    title: "Lời Mời Đã Bị Từ Chối",
     html: (
-      <div className="text-left">
-        <div className="flex items-center justify-center mb-4">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-4 w-4 text-red-500 mr-2"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <span className="text-xl font-bold text-red-500">
+      <div className="text-left font-sans p-4">
+        <div className="flex items-center justify-center mb-6">
+          <span className="text-2xl font-semibold text-red-600">
             Không Thể Thanh Toán
           </span>
         </div>
 
-        <p className="mb-3">
-          Lời mời đánh cờ từ <strong>{opponentName}</strong> đã bị hủy hoặc bị
-          chấp nhận bởi người chơi khác trước bạn.
+        <p className="mb-4 text-gray-800 text-base leading-relaxed">
+          Lời mời đánh cờ từ{" "}
+          <strong className="font-semibold">{opponentName}</strong> đã bị hủy
+          hoặc được chấp nhận bởi người chơi khác trước bạn.
         </p>
 
-        <div className="bg-gray-100 rounded-lg p-3 mb-4">
-          <div className="grid grid-cols-2 gap-2">
+        <div className="bg-gray-50 rounded-xl p-4 mb-6 shadow-sm border border-gray-200">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="font-medium">Bàn số:</p>
-              <p className="font-bold">#{tableId}</p>
+              <p className="text-sm text-gray-600 font-medium">Bàn số:</p>
+              <p className="text-lg font-bold text-gray-900">#{tableId}</p>
             </div>
             <div>
-              <p className="font-medium">Thời gian:</p>
-              <p>
+              <p className="text-sm text-gray-600 font-medium">Thời gian:</p>
+              <p className="text-lg font-medium text-gray-900">
                 {new Date(startTime).toLocaleTimeString("vi-VN", {
                   hour: "2-digit",
                   minute: "2-digit",
@@ -68,20 +56,26 @@ export const AlreadyRejectedPopup = async ({
           </div>
         </div>
 
-        <p className="text-gray-600 text-sm">
-          Vui lòng kiểm tra lại lời mời hoặc tạo cuộc hẹn mới.
+        <p className="text-gray-500 text-sm italic">
+          Vui lòng kiểm tra lại lời mời hoặc tạo cuộc hẹn mới để tiếp tục.
         </p>
       </div>
     ),
     icon: "error",
-    confirmButtonText: "Đã hiểu",
+    confirmButtonText: "Đã Hiểu",
     customClass: {
       confirmButton:
-        "bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md shadow",
-      popup: "max-w-md",
+        "bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg shadow-md transition duration-200",
+      popup: "max-w-lg rounded-2xl p-6",
+      title: "text-2xl font-bold text-gray-900 mb-4",
     },
     buttonsStyling: false,
     allowOutsideClick: false,
     allowEscapeKey: false,
   });
+
+  // Gọi callback nếu được cung cấp
+  if (onConfirm) {
+    onConfirm();
+  }
 };
