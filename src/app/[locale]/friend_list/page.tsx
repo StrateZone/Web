@@ -444,13 +444,6 @@ export default function FriendManagementPage() {
           </div>
         </div>
 
-        {/* Thông báo lỗi */}
-        {error && (
-          <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">
-            {error}
-          </div>
-        )}
-
         {/* Các tab */}
         <Tabs value={activeTab} className="mb-8">
           <TabsHeader>

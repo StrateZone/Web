@@ -102,9 +102,10 @@ function PostDetailPage() {
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [isLoadingLike, setIsLoadingLike] = useState(false);
   const [isLoadingCommentLike, setIsLoadingCommentLike] = useState(false);
+  const [isLoadingMainComment, setIsLoadingMainComment] = useState(false); // New state for main comment loading
   const [userId, setUserId] = useState<number | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null); // New state for login status
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [showMembershipDialog, setShowMembershipDialog] = useState(false);
   const [membershipPrice, setMembershipPrice] =
     useState<MembershipPrice | null>(null);
@@ -128,20 +129,19 @@ function PostDetailPage() {
   const [mainCommentContent, setMainCommentContent] = useState("");
   const [replyCommentContent, setReplyCommentContent] = useState("");
 
-  // Xác định Top Contributor
   const isTopContributor = thread?.createdByNavigation?.userLabel === 1;
 
   useEffect(() => {
     const checkUserMembership = () => {
       const authDataString = localStorage.getItem("authData");
       if (!authDataString) {
-        setIsLoggedIn(false); // User is not logged in
+        setIsLoggedIn(false);
         setInitialLoading(false);
         return;
       }
 
       try {
-        setIsLoggedIn(true); // User is logged in
+        setIsLoggedIn(true);
         const user = JSON.parse(authDataString);
         setUserId(user.userId);
         setUserRole(user.userRole);
@@ -152,7 +152,7 @@ function PostDetailPage() {
         }
       } catch (error) {
         console.error("Error parsing auth data:", error);
-        setIsLoggedIn(false); // Treat as not logged in on error
+        setIsLoggedIn(false);
         toast.error("Dữ liệu xác thực không hợp lệ. Vui lòng đăng nhập lại.");
       } finally {
         setInitialLoading(false);
@@ -226,7 +226,6 @@ function PostDetailPage() {
             }
           );
 
-          // Reload thread data
           fetchData();
         }
       }
@@ -264,7 +263,6 @@ function PostDetailPage() {
 
   const fetchData = async () => {
     try {
-      // Fetch thread data
       const threadResponse = await fetch(
         `https://backend-production-ac5e.up.railway.app/api/threads/${id}`,
         {
@@ -278,7 +276,6 @@ function PostDetailPage() {
       }
       const threadData = await threadResponse.json();
 
-      // Kiểm tra quyền truy cập
       if (
         threadData.status !== "published" &&
         threadData.createdBy !== userId
@@ -289,7 +286,6 @@ function PostDetailPage() {
         return;
       }
 
-      // Check if current user has liked this thread
       const userLike = threadData.likes?.find(
         (like: { id: number; userId: number; threadId: number }) =>
           like.userId === currentUser.userId
@@ -302,14 +298,12 @@ function PostDetailPage() {
       });
       setHasPermission(true);
 
-      // Fetch comments (only for published threads)
       if (threadData.status === "published") {
         const commentsResponse = await fetch(
           `https://backend-production-ac5e.up.railway.app/api/comments/thread/${id}`
         );
         let commentsData = await commentsResponse.json();
 
-        // Structure comments with replies
         const commentsMap = new Map<number, Comment>();
         const rootComments: Comment[] = [];
 
@@ -365,6 +359,7 @@ function PostDetailPage() {
     e.preventDefault();
     if (!mainCommentContent.trim()) return;
 
+    setIsLoadingMainComment(true); // Set loading state
     try {
       const response = await fetch(
         "https://backend-production-ac5e.up.railway.app/api/comments",
@@ -398,10 +393,15 @@ function PostDetailPage() {
         setComments((prevComments) => [commentWithLike, ...prevComments]);
         setMainCommentContent("");
         toast.success("Bình luận đã được đăng");
+      } else {
+        const errorData = await response.json();
+        toast.error("Ngôn từ không phù hợp");
       }
     } catch (error) {
       console.error("Error posting comment:", error);
       toast.error("Có lỗi xảy ra khi đăng bình luận");
+    } finally {
+      setIsLoadingMainComment(false); // Reset loading state
     }
   };
 
@@ -491,7 +491,6 @@ function PostDetailPage() {
 
     try {
       if (thread.isLiked && thread.likeId) {
-        // Unlike
         await fetch(
           `https://backend-production-ac5e.up.railway.app/api/likes/${thread.likeId}`,
           {
@@ -508,7 +507,6 @@ function PostDetailPage() {
           likeId: null,
         });
       } else {
-        // Like
         const response = await fetch(
           "https://backend-production-ac5e.up.railway.app/api/likes",
           {
@@ -549,7 +547,6 @@ function PostDetailPage() {
 
     try {
       if (currentLikeStatus && currentLikeId) {
-        // Unlike
         await fetch(
           `https://backend-production-ac5e.up.railway.app/api/likes/${currentLikeId}`,
           {
@@ -560,12 +557,10 @@ function PostDetailPage() {
           }
         );
 
-        // Update state
         setComments((prevComments) =>
           updateCommentLikes(prevComments, commentId, false, null, -1)
         );
       } else {
-        // Like
         const response = await fetch(
           "https://backend-production-ac5e.up.railway.app/api/likes",
           {
@@ -582,7 +577,6 @@ function PostDetailPage() {
         );
         const data = await response.json();
 
-        // Update state
         setComments((prevComments) =>
           updateCommentLikes(prevComments, commentId, true, data.id, 1)
         );
@@ -612,7 +606,6 @@ function PostDetailPage() {
         };
       }
 
-      // Check replies
       if (comment.inverseReplyToNavigation.length > 0) {
         return {
           ...comment,
@@ -749,7 +742,6 @@ function PostDetailPage() {
     );
   }
 
-  // If not logged in, show login prompt
   if (!isLoggedIn) {
     return (
       <div className="flex flex-col min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
@@ -838,7 +830,6 @@ function PostDetailPage() {
             </div>
           ) : (
             <>
-              {/* Breadcrumb */}
               <p className="text-sm text-blue-500">
                 <span
                   className="cursor-pointer hover:underline"
@@ -850,9 +841,7 @@ function PostDetailPage() {
               </p>
 
               <div className="flex flex-wrap -mx-4">
-                {/* Main content */}
                 <div className="w-full px-4">
-                  {/* Post Title and Like Button */}
                   <div className="flex justify-between items-center">
                     <h1 className="text-3xl font-bold text-gray-900">
                       {thread.title}
@@ -879,7 +868,6 @@ function PostDetailPage() {
                     )}
                   </div>
 
-                  {/* Author Info */}
                   <div className="flex flex-col text-sm text-gray-600">
                     <div className="flex items-center gap-2">
                       <Image
@@ -890,9 +878,13 @@ function PostDetailPage() {
                             ? "border-2 border-yellow-500 shadow-lg shadow-yellow-500/30"
                             : ""
                         }`}
-                        src={thread.createdByNavigation.avatarUrl}
+                        src={
+                          thread.createdByNavigation.avatarUrl ||
+                          "https://i.pinimg.com/736x/0f/68/94/0f6894e539589a50809e45833c8bb6c4.jpg"
+                        }
                         alt={thread.createdByNavigation.fullName}
                       />
+
                       <span
                         className={
                           isTopContributor ? "text-yellow-700" : "text-gray-600"
@@ -981,20 +973,17 @@ function PostDetailPage() {
                     </div>
                   )}
 
-                  {/* Content */}
                   <div
                     className="space-y-4 text-gray-700 whitespace-pre-line mb-4"
                     dangerouslySetInnerHTML={{ __html: thread.content }}
                   />
 
-                  {/* Comments Section */}
                   {thread.status === "published" && (
                     <section className="border-t pt-6">
                       <h2 className="text-xl font-semibold">
                         Bình Luận ({totalComments})
                       </h2>
 
-                      {/* Main comment form */}
                       <form
                         onSubmit={handleSubmitMainComment}
                         className="flex items-center gap-2 mt-4"
@@ -1017,12 +1006,19 @@ function PostDetailPage() {
                           crossOrigin="anonymous"
                         />
 
-                        <Button className="py-1" type="submit">
-                          Bình luận
+                        <Button
+                          className="py-1 h-10 w-40 flex items-center justify-center"
+                          type="submit"
+                          disabled={isLoadingMainComment}
+                        >
+                          {isLoadingMainComment ? (
+                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                          ) : (
+                            "Bình luận"
+                          )}
                         </Button>
                       </form>
 
-                      {/* Comments List */}
                       <div className="mt-6">
                         {comments.length > 0 ? (
                           renderComments(comments)

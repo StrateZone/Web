@@ -5,7 +5,9 @@ interface RefundInfo {
   refundAmount: number;
   cancellationTime: string;
   cancellation_Block_TimeGate: string;
-  cancellation_PartialRefund_TimeGate: string;
+  cancellation_PartialRefund_TimeGate: string | null;
+  refundStatus?: number;
+  numerOfTablesCancelledThisWeek?: number;
 }
 
 interface CancelConfirmationModalProps {
@@ -23,9 +25,23 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
   refundInfo,
   isLoading,
 }) => {
-  if (!show || !refundInfo) return null;
+  console.log("CancelConfirmationModal Props:", {
+    show,
+    onClose,
+    onConfirm,
+    refundInfo,
+    isLoading,
+  });
+
+  if (!show || !refundInfo) {
+    console.log("Modal not rendered due to:", { show, refundInfo });
+    return null;
+  }
 
   const formatCurrency = (amount: number) => {
+    if (typeof amount !== "number" || isNaN(amount)) {
+      return "Số tiền không hợp lệ";
+    }
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
@@ -33,6 +49,9 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
   };
 
   const formatDate = (dateString: string) => {
+    if (!dateString || isNaN(new Date(dateString).getTime())) {
+      return "Ngày không hợp lệ";
+    }
     const date = new Date(dateString);
     return (
       date.toLocaleDateString("vi-VN") + " " + date.toLocaleTimeString("vi-VN")
@@ -40,38 +59,38 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
   };
 
   const renderRefundMessage = () => {
+    console.log("Refund Info:", refundInfo);
     if (
+      refundInfo.refundAmount === 0 ||
+      refundInfo.message.toLowerCase().includes("không được hoàn tiền") ||
       refundInfo.message.includes(
-        "No refund. Reason: Cancellation on shared appointment will not be refund.",
+        "No refund. Reason: Cancellation on shared appointment will not be refund."
       )
     ) {
-      return (
-        <p className="font-medium text-red-600">
-          <strong>Không hoàn tiền.</strong> Lý do: Việc hủy lịch đã có sự thanh
-          toán của đối phương sẽ không được hoàn tiền.
-        </p>
-      );
+      const reason = refundInfo.message.includes("shared appointment")
+        ? "Việc hủy lịch đã có sự thanh toán của đối phương sẽ không được hoàn tiền."
+        : refundInfo.message.includes("nhiều hơn 5 bàn")
+          ? `Bạn đã hủy ${
+              typeof refundInfo.numerOfTablesCancelledThisWeek === "number"
+                ? refundInfo.numerOfTablesCancelledThisWeek
+                : "nhiều"
+            } bàn trong tuần này, vượt quá giới hạn cho phép.`
+          : refundInfo.message;
+
+      return <p className="font-medium text-red-600">{reason}</p>;
     }
 
     return (
       <>
         <p className="font-medium text-black">
-          {refundInfo.message.includes("100%") ? (
-            <>
-              Nếu hủy bàn này ở thời điểm hiện tại, bạn sẽ được hoàn tiền{" "}
-              <strong>100%</strong>
-            </>
-          ) : refundInfo.message.includes("50%") ? (
-            <>
-              Nếu hủy bàn này ở thời điểm hiện tại, bạn sẽ được hoàn tiền{" "}
-              <strong>50%</strong>
-            </>
-          ) : (
-            <>
-              Nếu hủy bàn này ở thời điểm hiện tại, bạn sẽ được hoàn tiền{" "}
-              <strong>{refundInfo.message}</strong>
-            </>
-          )}
+          Nếu hủy bàn này ở thời điểm hiện tại, bạn sẽ được hoàn tiền{" "}
+          <strong>
+            {refundInfo.message.includes("100%")
+              ? "100%"
+              : refundInfo.message.includes("50%")
+                ? "50%"
+                : refundInfo.message}
+          </strong>
         </p>
         <p>
           <span className="font-medium text-black">
@@ -89,15 +108,16 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
             {formatDate(refundInfo.cancellationTime)}
           </strong>
         </p>
-
-        <p>
-          <span className="font-medium text-black">
-            **Hạn hoàn tiền một phần**:
-          </span>{" "}
-          <strong className="text-black">
-            {formatDate(refundInfo.cancellation_PartialRefund_TimeGate)}
-          </strong>
-        </p>
+        {refundInfo.cancellation_PartialRefund_TimeGate && (
+          <p>
+            <span className="font-medium text-black">
+              **Hạn hoàn tiền một phần**:
+            </span>{" "}
+            <strong className="text-black">
+              {formatDate(refundInfo.cancellation_PartialRefund_TimeGate)}
+            </strong>
+          </p>
+        )}
         <p>
           <span className="font-medium text-black">**Hạn chót hủy đơn**:</span>{" "}
           <strong className="text-black">
@@ -115,12 +135,24 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
           Xác Nhận Hủy Bàn Đã Đặt
         </h3>
 
-        <div className="space-y-3 mb-4">{renderRefundMessage()}</div>
+        <div className="space-y-3 mb-4">
+          {renderRefundMessage()}
+          <p>
+            <span className="font-medium text-black">
+              **Số bàn đã hủy trong tuần**:
+            </span>{" "}
+            <strong className="text-black">
+              {typeof refundInfo.numerOfTablesCancelledThisWeek === "number"
+                ? refundInfo.numerOfTablesCancelledThisWeek
+                : "Không xác định"}
+            </strong>
+          </p>
+        </div>
 
         <div className="flex justify-center space-x-3">
           <button
             onClick={onClose}
-            className={` text-black px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 flex items-center justify-center min-w-[100px] ${
+            className={`text-black px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 flex items-center justify-center min-w-[100px] ${
               isLoading ? "opacity-50 cursor-not-allowed" : ""
             }`}
             disabled={isLoading}

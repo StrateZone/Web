@@ -108,6 +108,7 @@ interface RefundInfo {
   cancellationTime: string;
   cancellation_Block_TimeGate: string;
   cancellation_PartialRefund_TimeGate: string;
+  numerOfTablesCancelledThisWeek: number;
 }
 
 function Page() {
@@ -279,6 +280,7 @@ function Page() {
         refundAmount: data.refundAmount,
         cancellationTime: data.cancellationTime,
         cancellation_Block_TimeGate: data.cancellation_Block_TimeGate,
+        numerOfTablesCancelledThisWeek: data.numerOfTablesCancelledThisWeek,
         cancellation_PartialRefund_TimeGate:
           data.cancellation_PartialRefund_TimeGate,
       });
@@ -346,8 +348,8 @@ function Page() {
         };
       case "confirmed":
         return {
-          bg: "bg-green-100",
-          text: "text-green-800",
+          bg: "bg-cyan-100",
+          text: "text-cyan-800",
           display: "Đã thanh toán",
         };
       case "incoming":
@@ -385,6 +387,12 @@ function Page() {
           bg: "bg-orange-100",
           text: "text-orange-800",
           display: "Chưa hoàn thành",
+        };
+      case "unfinished":
+        return {
+          bg: "bg-orange-100",
+          text: "text-orange-800",
+          display: "Không hoàn thành",
         };
       default:
         return {

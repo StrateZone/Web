@@ -326,32 +326,24 @@ function OpponentDetailsPopup({
                         >
                           {request.toUserNavigation.fullName}
                         </p>
-                        {isMember(request.toUserNavigation.userRole) && (
-                          <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-                            MEMBER
-                          </span>
-                        )}
-                        {isTopContributor(
-                          request.toUserNavigation.userLabel
-                        ) && (
-                          <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white ">
-                            TOP CONTRIBUTOR
-                          </span>
-                        )}
+                        <div className="flex flex-row gap-2">
+                          {isMember(request.toUserNavigation.userRole) && (
+                            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                              MEMBER
+                            </span>
+                          )}
+                          {isTopContributor(
+                            request.toUserNavigation.userLabel
+                          ) && (
+                            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                              TOP CONTRIBUTOR
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <p className="text-sm text-gray-500">
                         {request.toUserNavigation.username}
                       </p>
-                      {isMember(request.toUserNavigation.userRole) && (
-                        <p className="text-purple-500 text-sm mt-1">
-                          Thành viên câu lạc bộ
-                        </p>
-                      )}
-                      {isTopContributor(request.toUserNavigation.userLabel) && (
-                        <p className="text-yellow-500 text-sm mt-1">
-                          Thành viên đóng góp hàng đầu
-                        </p>
-                      )}
                     </div>
                   </div>
                   <div className="flex flex-col items-end">
@@ -363,7 +355,11 @@ function OpponentDetailsPopup({
                             ? "bg-green-100 text-green-800"
                             : request.status === "accepted_by_others"
                               ? "bg-pink-100 text-pink-800"
-                              : "bg-red-100 text-red-800"
+                              : request.status === "rejected"
+                                ? "bg-red-200 text-red-900"
+                                : request.status === "table_cancelled"
+                                  ? "bg-gray-200 text-gray-900"
+                                  : "bg-red-100 text-red-800"
                       }`}
                     >
                       {request.status === "pending"
@@ -372,7 +368,11 @@ function OpponentDetailsPopup({
                           ? "Đã chấp nhận Lời Mời"
                           : request.status === "accepted_by_others"
                             ? "Lời mời đã có người chấp nhận"
-                            : "Lời mời đã hết hạn"}
+                            : request.status === "rejected"
+                              ? "Đã từ chối Lời Mời"
+                              : request.status === "table_cancelled"
+                                ? "Bàn đã bị hủy"
+                                : "Lời mời đã hết hạn"}
                     </span>
                     <p className="text-xs text-gray-500 mt-1">
                       Thời gian chơi:{" "}
