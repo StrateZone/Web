@@ -329,7 +329,7 @@ const AppointmentRequestsPage = () => {
 
       if (
         errorMessage.includes(
-          "Object reference not set to an instance of an object."
+          "This appointment invitation is no longer available."
         ) ||
         errorMessage.includes("This appointment is already cancelled")
       ) {
