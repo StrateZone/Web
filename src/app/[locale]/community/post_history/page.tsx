@@ -32,6 +32,7 @@ import { toast, ToastContainer } from "react-toastify";
 import Swal from "sweetalert2";
 import "react-toastify/dist/ReactToastify.css";
 import { InsufficientBalancePopup } from "../../chess_appointment/chess_appointment_order/InsufficientBalancePopup";
+import DOMPurify from "dompurify"; // Import DOMPurify
 import { MembershipUpgradeDialog } from "../MembershipUpgradeDialog ";
 
 interface Thread {
@@ -104,7 +105,7 @@ function BlogHistory() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [userId, setUserId] = useState<number | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null); // Thêm trạng thái đăng nhập
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [currentUser, setCurrentUser] = useState({
     userId: 0,
     fullName: "",
@@ -171,13 +172,13 @@ function BlogHistory() {
     const checkUserMembership = () => {
       const authDataString = localStorage.getItem("authData");
       if (!authDataString) {
-        setIsLoggedIn(false); // Người dùng chưa đăng nhập
+        setIsLoggedIn(false);
         setInitialLoading(false);
         return;
       }
 
       try {
-        setIsLoggedIn(true); // Người dùng đã đăng nhập
+        setIsLoggedIn(true);
         const authData = JSON.parse(authDataString);
         if (authData && authData.userId) {
           setUserId(authData.userId);
@@ -197,7 +198,7 @@ function BlogHistory() {
         }
       } catch (error) {
         console.error("Error parsing auth data:", error);
-        setIsLoggedIn(false); // Xử lý lỗi như chưa đăng nhập
+        setIsLoggedIn(false);
         toast.error("Dữ liệu xác thực không hợp lệ. Vui lòng đăng nhập lại.");
       } finally {
         setInitialLoading(false);
@@ -785,6 +786,15 @@ function BlogHistory() {
     }
   };
 
+  // Hàm cắt ngắn nội dung
+  const truncateContent = (content: string, maxLength: number) => {
+    // Loại bỏ các thẻ HTML để chỉ lấy văn bản thô
+    const plainText = content.replace(/<[^>]+>/g, "");
+    if (plainText.length <= maxLength) return content;
+    const truncatedText = plainText.substring(0, maxLength);
+    return truncatedText + "...";
+  };
+
   // Lọc danh sách thread cho tab "Bản nháp"
   const draftThreads = threads.filter((thread) => thread.status === "drafted");
 
@@ -945,6 +955,12 @@ function BlogHistory() {
                       (like) => like.userId === currentUser.userId
                     )?.id;
 
+                    // Cắt ngắn nội dung trước khi render (giới hạn 200 ký tự)
+                    const truncatedContent = truncateContent(
+                      thread.content,
+                      400
+                    );
+
                     return (
                       <div
                         key={thread.threadId}
@@ -1020,13 +1036,17 @@ function BlogHistory() {
                             </div>
                           </div>
 
-                          <Typography
-                            variant="paragraph"
-                            color="gray"
-                            className="mb-4 line-clamp-2"
-                          >
-                            {thread.content}
-                          </Typography>
+                          {/* Hiển thị nội dung đã cắt ngắn */}
+                          <div
+                            className="prose text-gray-600 mb-4 white-space-nowrap overflow-x-auto max-w-[100cm] [p]:inline-block [p]:mr-2"
+                            dangerouslySetInnerHTML={{
+                              __html: DOMPurify.sanitize(truncatedContent, {
+                                ADD_TAGS: ["img", "iframe", "br"],
+                                ADD_ATTR: ["src", "alt", "style"],
+                                FORBID_TAGS: ["br"], // Loại bỏ <br> để tránh xuống dòng
+                              }),
+                            }}
+                          />
 
                           {thread.threadsTags.length > 0 && (
                             <div className="flex flex-wrap gap-2 mb-4">

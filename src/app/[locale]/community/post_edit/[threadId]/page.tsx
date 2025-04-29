@@ -3,7 +3,7 @@
 import Banner from "@/components/banner/banner";
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
 import { Button, Typography } from "@material-tailwind/react";
@@ -11,6 +11,9 @@ import { toast, ToastContainer } from "react-toastify";
 import Swal from "sweetalert2";
 import "react-toastify/dist/ReactToastify.css";
 import { InsufficientBalancePopup } from "@/app/[locale]/chess_appointment/chess_appointment_order/InsufficientBalancePopup";
+import { useQuill } from "react-quilljs";
+import "quill/dist/quill.snow.css";
+import DOMPurify from "dompurify";
 import { MembershipUpgradeDialog } from "../../MembershipUpgradeDialog ";
 
 interface Tag {
@@ -85,7 +88,8 @@ export default function EditPost() {
   const [membershipPrice, setMembershipPrice] =
     useState<MembershipPrice | null>(null);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null); // Kiểm tra quyền sở hữu
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [touched, setTouched] = useState({
     title: false,
@@ -101,14 +105,81 @@ export default function EditPost() {
     avatarUrl: "/default-avatar.jpg",
   });
 
+  // Initialize Quill editor
+  const { quill, quillRef } = useQuill({
+    theme: "snow",
+    modules: {
+      toolbar: [
+        [{ header: [1, 2, 3, false] }],
+        ["bold", "italic", "underline", "strike"],
+        ["blockquote", "code-block"],
+        [{ list: "ordered" }, { list: "bullet" }],
+        ["link", "image"],
+        ["clean"],
+      ],
+    },
+    formats: [
+      "header",
+      "bold",
+      "italic",
+      "underline",
+      "strike",
+      "blockquote",
+      "code-block",
+      "list",
+      "bullet",
+      "link",
+      "image",
+    ],
+  });
+
+  // Sync content with Quill editor
+  useEffect(() => {
+    if (quill) {
+      console.log("Quill initialized, setting content:", content);
+      // Chỉ set nội dung nếu Quill mới được khởi tạo và không có nội dung
+      if (
+        quill.root.innerHTML === "<p><br></p>" ||
+        quill.root.innerHTML === ""
+      ) {
+        quill.root.innerHTML = content || "<p></p>";
+      }
+
+      // Update content state on text change
+      const handleTextChange = () => {
+        const newContent = quill.root.innerHTML;
+        console.log("Quill text changed, new content:", newContent);
+        setContent(newContent);
+        setTouched((prev) => ({ ...prev, content: true }));
+      };
+
+      quill.on("text-change", handleTextChange);
+
+      return () => {
+        console.log("Cleaning up Quill event listener");
+        quill.off("text-change", handleTextChange);
+      };
+    }
+  }, [quill]); // Loại bỏ content khỏi dependency để tránh vòng lặp
+
+  // Log state changes for debugging
+  useEffect(() => {
+    console.log("Current state:", {
+      title,
+      content,
+      selectedTagIds,
+      previewImage,
+      thumbnail: thumbnail ? thumbnail.name : null,
+      isPreview,
+    });
+  }, [title, content, selectedTagIds, previewImage, thumbnail, isPreview]);
+
   // Hàm lấy màu chữ tương phản
   const getContrastColor = (hexColor: string) => {
     if (!hexColor || !hexColor.startsWith("#")) return "#FFFFFF";
-
     const r = parseInt(hexColor.substr(1, 2), 16);
     const g = parseInt(hexColor.substr(3, 2), 16);
     const b = parseInt(hexColor.substr(5, 2), 16);
-
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
     return luminance > 0.5 ? "#000000" : "#FFFFFF";
   };
@@ -277,10 +348,25 @@ export default function EditPost() {
 
         setHasPermission(true);
         setTitle(thread.title);
-        setContent(thread.content);
+        setContent(thread.content || "<p></p>");
         setPreviewImage(thread.thumbnailUrl || "");
         setSelectedTagIds(thread.threadsTags.map((tag) => tag.tag.tagId));
         setCurrentStatus(thread.status);
+
+        // Fetch thumbnail file if thumbnailUrl exists
+        if (thread.thumbnailUrl) {
+          console.log("Setting thumbnail URL:", thread.thumbnailUrl);
+          try {
+            const response = await fetch(thread.thumbnailUrl);
+            if (!response.ok) throw new Error("Failed to fetch thumbnail");
+            const blob = await response.blob();
+            const file = new File([blob], "thumbnail.jpg", { type: blob.type });
+            setThumbnail(file);
+          } catch (error) {
+            console.error("Error fetching thumbnail:", error);
+            setPreviewImage("/default-thumbnail.jpg");
+          }
+        }
       } catch (err) {
         console.error("Failed to fetch thread:", err);
         setHasPermission(false);
@@ -308,6 +394,7 @@ export default function EditPost() {
           {
             headers: {
               accept: "*/*",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
           }
         );
@@ -387,7 +474,9 @@ export default function EditPost() {
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target?.result) {
-        setPreviewImage(event.target.result as string);
+        const imageUrl = event.target.result as string;
+        console.log("Thumbnail selected, preview URL:", imageUrl);
+        setPreviewImage(imageUrl);
       }
     };
     reader.readAsDataURL(file);
@@ -418,13 +507,14 @@ export default function EditPost() {
       return;
     }
 
-    if (!previewImage && !thumbnail) {
+    if (!previewImage) {
       setError("Vui lòng chọn ảnh đại diện cho bài viết");
       setIsSubmitting(false);
       return;
     }
 
-    if (!content.trim() || content.length < 500) {
+    const plainText = content.replace(/<[^>]+>/g, "");
+    if (!plainText.trim() || plainText.length < 500) {
       setError("Nội dung bài viết phải có ít nhất 500 ký tự");
       setIsSubmitting(false);
       return;
@@ -528,7 +618,7 @@ export default function EditPost() {
         {
           createdBy: userId,
           title: title,
-          content: content || " ",
+          content: content || "<p></p>",
           tagIds: selectedTagIds.length > 0 ? selectedTagIds : [],
           isDrafted: true,
         },
@@ -584,6 +674,43 @@ export default function EditPost() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handlePreview = () => {
+    setError("");
+    setTouched({
+      title: true,
+      tags: true,
+      thumbnail: true,
+      content: true,
+    });
+
+    if (!title.trim()) {
+      setError("Vui lòng nhập tiêu đề bài viết");
+      return;
+    }
+    if (selectedTagIds.length === 0) {
+      setError("Vui lòng chọn ít nhất một thể loại");
+      return;
+    }
+    if (!previewImage) {
+      setError("Vui lòng chọn ảnh đại diện cho bài viết");
+      return;
+    }
+    const plainText = content.replace(/<[^>]+>/g, "");
+    if (!plainText.trim() || plainText.length < 500) {
+      setError("Nội dung bài viết phải có ít nhất 500 ký tự");
+      return;
+    }
+
+    // Lưu nội dung hiện tại của Quill trước khi chuyển sang preview
+    if (quill) {
+      const currentContent = quill.root.innerHTML;
+      setContent(currentContent);
+    }
+
+    console.log("Switching to preview mode, content:", content);
+    setIsPreview(true);
   };
 
   if (initialLoading) {
@@ -646,7 +773,7 @@ export default function EditPost() {
               </Button>
             </div>
           ) : (
-            <>
+            <div className="space-y-6">
               {isPreview ? (
                 <div className="border rounded-lg p-6 bg-white shadow-md">
                   <h1 className="text-3xl font-bold mb-4">{title}</h1>
@@ -707,270 +834,275 @@ export default function EditPost() {
                       );
                     })}
                   </div>
-                  {previewImage && (
+                  {previewImage ? (
                     <img
                       src={previewImage}
                       alt="Preview"
                       className="w-full mb-6 rounded-lg object-cover max-h-96"
+                      onError={() => setPreviewImage("/default-thumbnail.jpg")}
                     />
+                  ) : (
+                    <p className="text-gray-500 mb-6">Không có ảnh đại diện</p>
                   )}
                   <div
                     className="prose max-w-none"
                     dangerouslySetInnerHTML={{
-                      __html: content.replace(/\n/g, "<br>"),
+                      __html: DOMPurify.sanitize(content, {
+                        ADD_TAGS: ["img", "iframe"],
+                        ADD_ATTR: ["src", "alt", "style"],
+                      }),
                     }}
                   />
                   <div className="mt-6">
                     <Button
-                      onClick={() => setIsPreview(false)}
+                      onClick={() => {
+                        console.log(
+                          "Returning to edit mode, content:",
+                          content
+                        );
+                        setIsPreview(false);
+                      }}
                       className="w-full bg-gray-600 hover:bg-gray-700"
                     >
                       Quay lại chỉnh sửa
                     </Button>
                   </div>
                 </div>
-              ) : (
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {error && (
-                    <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded">
-                      <div className="flex items-center">
-                        <svg
-                          className="w-5 h-5 mr-2"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        <span className="font-medium">{error}</span>
-                      </div>
+              ) : null}
+              <form
+                onSubmit={handleSubmit}
+                className={`space-y-6 ${isPreview ? "hidden" : ""}`}
+              >
+                {error && (
+                  <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded">
+                    <div className="flex items-center">
+                      <svg
+                        className="w-5 h-5 mr-2"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <span className="font-medium">{error}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label className="block text-lg font-medium text-gray-800">
+                    Tên bài viết <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => {
+                      setTitle(e.target.value);
+                      setTouched((prev) => ({ ...prev, title: true }));
+                    }}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    placeholder="Nhập tiêu đề bài viết"
+                    maxLength={100}
+                    required
+                  />
+                  <p className="text-sm text-gray-500">
+                    {title.length}/100 ký tự
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-lg font-medium text-gray-800">
+                    Thể loại <span className="text-red-500">*</span>
+                    <span className="text-sm text-gray-500 ml-2">
+                      (Tối đa 5 thể loại)
+                    </span>
+                  </label>
+                  {isLoadingTags ? (
+                    <div className="flex space-x-2">
+                      {[...Array(4)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="h-10 w-20 bg-gray-200 rounded-full animate-pulse"
+                        ></div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {tags.map((tag) => {
+                        const isSelected = selectedTagIds.includes(tag.tagId);
+                        const isImportantTag = [
+                          "thông báo",
+                          "quan trọng",
+                        ].includes(tag.tagName);
+                        const textColor = getContrastColor(
+                          tag.tagColor || "#6B7280"
+                        );
+
+                        return (
+                          <button
+                            key={tag.tagId}
+                            type="button"
+                            onClick={() => handleTagSelect(tag.tagId)}
+                            disabled={!isSelected && selectedTagIds.length >= 5}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                              isSelected ? "shadow-md" : ""
+                            } ${
+                              !isSelected && selectedTagIds.length >= 5
+                                ? "opacity-50 cursor-not-allowed"
+                                : ""
+                            }`}
+                            style={{
+                              backgroundColor: isSelected
+                                ? tag.tagColor || "#6B7280"
+                                : "#f3f4f6",
+                              color: isSelected
+                                ? textColor
+                                : tag.tagColor || "#6B7280",
+                              transform:
+                                isSelected && isImportantTag
+                                  ? "scale(1.05)"
+                                  : "none",
+                              border:
+                                isSelected && isImportantTag
+                                  ? "1px solid white"
+                                  : "none",
+                              boxShadow:
+                                isSelected && isImportantTag
+                                  ? `0 0 8px ${tag.tagColor}`
+                                  : "none",
+                            }}
+                          >
+                            {isSelected && isImportantTag && (
+                              <span className="mr-1">
+                                {tag.tagName === "quan trọng" ? "⚠️" : "📢"}
+                              </span>
+                            )}
+                            {tag.tagName}
+                            {isSelected &&
+                              isImportantTag &&
+                              tag.tagName === "quan trọng" && (
+                                <span className="ml-1">⚠️</span>
+                              )}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
-
-                  <div className="space-y-2">
-                    <label className="block text-lg font-medium text-gray-800">
-                      Tên bài viết <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={title}
-                      onChange={(e) => {
-                        setTitle(e.target.value);
-                        setTouched((prev) => ({ ...prev, title: true }));
-                      }}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                      placeholder="Nhập tiêu đề bài viết"
-                      maxLength={100}
-                      required
-                    />
+                  {selectedTagIds.length > 0 && (
                     <p className="text-sm text-gray-500">
-                      {title.length}/100 ký tự
+                      Đã chọn {selectedTagIds.length}/5 thể loại
                     </p>
-                  </div>
+                  )}
+                </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-lg font-medium text-gray-800">
-                      Thể loại <span className="text-red-500">*</span>
-                      <span className="text-sm text-gray-500 ml-2">
-                        (Tối đa 5 thể loại)
-                      </span>
-                    </label>
-                    {isLoadingTags ? (
-                      <div className="flex space-x-2">
-                        {[...Array(4)].map((_, i) => (
-                          <div
-                            key={i}
-                            className="h-10 w-20 bg-gray-200 rounded-full animate-pulse"
-                          ></div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {tags.map((tag) => {
-                          const isSelected = selectedTagIds.includes(tag.tagId);
-                          const isImportantTag = [
-                            "thông báo",
-                            "quan trọng",
-                          ].includes(tag.tagName);
-                          const textColor = getContrastColor(
-                            tag.tagColor || "#6B7280"
-                          );
-
-                          return (
-                            <button
-                              key={tag.tagId}
-                              type="button"
-                              onClick={() => handleTagSelect(tag.tagId)}
-                              disabled={
-                                !isSelected && selectedTagIds.length >= 5
-                              }
-                              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                                isSelected ? "shadow-md" : ""
-                              } ${
-                                !isSelected && selectedTagIds.length >= 5
-                                  ? "opacity-50 cursor-not-allowed"
-                                  : ""
-                              }`}
-                              style={{
-                                backgroundColor: isSelected
-                                  ? tag.tagColor || "#6B7280"
-                                  : "#f3f4f6",
-                                color: isSelected
-                                  ? textColor
-                                  : tag.tagColor || "#6B7280",
-                                transform:
-                                  isSelected && isImportantTag
-                                    ? "scale(1.05)"
-                                    : "none",
-                                border:
-                                  isSelected && isImportantTag
-                                    ? "1px solid white"
-                                    : "none",
-                                boxShadow:
-                                  isSelected && isImportantTag
-                                    ? `0 0 8px ${tag.tagColor}`
-                                    : "none",
-                              }}
-                            >
-                              {isSelected && isImportantTag && (
-                                <span className="mr-1">
-                                  {tag.tagName === "quan trọng" ? "⚠️" : "📢"}
-                                </span>
-                              )}
-                              {tag.tagName}
-                              {isSelected &&
-                                isImportantTag &&
-                                tag.tagName === "quan trọng" && (
-                                  <span className="ml-1">⚠️</span>
-                                )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {selectedTagIds.length > 0 && (
-                      <p className="text-sm text-gray-500">
-                        Đã chọn {selectedTagIds.length}/5 thể loại
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-lg font-medium text-gray-800">
-                      Thumbnails (Ảnh đại diện){" "}
-                      <span className="text-red-500">*</span>
-                      <span className="text-sm text-gray-500 ml-2">
-                        (Tối đa 5MB, JPEG/PNG/WEBP)
-                      </span>
-                    </label>
-                    <input
-                      type="file"
-                      onChange={handleThumbnailChange}
-                      accept="image/*"
-                      className="w-full text-sm text-gray-500 file:py-2 file:px-4 file:rounded-lg file:border file:border-gray-300 file:bg-gray-50 file:text-sm file:font-medium file:text-blue-600 file:hover:bg-blue-100"
-                    />
-                    {previewImage && (
-                      <div className="mt-4">
-                        <img
-                          src={previewImage}
-                          alt="Preview"
-                          className="w-full max-w-md mx-auto rounded-lg shadow-lg"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-lg font-medium text-gray-800">
-                      Nội dung bài viết <span className="text-red-500">*</span>
-                      <span className="text-sm text-gray-500 ml-2">
-                        (Tối thiểu 500 ký tự)
-                      </span>
-                    </label>
-                    <textarea
-                      value={content}
-                      onChange={(e) => {
-                        setContent(e.target.value);
-                        setTouched((prev) => ({ ...prev, content: true }));
-                      }}
-                      className="w-full h-48 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                      placeholder="Nhập nội dung bài viết"
-                      minLength={500}
-                      required
-                    />
-                    <p
-                      className={`text-sm ${
-                        content.length < 500 ? "text-red-500" : "text-gray-500"
-                      }`}
-                    >
-                      {content.length}/500 ký tự{" "}
-                      {content.length < 500 && "(tối thiểu)"}
-                    </p>
-                  </div>
-
-                  <div className="flex justify-between gap-4">
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        if (!title.trim()) {
-                          setError("Vui lòng nhập tiêu đề bài viết");
-                          return;
+                <div className="space-y-2">
+                  <label className="block text-lg font-medium text-gray-800">
+                    Thumbnails (Ảnh đại diện){" "}
+                    <span className="text-red-500">*</span>
+                    <span className="text-sm text-gray-500 ml-2">
+                      (Tối đa 5MB, JPEG/PNG/WEBP)
+                    </span>
+                  </label>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleThumbnailChange}
+                    accept="image/*"
+                    className="w-full text-sm text-gray-500 file:py-2 file:px-4 file:rounded-lg file:border file:border-gray-300 file:bg-gray-50 file:text-sm file:font-medium file:text-blue-600 file:hover:bg-blue-100"
+                  />
+                  {previewImage && (
+                    <div className="mt-4 relative">
+                      <img
+                        src={previewImage}
+                        alt="Preview"
+                        className="w-full max-w-md mx-auto rounded-lg shadow-lg"
+                        onError={() =>
+                          setPreviewImage("/default-thumbnail.jpg")
                         }
-                        if (selectedTagIds.length === 0) {
-                          setError("Vui lòng chọn ít nhất một thể loại");
-                          return;
-                        }
-                        if (!previewImage && !thumbnail) {
-                          setError("Vui lòng chọn ảnh đại diện cho bài viết");
-                          return;
-                        }
-                        if (!content.trim() || content.length < 500) {
-                          setError(
-                            "Nội dung bài viết phải có ít nhất 500 ký tự"
-                          );
-                          return;
-                        }
-                        setIsPreview(true);
-                        setError("");
-                      }}
-                      className="px-6 py-3 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700"
-                    >
-                      Xem trước
-                    </Button>
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          console.log("Removing thumbnail");
+                          setThumbnail(null);
+                          setPreviewImage("");
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = "";
+                          }
+                        }}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600"
+                      >
+                        X
+                      </button>
+                    </div>
+                  )}
+                </div>
 
-                    <Button
-                      type="button"
-                      onClick={handleSaveDraft}
-                      disabled={isSubmitting}
-                      style={{
-                        backgroundColor: "#004080",
-                        color: "white",
-                        opacity: isSubmitting ? 0.5 : 1,
-                        cursor: isSubmitting ? "not-allowed" : "pointer",
-                      }}
-                      className="px-6 py-3 rounded-lg font-medium hover:brightness-110"
-                    >
-                      {isSubmitting ? "Đang lưu nháp..." : "Lưu nháp"}
-                    </Button>
+                <div className="space-y-2">
+                  <label className="block text-lg font-medium text-gray-800">
+                    Nội dung bài viết <span className="text-red-500">*</span>
+                    <span className="text-sm text-gray-500 ml-2">
+                      (Tối thiểu 500 ký tự)
+                    </span>
+                  </label>
+                  <div
+                    ref={quillRef}
+                    className="h-64 bg-white border border-gray-300 rounded-lg"
+                  />
+                  <p
+                    className={`text-sm mt-12 ${
+                      content.replace(/<[^>]+>/g, "").length < 500
+                        ? "text-red-500"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    {content.replace(/<[^>]+>/g, "").length}/500 ký tự{" "}
+                    {content.replace(/<[^>]+>/g, "").length < 500 &&
+                      "(tối thiểu)"}
+                  </p>
+                </div>
 
-                    <Button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className={`px-6 py-3 bg-blue-600 text-white rounded-lg font-medium ${
-                        isSubmitting
-                          ? "opacity-50 cursor-not-allowed"
-                          : "hover:bg-blue-700"
-                      }`}
-                    >
-                      {isSubmitting ? "Đang cập nhật..." : "Cập nhật bài viết"}
-                    </Button>
-                  </div>
-                </form>
-              )}
-            </>
+                <div className="flex justify-between gap-4">
+                  <Button
+                    type="button"
+                    onClick={handlePreview}
+                    className="px-6 py-3 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700"
+                  >
+                    Xem trước
+                  </Button>
+
+                  <Button
+                    type="button"
+                    onClick={handleSaveDraft}
+                    disabled={isSubmitting}
+                    style={{
+                      backgroundColor: "#004080",
+                      color: "white",
+                      opacity: isSubmitting ? 0.5 : 1,
+                      cursor: isSubmitting ? "not-allowed" : "pointer",
+                    }}
+                    className="px-6 py-3 rounded-lg font-medium hover:brightness-110"
+                  >
+                    {isSubmitting ? "Đang lưu nháp..." : "Lưu nháp"}
+                  </Button>
+
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className={`px-6 py-3 bg-blue-600 text-white rounded-lg font-medium ${
+                      isSubmitting
+                        ? "opacity-50 cursor-not-allowed"
+                        : "hover:bg-blue-700"
+                    }`}
+                  >
+                    {isSubmitting ? "Đang cập nhật..." : "Cập nhật bài viết"}
+                  </Button>
+                </div>
+              </form>
+            </div>
           )}
         </div>
       ) : (

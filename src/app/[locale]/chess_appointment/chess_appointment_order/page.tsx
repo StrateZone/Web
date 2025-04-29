@@ -30,7 +30,7 @@ interface ChessBooking {
   roomName: string;
   roomType: string;
   durationInHours: number;
-  endDate: string;
+  endDate: string; // ISO format, e.g., "2025-04-29T13:00:00"
   gameType: {
     typeId: number;
     typeName: string;
@@ -39,25 +39,39 @@ interface ChessBooking {
   gameTypePrice: number;
   roomDescription: string;
   roomTypePrice: number;
-  startDate: string;
+  startDate: string; // ISO format, e.g., "2025-04-29T12:00:00"
   totalPrice: number;
   hasInvitations?: boolean;
   originalPrice?: number;
   invitedUsers?: InvitedUser[];
 }
 
-interface UnavailableTable {
+// Interface for backend error response (TABLE_NOT_AVAILABLE)
+interface BackendUnavailableTable {
   table_id: number;
-  start_time: string;
-  end_time: string;
+  start_time: string; // ISO format
+  end_time: string; // ISO format
 }
 
 interface TableNotAvailableError {
   error: {
     code: string;
     message: string;
-    unavailable_tables: UnavailableTable[];
+    unavailable_tables: BackendUnavailableTable[];
   };
+}
+
+// Interface for UnavailableTablesPopup props
+interface UnavailableTable {
+  tableId: number;
+  startTime: string; // Formatted for display, e.g., "12:00"
+  endTime: string; // Formatted for display, e.g., "13:00"
+}
+
+// Extended interface for internal use with raw timestamps
+interface UnavailableTableWithRaw extends UnavailableTable {
+  rawStartTime: string; // Matches ChessBooking startDate format
+  rawEndTime: string; // Matches ChessBooking endDate format
 }
 
 const TableBookingPage = () => {
@@ -176,7 +190,6 @@ const TableBookingPage = () => {
     try {
       setLocalLoading((prev) => ({ ...prev, [bookingKey]: true }));
 
-      // Check if there are any invited users
       const booking = chessBookings.find(
         (b) =>
           b.tableId === tableId &&
@@ -191,7 +204,6 @@ const TableBookingPage = () => {
         }
       }
 
-      // Remove the table from the list
       const updatedBookings = chessBookings.filter(
         (booking) =>
           !(
@@ -300,6 +312,7 @@ const TableBookingPage = () => {
       finalPrice,
     });
     if (!isConfirmed) return;
+
     const now = new Date();
     const closeToNowBookings = chessBookings.filter(
       (booking) =>
@@ -344,7 +357,6 @@ const TableBookingPage = () => {
           endTime: booking.endDate,
           invitedUsers: booking.invitedUsers?.map((user) => user.userId) || [],
         })),
-
         totalPrice: finalPrice,
       };
 
@@ -408,25 +420,68 @@ const TableBookingPage = () => {
           );
           setChessBookings(validBookings);
           localStorage.setItem("chessBookings", JSON.stringify(validBookings));
-        } else if (error.message.includes("TABLE_NOT_AVAILABLE")) {
+        } else if (
+          error.message.includes("TABLE_NOT_AVAILABLE") ||
+          error.message.includes("This table is being booked by someone else")
+        ) {
           try {
-            const errorData = JSON.parse(error.message);
-            const unavailableTables = errorData.error.unavailable_tables.map(
-              (t: UnavailableTable) => ({
-                tableId: t.table_id,
-                startTime: formatTime(t.start_time),
-                endTime: formatTime(t.end_time),
-              })
-            );
+            let unavailableTablesWithRaw: UnavailableTableWithRaw[] = [];
+
+            if (error.message.includes("TABLE_NOT_AVAILABLE")) {
+              const errorData = JSON.parse(error.message);
+              unavailableTablesWithRaw = errorData.error.unavailable_tables.map(
+                (t: BackendUnavailableTable) => ({
+                  tableId: t.table_id,
+                  startTime: formatTime(t.start_time), // Formatted for display
+                  endTime: formatTime(t.end_time),
+                  rawStartTime: t.start_time, // Raw for filtering
+                  rawEndTime: t.end_time,
+                })
+              );
+            } else if (
+              error.message.includes(
+                "This table is being booked by someone else"
+              )
+            ) {
+              const match = error.message.match(
+                /Table ID (\d+), schedule time: ([^,]+), end time: ([^"]+)/
+              );
+              if (match) {
+                // Convert to ISO format to match ChessBooking startDate/endDate
+                const rawStartTime = new Date(match[2]).toISOString();
+                const rawEndTime = new Date(match[3]).toISOString();
+                unavailableTablesWithRaw = [
+                  {
+                    tableId: parseInt(match[1]),
+                    startTime: formatTime(match[2]), // Formatted for display
+                    endTime: formatTime(match[3]),
+                    rawStartTime,
+                    rawEndTime,
+                  },
+                ];
+              } else {
+                throw new Error("Invalid error format for booked table");
+              }
+            }
+
+            // Pass only the required fields to UnavailableTablesPopup
+            const unavailableTables: UnavailableTable[] =
+              unavailableTablesWithRaw.map(
+                ({ tableId, startTime, endTime }) => ({
+                  tableId,
+                  startTime,
+                  endTime,
+                })
+              );
 
             await UnavailableTablesPopup({ unavailableTables });
 
             const updatedBookings = chessBookings.filter((booking) => {
-              return !errorData.error.unavailable_tables.some(
-                (unavailable: UnavailableTable) =>
-                  booking.tableId === unavailable.table_id &&
-                  booking.startDate === unavailable.start_time &&
-                  booking.endDate === unavailable.end_time
+              return !unavailableTablesWithRaw.some(
+                (unavailable) =>
+                  booking.tableId === unavailable.tableId &&
+                  booking.startDate === unavailable.rawStartTime &&
+                  booking.endDate === unavailable.rawEndTime
               );
             });
 
@@ -436,8 +491,14 @@ const TableBookingPage = () => {
               JSON.stringify(updatedBookings)
             );
           } catch (parseError) {
-            console.error("Error parsing unavailable tables:", parseError);
+            console.error(
+              "Error parsing unavailable/booked tables:",
+              parseError
+            );
+            toast.error("Có lỗi khi xử lý thông báo bàn không khả dụng");
           }
+        } else {
+          toast.error("Có lỗi xảy ra khi đặt bàn. Vui lòng thử lại.");
         }
       }
     } finally {
@@ -489,7 +550,7 @@ const TableBookingPage = () => {
       </div>
 
       <div className="mt-10">
-        <OrderAttention></OrderAttention>
+        <OrderAttention />
       </div>
 
       <div className="min-h-[calc(100vh-200px)] bg-gray-100 p-6 text-black">
@@ -553,9 +614,7 @@ const TableBookingPage = () => {
                             </p>
                           </div>
                           <p>
-                            <span className="font-bold text-lg ">
-                              Loại Cờ:{" "}
-                            </span>
+                            <span className="font-bold text-lg">Loại Cờ: </span>
                             {GAME_TYPE_TRANSLATIONS[
                               booking?.gameType?.typeName?.toLowerCase?.() || ""
                             ] ||
@@ -563,23 +622,23 @@ const TableBookingPage = () => {
                               "Không rõ"}
                           </p>
                           <p>
-                            <span className="font-bold text-lg ">
+                            <span className="font-bold text-lg">
                               Loại Phòng:{" "}
                             </span>
                             {translateRoomType(booking.roomType)}
                           </p>
                           <p>
-                            <span className="font-bold text-lg ">Mã Bàn: </span>
+                            <span className="font-bold text-lg">Mã Bàn: </span>
                             {booking.tableId}
                           </p>
                           <p>
-                            <span className="font-bold text-lg ">
+                            <span className="font-bold text-lg">
                               Tên Phòng:{" "}
                             </span>
                             {booking.roomName}
                           </p>
                           <p>
-                            <span className="font-bold text-lg ">
+                            <span className="font-bold text-lg">
                               Tổng Thời Gian Thuê Bàn:{" "}
                             </span>
                             {formatDuration(booking.durationInHours)}
@@ -587,26 +646,26 @@ const TableBookingPage = () => {
                         </div>
                         <div className="text-right">
                           <p>
-                            <span className="font-bold text-lg ">
+                            <span className="font-bold text-lg">
                               Ngày Đặt:{" "}
                             </span>
                             {formatDate(booking.startDate)}
                           </p>
                           <p>
-                            <span className="font-bold text-lg ">
+                            <span className="font-bold text-lg">
                               Giờ Bắt Đầu:{" "}
                             </span>
                             {formatTime(booking.startDate)}
                           </p>
                           <p>
-                            <span className="font-bold text-lg ">
+                            <span className="font-bold text-lg">
                               Giờ Kết thúc:{" "}
                             </span>
                             {formatTime(booking.endDate)}
                           </p>
                           <div>
                             <p className="font-medium text-base">
-                              <span className="font-bold text-lg ">
+                              <span className="font-bold text-lg">
                                 Giá Thuê Theo Giờ:{" "}
                               </span>
                               {(
@@ -633,7 +692,6 @@ const TableBookingPage = () => {
                         </div>
                       </div>
 
-                      {/* Phần hiển thị avatar người được mời */}
                       <div className="absolute bottom-2 right-2 flex items-center">
                         {booking.invitedUsers &&
                           booking.invitedUsers.length > 0 && (

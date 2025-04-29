@@ -14,6 +14,7 @@ import { HeartIcon } from "@heroicons/react/24/outline";
 import Swal from "sweetalert2";
 import "react-toastify/dist/ReactToastify.css";
 import { InsufficientBalancePopup } from "../../chess_appointment/chess_appointment_order/InsufficientBalancePopup";
+import DOMPurify from "dompurify";
 import { MembershipUpgradeDialog } from "../MembershipUpgradeDialog ";
 
 interface Thread {
@@ -23,7 +24,7 @@ interface Thread {
   thumbnailUrl: string | null;
   createdAt: string;
   createdBy: number;
-  status: "pending" | "published" | "rejected" | "deleted";
+  status: "pending" | "published" | "rejected" | "deleted" | "edit_pending";
   createdByNavigation: {
     userLabel: number;
     userId: number;
@@ -90,6 +91,26 @@ function getContrastColor(hexColor: string) {
   return luminance > 0.5 ? "#000000" : "#FFFFFF";
 }
 
+// Hàm làm sạch nội dung HTML
+const cleanContent = (htmlContent: string): string => {
+  // Loại bỏ các thẻ <span class="ql-ui" contenteditable="false">
+  let cleanedContent = htmlContent.replace(
+    /<span class="ql-ui" contenteditable="false"><\/span>/g,
+    ""
+  );
+
+  // Chuyển đổi <ol> thành <ul> nếu danh sách có data-list="bullet"
+  cleanedContent = cleanedContent.replace(
+    /<ol>([\s\S]*?(<li[^>]*data-list="bullet"[^>]*>[\s\S]*?)<\/ol>)/g,
+    "<ul>$1</ul>"
+  );
+
+  // Loại bỏ <p><br></p> ở cuối nếu có
+  cleanedContent = cleanedContent.replace(/<p><br><\/p>$/, "");
+
+  return cleanedContent;
+};
+
 function PostDetailPage() {
   const params = useParams();
   const id = params.id as string;
@@ -102,7 +123,7 @@ function PostDetailPage() {
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [isLoadingLike, setIsLoadingLike] = useState(false);
   const [isLoadingCommentLike, setIsLoadingCommentLike] = useState(false);
-  const [isLoadingMainComment, setIsLoadingMainComment] = useState(false); // New state for main comment loading
+  const [isLoadingMainComment, setIsLoadingMainComment] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
@@ -112,7 +133,6 @@ function PostDetailPage() {
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 
-  // Get user data from localStorage
   const authDataString =
     typeof window !== "undefined" ? localStorage.getItem("authData") : null;
   const parsedAuthData = authDataString ? JSON.parse(authDataString) : {};
@@ -123,7 +143,7 @@ function PostDetailPage() {
     userId: userInfo.userId,
     username: userInfo.username,
     fullName: userInfo.fullName,
-    avatarUrl: userInfo.avatarUrl || "",
+    avatarUrl: userInfo.avatarUrl || "/default-avatar.jpg",
   });
 
   const [mainCommentContent, setMainCommentContent] = useState("");
@@ -276,9 +296,12 @@ function PostDetailPage() {
       }
       const threadData = await threadResponse.json();
 
+      // Allow post owner to view edit_pending or pending posts
       if (
         threadData.status !== "published" &&
-        threadData.createdBy !== userId
+        threadData.createdBy !== userId &&
+        threadData.status !== "edit_pending" &&
+        threadData.status !== "pending"
       ) {
         setHasPermission(false);
         toast.error("Bạn không có quyền xem bài viết này");
@@ -359,7 +382,7 @@ function PostDetailPage() {
     e.preventDefault();
     if (!mainCommentContent.trim()) return;
 
-    setIsLoadingMainComment(true); // Set loading state
+    setIsLoadingMainComment(true);
     try {
       const response = await fetch(
         "https://backend-production-ac5e.up.railway.app/api/comments",
@@ -401,7 +424,7 @@ function PostDetailPage() {
       console.error("Error posting comment:", error);
       toast.error("Có lỗi xảy ra khi đăng bình luận");
     } finally {
-      setIsLoadingMainComment(false); // Reset loading state
+      setIsLoadingMainComment(false);
     }
   };
 
@@ -880,7 +903,7 @@ function PostDetailPage() {
                         }`}
                         src={
                           thread.createdByNavigation.avatarUrl ||
-                          "https://i.pinimg.com/736x/0f/68/94/0f6894e539589a50809e45833c8bb6c4.jpg"
+                          "/default-avatar.jpg"
                         }
                         alt={thread.createdByNavigation.fullName}
                       />
@@ -963,7 +986,7 @@ function PostDetailPage() {
                       <img
                         src={thread.thumbnailUrl}
                         alt={thread.title}
-                        className="w-8/12 h-96 object-cover mb-4"
+                        className="w-8/12 h-96 object-cover mb-4 rounded-lg"
                         loading="lazy"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src =
@@ -974,8 +997,13 @@ function PostDetailPage() {
                   )}
 
                   <div
-                    className="space-y-4 text-gray-700 whitespace-pre-line mb-4"
-                    dangerouslySetInnerHTML={{ __html: thread.content }}
+                    className="prose max-w-none space-y-4 text-gray-700 mb-4"
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(cleanContent(thread.content), {
+                        ADD_TAGS: ["img", "iframe"],
+                        ADD_ATTR: ["src", "alt", "style", "data-list"],
+                      }),
+                    }}
                   />
 
                   {thread.status === "published" && (
@@ -1092,6 +1120,12 @@ const getStatusBadge = (status: string) => {
       return (
         <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded">
           Đã Bị Ẩn Bởi Admin
+        </span>
+      );
+    case "edit_pending":
+      return (
+        <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded">
+          Chờ Xét Duyệt Chỉnh Sửa
         </span>
       );
     default:

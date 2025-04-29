@@ -63,12 +63,11 @@ export default function LoginPage() {
     if (!emailError && !passwordError && email && password) {
       setLoading(true);
       try {
-        const response = await axios.post(
-          "https://backend-production-ac5e.up.railway.app/api/auth/login",
-          {
-            email: email,
-            password: password,
-          },
+        const loginUrl =
+          "https://backend-production-ac5e.up.railway.app/api/auth/login";
+        const loginResponse = await axios.post(
+          loginUrl,
+          { email, password },
           {
             headers: {
               "Content-Type": "application/json",
@@ -77,42 +76,10 @@ export default function LoginPage() {
           }
         );
 
-        // Xử lý khi login thành công
-        if (response.data?.success === true) {
-          // Lấy data từ response
-          const responseData = response.data.data;
-
-          // Chuẩn bị dữ liệu user để lưu trữ
-          const authData = {
-            userId: responseData.userId,
-            username: responseData.username,
-            email: responseData.email,
-            fullName: responseData.fullName,
-            phone: responseData.phone,
-            gender: responseData.gender,
-            userRole: responseData.userRole,
-            status: responseData.status,
-            wallet: responseData.wallet,
-            accessToken: responseData.accessToken,
-            refreshToken: responseData.refreshToken,
-            imageUrl: responseData.imageUrl,
-            skillLevel: responseData.skillLevel,
-            ranking: responseData.ranking,
-          };
-
-          // Lưu vào localStorage
-          localStorage.setItem("authData", JSON.stringify(authData));
-          localStorage.setItem("accessToken", responseData.accessToken);
-          localStorage.setItem("refreshToken", responseData.refreshToken);
-          document.cookie = `accessToken=${responseData.accessToken}; path=/; max-age=604800; Secure; SameSite=Strict`;
-          document.cookie = `refreshToken=${responseData.refreshToken}; path=/; max-age=604800; Secure; SameSite=Strict`;
-
-          // Thông báo và chuyển hướng
-          router.push("/");
-        } else if (response.data?.success === false) {
-          // Xử lý các trường hợp thất bại
+        if (loginResponse.data?.success !== true) {
           if (
-            response.data?.message === "Tài khoản chưa được xác thực email."
+            loginResponse.data?.message ===
+            "Tài khoản chưa được xác thực email."
           ) {
             router.push(
               `/${localActive}/otp_verification?email=${encodeURIComponent(email)}`
@@ -120,19 +87,48 @@ export default function LoginPage() {
             toast.warning(
               "Tài Khoản Vẫn Chưa Được Kích Hoạt, Vui lòng xác thực email trước khi đăng nhập"
             );
-          } else if (response.data?.message === "User doesnt exist") {
+          } else if (loginResponse.data?.message === "User doesnt exist") {
             toast.error(
               "Tài khoản không tồn tại. Vui lòng kiểm tra lại email."
             );
-          } else if (response.data?.message === "Invalid email or password") {
+          } else if (
+            loginResponse.data?.message === "Invalid email or password"
+          ) {
             toast.error(
               "Email hoặc mật khẩu không đúng. Vui lòng kiểm tra lại."
             );
           } else {
-            toast.error(response.data?.message || "Đăng nhập thất bại");
+            toast.error(loginResponse.data?.message || "Đăng nhập thất bại");
           }
+          return;
         }
-      } catch (error: unknown) {
+
+        // Fetch additional user data, similar to handleVerifyOTP
+        const userUrl = `https://backend-production-ac5e.up.railway.app/api/users/email/${encodeURIComponent(email)}`;
+        const userResponse = await axios.get(userUrl, {
+          headers: {
+            Authorization: `Bearer ${loginResponse.data.data.accessToken}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        // Structure authData to match handleVerifyOTP
+        const authData = {
+          ...loginResponse.data.data, // Includes accessToken, refreshToken, etc.
+          userInfo: userResponse.data, // User details like userId, username, etc.
+        };
+
+        // Store in localStorage, matching handleVerifyOTP
+        localStorage.setItem("authData", JSON.stringify(authData));
+        localStorage.setItem("accessToken", authData.accessToken);
+        localStorage.setItem("refreshToken", authData.refreshToken);
+
+        // Store cookies, matching handleVerifyOTP
+        document.cookie = `accessToken=${encodeURIComponent(authData.accessToken)}; path=/; max-age=604800; Secure; SameSite=Strict`;
+        document.cookie = `refreshToken=${encodeURIComponent(authData.refreshToken)}; path=/; max-age=604800; Secure; SameSite=Strict`;
+
+        router.push("/");
+      } catch (error) {
         if (axios.isAxiosError(error)) {
           console.error("Login error:", error.response?.data || error.message);
           toast.error(
@@ -143,8 +139,6 @@ export default function LoginPage() {
           console.error("Unexpected error:", error);
           toast.error("Lỗi không xác định. Vui lòng thử lại sau.");
         }
-        console.error("Login error:", error);
-        toast.error("Lỗi hệ thống. Vui lòng thử lại sau.");
       } finally {
         setLoading(false);
       }
