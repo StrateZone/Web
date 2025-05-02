@@ -25,14 +25,6 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
   refundInfo,
   isLoading,
 }) => {
-  console.log("CancelConfirmationModal Props:", {
-    show,
-    onClose,
-    onConfirm,
-    refundInfo,
-    isLoading,
-  });
-
   if (!show || !refundInfo) {
     console.log("Modal not rendered due to:", { show, refundInfo });
     return null;
@@ -59,7 +51,6 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
   };
 
   const renderRefundMessage = () => {
-    console.log("Refund Info:", refundInfo);
     if (
       refundInfo.refundAmount === 0 ||
       refundInfo.message.toLowerCase().includes("không được hoàn tiền") ||

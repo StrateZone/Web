@@ -90,7 +90,6 @@ export default function CreatePost() {
   // Sync content with Quill editor
   useEffect(() => {
     if (quill) {
-      console.log("Quill initialized, setting content:", content);
       // Update Quill editor content whenever content state changes
       quill.root.innerHTML = DOMPurify.sanitize(content || "<p></p>", {
         ADD_TAGS: ["img", "iframe"],
@@ -100,7 +99,6 @@ export default function CreatePost() {
       // Update content state on text change
       const handleTextChange = () => {
         const newContent = quill.root.innerHTML;
-        console.log("Quill text changed, new content:", newContent);
         setContent(newContent);
         setTouched((prev) => ({ ...prev, content: true }));
       };
@@ -108,23 +106,12 @@ export default function CreatePost() {
       quill.on("text-change", handleTextChange);
 
       return () => {
-        console.log("Cleaning up Quill event listener");
         quill.off("text-change", handleTextChange);
       };
     }
   }, [quill, content]); // Include content in the dependency array
 
   // Log state changes for debugging
-  useEffect(() => {
-    console.log("Current state:", {
-      title,
-      content,
-      selectedTagIds,
-      previewImage,
-      thumbnail: thumbnail ? thumbnail.name : null,
-      isPreview,
-    });
-  }, [title, content, selectedTagIds, previewImage, thumbnail, isPreview]);
 
   // Hàm lấy màu chữ tương phản
   const getContrastColor = (hexColor: string) => {
@@ -322,7 +309,6 @@ export default function CreatePost() {
         );
 
         const draft = response.data;
-        console.log("Fetched draft:", draft);
         if (draft.createdBy !== userId) {
           toast.error("Bạn không có quyền truy cập vào nháp này.");
           router.push(`/${locale}/community/post_history`);
@@ -339,7 +325,6 @@ export default function CreatePost() {
           draft.threadsTags?.map((tag: { tagId: number }) => tag.tagId) || []
         );
         if (draft.thumbnailUrl) {
-          console.log("Setting thumbnail URL:", draft.thumbnailUrl);
           setPreviewImage(draft.thumbnailUrl);
           try {
             const response = await fetch(draft.thumbnailUrl);
@@ -418,7 +403,6 @@ export default function CreatePost() {
     reader.onload = (event) => {
       if (event.target?.result) {
         const imageUrl = event.target.result as string;
-        console.log("Thumbnail selected, preview URL:", imageUrl);
         setPreviewImage(imageUrl);
       }
     };
@@ -680,7 +664,6 @@ export default function CreatePost() {
       setContent(currentContent);
     }
 
-    console.log("Switching to preview mode, content:", content);
     setIsPreview(true);
   };
 
@@ -810,7 +793,6 @@ export default function CreatePost() {
               <div className="mt-6">
                 <Button
                   onClick={() => {
-                    console.log("Returning to edit mode, content:", content);
                     setIsPreview(false);
                   }}
                   className="w-full bg-gray-600 hover:bg-gray-700"
@@ -972,7 +954,6 @@ export default function CreatePost() {
                   <button
                     type="button"
                     onClick={() => {
-                      console.log("Removing thumbnail");
                       setThumbnail(null);
                       setPreviewImage("");
                       if (fileInputRef.current) {
