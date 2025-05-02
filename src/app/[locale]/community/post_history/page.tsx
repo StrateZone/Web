@@ -32,7 +32,8 @@ import { toast, ToastContainer } from "react-toastify";
 import Swal from "sweetalert2";
 import "react-toastify/dist/ReactToastify.css";
 import { InsufficientBalancePopup } from "../../chess_appointment/chess_appointment_order/InsufficientBalancePopup";
-import DOMPurify from "dompurify"; // Import DOMPurify
+import DOMPurify from "dompurify";
+import TermsDialog from "../../chess_appointment/chess_category/TermsDialog";
 import { MembershipUpgradeDialog } from "../MembershipUpgradeDialog ";
 
 interface Thread {
@@ -125,6 +126,7 @@ function BlogHistory() {
     useState<MembershipPrice | null>(null);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
+  const [openTermsDialog, setOpenTermsDialog] = useState(false); // State for TermsDialog
   const router = useRouter();
   const pageSize = 10;
   const { locale } = useParams();
@@ -786,20 +788,18 @@ function BlogHistory() {
     }
   };
 
-  // Hàm cắt ngắn nội dung
   const truncateContent = (content: string, maxLength: number) => {
-    // Loại bỏ các thẻ HTML để chỉ lấy văn bản thô
     const plainText = content.replace(/<[^>]+>/g, "");
     if (plainText.length <= maxLength) return content;
     const truncatedText = plainText.substring(0, maxLength);
     return truncatedText + "...";
   };
 
-  // Lọc danh sách thread cho tab "Bản nháp"
+  const nonDraftThreads = threads.filter(
+    (thread) => thread.status !== "drafted"
+  );
   const draftThreads = threads.filter((thread) => thread.status === "drafted");
-
-  // Danh sách thread hiển thị dựa trên tab đang chọn
-  const displayedThreads = activeTab === "all" ? threads : draftThreads;
+  const displayedThreads = activeTab === "all" ? nonDraftThreads : draftThreads;
 
   if (initialLoading || isLoggedIn === null) {
     return (
@@ -813,7 +813,6 @@ function BlogHistory() {
     );
   }
 
-  // Nếu chưa đăng nhập, hiển thị giao diện yêu cầu đăng nhập, ẩn Navbar
   if (!isLoggedIn) {
     return (
       <div className="flex flex-col min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
@@ -888,16 +887,25 @@ function BlogHistory() {
             </div>
           ) : (
             <>
-              <div className="mb-6">
-                <Typography variant="h2" color="blue-gray" className="mb-2">
-                  Những Bài Viết Của Bạn ({totalCount})
-                </Typography>
-                <Typography variant="paragraph" color="gray">
-                  Trạng thái của tất cả bài viết bạn đã tạo
-                </Typography>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <Typography variant="h2" color="blue-gray" className="mb-2">
+                    Những Bài Viết Của Bạn ({totalCount})
+                  </Typography>
+                  <Typography variant="paragraph" color="gray">
+                    Trạng thái của tất cả bài viết bạn đã tạo
+                  </Typography>
+                </div>
+                <Button
+                  onClick={() => setOpenTermsDialog(true)}
+                  variant="outlined"
+                  className="px-4 py-2"
+                  disabled={isLoading}
+                >
+                  Xem Điều Khoản
+                </Button>
               </div>
 
-              {/* Tabs */}
               <Tabs value={activeTab} className="mb-6">
                 <TabsHeader
                   className="bg-gray-100 rounded-lg p-1"
@@ -912,7 +920,7 @@ function BlogHistory() {
                       activeTab === "all" ? "text-blue-600" : ""
                     }`}
                   >
-                    Tất cả bài viết ({threads.length})
+                    Tất cả bài viết ({nonDraftThreads.length})
                   </Tab>
                   <Tab
                     value="drafts"
@@ -955,7 +963,6 @@ function BlogHistory() {
                       (like) => like.userId === currentUser.userId
                     )?.id;
 
-                    // Cắt ngắn nội dung trước khi render (giới hạn 200 ký tự)
                     const truncatedContent = truncateContent(
                       thread.content,
                       400
@@ -1036,14 +1043,13 @@ function BlogHistory() {
                             </div>
                           </div>
 
-                          {/* Hiển thị nội dung đã cắt ngắn */}
                           <div
                             className="prose text-gray-600 mb-4 white-space-nowrap overflow-x-auto max-w-[100cm] [p]:inline-block [p]:mr-2"
                             dangerouslySetInnerHTML={{
                               __html: DOMPurify.sanitize(truncatedContent, {
                                 ADD_TAGS: ["img", "iframe", "br"],
                                 ADD_ATTR: ["src", "alt", "style"],
-                                FORBID_TAGS: ["br"], // Loại bỏ <br> để tránh xuống dòng
+                                FORBID_TAGS: ["br"],
                               }),
                             }}
                           />
@@ -1367,6 +1373,11 @@ function BlogHistory() {
           </Button>
         </DialogFooter>
       </Dialog>
+
+      <TermsDialog
+        open={openTermsDialog}
+        onClose={() => setOpenTermsDialog(false)}
+      />
 
       <ToastContainer position="top-right" />
       <Footer />

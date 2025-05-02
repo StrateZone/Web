@@ -12,6 +12,9 @@ import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import Banner from "@/components/banner/banner";
 import OpponentDetailsPopup from "./OpponentDetailsPopup";
+import { Button } from "@material-tailwind/react";
+import { RefreshCw } from "lucide-react";
+import TermsDialog from "../chess_appointment/chess_category/TermsDialog";
 
 // Interfaces remain unchanged
 interface GameType {
@@ -144,6 +147,7 @@ function Page() {
     AppointmentRequest[]
   >([]);
   const [currentTableId, setCurrentTableId] = useState<number | null>(null);
+  const [openTermsDialog, setOpenTermsDialog] = useState(false); // State for TermsDialog
 
   const authDataString = localStorage.getItem("authData");
   const authData = JSON.parse(authDataString || "{}");
@@ -153,7 +157,7 @@ function Page() {
     (state: RootState) => state.wallet
   );
 
-  // Fetch paginated list of appointments (unchanged)
+  // Fetch paginated list of appointments
   const fetchData = async () => {
     setIsLoading(true);
     setError(null);
@@ -213,6 +217,44 @@ function Page() {
         err instanceof Error ? err.message : "Đã xảy ra lỗi khi tải chi tiết"
       );
       setSelectedAppointment(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Refresh appointment details
+  const handleRefreshDetails = async () => {
+    if (!selectedAppointment) return;
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `https://backend-production-ac5e.up.railway.app/api/appointments/${selectedAppointment.appointmentId}`,
+        {
+          headers: {
+            accept: "*/*",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Không thể tải chi tiết bàn");
+      }
+
+      const result: Appointment = await response.json();
+      setSelectedAppointment((prev) =>
+        prev
+          ? {
+              ...prev,
+              tablesAppointments: result.tablesAppointments,
+            }
+          : null
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Đã xảy ra lỗi khi làm mới dữ liệu"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -357,7 +399,6 @@ function Page() {
           text: "text-blue-800",
           display: "Sắp diễn ra",
         };
-
       case "expired":
         return {
           bg: "bg-gray-100",
@@ -463,12 +504,34 @@ function Page() {
               </div>
             ) : selectedAppointment ? (
               <div className="bg-white rounded-lg shadow-md p-6">
-                <button
-                  onClick={handleBackToList}
-                  className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
-                >
-                  ← Quay lại danh sách
-                </button>
+                <div className="flex items-center justify-between space-x-4 mb-4">
+                  <button
+                    onClick={handleBackToList}
+                    className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+                  >
+                    ← Quay lại danh sách
+                  </button>
+                  <div className="flex items-center space-x-4">
+                    <Button
+                      onClick={() => setOpenTermsDialog(true)}
+                      variant="outlined"
+                      className="px-4 py-2"
+                      disabled={isLoading}
+                    >
+                      Xem Điều Khoản
+                    </Button>
+                    <Button
+                      onClick={handleRefreshDetails}
+                      className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2"
+                      disabled={isLoading}
+                    >
+                      <RefreshCw
+                        className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+                      />
+                      <strong>Làm Mới</strong>
+                    </Button>
+                  </div>
+                </div>
 
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-semibold">
@@ -492,7 +555,7 @@ function Page() {
                       {formatCurrency(selectedAppointment.totalPrice)}
                     </p>
                     <p>
-                      <span className="font-medium">Ngày Tạo Đơn :</span>{" "}
+                      <span className="font-medium">Ngày Tạo Đơn:</span>{" "}
                       {formatDate(selectedAppointment.createdAt)}
                     </p>
                   </div>
@@ -539,7 +602,6 @@ function Page() {
                                     : tableAppointment.table.gameType.typeName}
                             </td>
                             <td className="py-2 px-4 border text-center">
-                              {" "}
                               {tableAppointment.table.roomType === "basic"
                                 ? "Phòng thường"
                                 : tableAppointment.table.roomType === "premium"
@@ -736,6 +798,11 @@ function Page() {
                   (ta) => ta.table.tableId === currentTableId
                 )?.endTime
               }
+            />
+
+            <TermsDialog
+              open={openTermsDialog}
+              onClose={() => setOpenTermsDialog(false)}
             />
           </div>
         </div>

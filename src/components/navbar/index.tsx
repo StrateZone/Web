@@ -15,7 +15,7 @@ import {
   Bars3Icon,
 } from "@heroicons/react/24/solid";
 import { FaChessBoard, FaWallet, FaUserFriends } from "react-icons/fa";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, usePathname } from "next/navigation";
 import { useLocale } from "next-intl";
 import Link from "next/link";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
@@ -50,24 +50,15 @@ export function Navbar() {
   const t = useTranslations("NavBar");
   const router = useRouter();
   const localActive = useLocale();
-
-  // Initialize showBalance with default value (true) for SSR
-  const [showBalance, setShowBalance] = useState<boolean>(true);
-
-  // Load showBalance from localStorage only on client side
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("showBalance");
-      setShowBalance(saved !== null ? JSON.parse(saved) : true);
-    }
-  }, []); // Empty dependency array to run only once on mount
-
+  const pathname = usePathname(); // Get the current URL path
   const { locale } = useParams();
 
+  const [showBalance, setShowBalance] = useState<boolean>(true);
   const [open, setOpen] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<string | number | null>(null); // Store user role
 
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading: walletLoading } = useSelector(
@@ -81,6 +72,53 @@ export function Navbar() {
       return newValue;
     });
   };
+  useEffect(() => {
+    const checkAuth = () => {
+      try {
+        const token = localStorage.getItem("accessToken");
+        const storedAuthData = localStorage.getItem("authData");
+        const isAuthenticated = !!token && !!storedAuthData;
+        setIsLoggedIn(isAuthenticated);
+
+        if (isAuthenticated && storedAuthData) {
+          const parsedData = JSON.parse(storedAuthData);
+          const userId = parsedData.userId || 11;
+          const role = parsedData.userRole;
+          setUserRole(role); // Update userRole
+          dispatch(fetchWallet(userId));
+        }
+      } catch (error) {
+        console.error("Error checking auth:", error);
+        setIsLoggedIn(false);
+        setUserRole(null);
+      } finally {
+        setAuthChecked(true);
+      }
+    };
+
+    const handleStorageChange = () => {
+      checkAuth();
+    };
+
+    const handleAuthDataUpdate = () => {
+      checkAuth(); // Re-check auth when custom event is triggered
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("authDataUpdated", handleAuthDataUpdate); // Listen for custom event
+    checkAuth();
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("authDataUpdated", handleAuthDataUpdate);
+    };
+  }, [dispatch]);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("showBalance");
+      setShowBalance(saved !== null ? JSON.parse(saved) : true);
+    }
+  }, []);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -93,11 +131,14 @@ export function Navbar() {
         if (isAuthenticated && storedAuthData) {
           const parsedData = JSON.parse(storedAuthData);
           const userId = parsedData.userId || 11;
+          const role = parsedData.userRole; // Assuming role is stored in authData
+          setUserRole(role); // Set the user role
           dispatch(fetchWallet(userId));
         }
       } catch (error) {
         console.error("Error checking auth:", error);
         setIsLoggedIn(false);
+        setUserRole(null);
       } finally {
         setAuthChecked(true);
       }
@@ -115,6 +156,16 @@ export function Navbar() {
     };
   }, [dispatch]);
 
+  // Redirect to homepage if user is not a Member and tries to access /friend_list
+  useEffect(() => {
+    if (authChecked && pathname.includes("/friend_list")) {
+      const canAccessFriendList = userRole === "Member" || userRole === 1;
+      if (!canAccessFriendList) {
+        router.replace(`/${locale}`); // Redirect to homepage
+      }
+    }
+  }, [authChecked, userRole, pathname, router, locale]);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
@@ -129,6 +180,9 @@ export function Navbar() {
       "resize",
       () => window.innerWidth >= 960 && setOpen(false)
     );
+    return () => {
+      window.removeEventListener("resize", () => {});
+    };
   }, []);
 
   useEffect(() => {
@@ -156,11 +210,14 @@ export function Navbar() {
       href: `/${localActive}/chess_appointment/chess_category`,
     },
     {
-      name: "Cộng đồng  ",
+      name: "Cộng đồng",
       icon: UserCircleIcon,
       href: `/${localActive}/community`,
     },
   ];
+
+  // Check if user has the required role (Member or role ID 1)
+  const canAccessFriendList = userRole === "Member" || userRole === 1;
 
   if (!authChecked) {
     return (
@@ -237,12 +294,14 @@ export function Navbar() {
                 </button>
               </div>
             </div>
-            <div className="hover:bg-gray-200 focus:outline-none relative p-2 rounded-full">
-              <FaUserFriends
-                className="h-6 w-6 text-blue-700 cursor-pointer"
-                onClick={() => router.push(`/${locale}/friend_list`)}
-              />
-            </div>
+            {canAccessFriendList && (
+              <div className="hover:bg-gray-200 focus:outline-none relative p-2 rounded-full">
+                <FaUserFriends
+                  className="h-6 w-6 text-blue-700 cursor-pointer"
+                  onClick={() => router.push(`/${locale}/friend_list`)}
+                />
+              </div>
+            )}
             <NotificationDropdown />
             <div className="hover:bg-gray-200 focus:outline-none relative p-2 rounded-full">
               <FaChess

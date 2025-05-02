@@ -29,6 +29,7 @@ import Banner from "@/components/banner/banner";
 import { AlreadyRejectedPopup } from "./AcceptedByOtherPopup";
 import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 import { SuccessPaymentPopup } from "./SuccessPaymentPopup";
+import TermsDialog from "../chess_category/TermsDialog";
 
 interface UserNavigation {
   userId: number;
@@ -131,6 +132,7 @@ const AppointmentRequestsPage = () => {
   const [processingAcceptId, setProcessingAcceptId] = useState<number | null>(
     null
   );
+  const [openTermsDialog, setOpenTermsDialog] = useState(false); // State for TermsDialog
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -360,6 +362,7 @@ const AppointmentRequestsPage = () => {
       setProcessingAcceptId(null);
     }
   };
+
   const calculateTimeRemaining = (expireAt: string) => {
     const now = new Date();
     const expireDate = new Date(expireAt);
@@ -617,16 +620,27 @@ const AppointmentRequestsPage = () => {
             <h1 className="text-2xl font-bold">
               Những Lời Mời Bạn Đã Nhận Từ Người Khác
             </h1>
-            <Button
-              onClick={handleRefresh}
-              className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600"
-              disabled={isLoading}
-            >
-              <RefreshCw
-                className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
-              />
-              <strong>Làm Mới</strong>
-            </Button>
+
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setOpenTermsDialog(true)}
+                variant="outlined"
+                className="px-4 py-2"
+                disabled={isLoading}
+              >
+                Xem Điều Khoản
+              </Button>
+              <Button
+                onClick={handleRefresh}
+                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600"
+                disabled={isLoading}
+              >
+                <RefreshCw
+                  className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+                />
+                <strong>Làm Mới</strong>
+              </Button>
+            </div>
           </div>
 
           {isLoading ? (
@@ -635,12 +649,14 @@ const AppointmentRequestsPage = () => {
             </div>
           ) : selectedRequest ? (
             <div className="bg-white rounded-lg shadow-md p-6">
-              <button
-                onClick={handleBackToList}
-                className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
-              >
-                ← <strong>Quay Lại</strong>
-              </button>
+              <div className="flex items-center justify-between space-x-4 mb-4">
+                <button
+                  onClick={handleBackToList}
+                  className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+                >
+                  ← <strong>Quay Lại</strong>
+                </button>
+              </div>
 
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-semibold">
@@ -1168,6 +1184,11 @@ const AppointmentRequestsPage = () => {
         onConfirm={confirmCancelAppointment}
         refundInfo={refundInfo}
         isLoading={isCancelling}
+      />
+
+      <TermsDialog
+        open={openTermsDialog}
+        onClose={() => setOpenTermsDialog(false)}
       />
     </div>
   );

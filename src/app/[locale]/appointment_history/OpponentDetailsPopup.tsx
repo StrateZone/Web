@@ -357,7 +357,9 @@ function OpponentDetailsPopup({
                                 ? "bg-red-200 text-red-900"
                                 : request.status === "table_cancelled"
                                   ? "bg-gray-200 text-gray-900"
-                                  : "bg-red-100 text-red-800"
+                                  : request.status === "cancelled"
+                                    ? "bg-gray-300 text-gray-900"
+                                    : "bg-red-100 text-red-800"
                       }`}
                     >
                       {request.status === "pending"
@@ -370,7 +372,9 @@ function OpponentDetailsPopup({
                               ? "Đã từ chối Lời Mời"
                               : request.status === "table_cancelled"
                                 ? "Bàn đã bị hủy"
-                                : "Lời mời đã hết hạn"}
+                                : request.status === "cancelled"
+                                  ? "Đã hủy"
+                                  : "Lời mời đã hết hạn"}
                     </span>
                     <p className="text-xs text-gray-500 mt-1">
                       Thời gian chơi:{" "}
