@@ -76,9 +76,17 @@ const OpponentRecommendationModalWithNewInvite = ({
   const [invitedOpponents, setInvitedOpponents] = useState<number[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("friends");
+  const [activeTab, setActiveTab] = useState("opponents"); // Default to opponents
   const [hasSearched, setHasSearched] = useState(false);
   const hasFetchedInitialData = useRef(false);
+
+  // Retrieve user role from localStorage
+  const authDataString = localStorage.getItem("authData");
+  const authData = authDataString ? JSON.parse(authDataString) : {};
+  const currentUserRole = authData.userRole;
+
+  const isMember = (userRole: string | number | undefined) =>
+    userRole === "Member" || userRole === 1;
 
   const getChessBookingsInvite = () => {
     const savedBookings = localStorage.getItem("chessBookingsInvite");
@@ -94,8 +102,6 @@ const OpponentRecommendationModalWithNewInvite = ({
       setLoading(true);
       setError(null);
 
-      const authDataString = localStorage.getItem("authData");
-      const authData = JSON.parse(authDataString || "{}");
       const userId = authData.userId;
 
       const bookings = getChessBookingsInvite();
@@ -196,19 +202,19 @@ const OpponentRecommendationModalWithNewInvite = ({
       hasFetchedInitialData.current = true;
       setHasSearched(false);
       setSearchTerm(""); // Reset search term when modal opens
-      setActiveTab("friends"); // Reset to friends tab when modal opens
+      setActiveTab(isMember(currentUserRole) ? "friends" : "opponents"); // Set default tab based on role
       fetchOpponents();
     }
-  }, [open]);
+  }, [open, currentUserRole]);
 
   useEffect(() => {
     if (refreshTrigger && open) {
       setHasSearched(false);
       setSearchTerm(""); // Clear search term on refresh
-      setActiveTab("friends"); // Reset to friends tab on refresh
+      setActiveTab(isMember(currentUserRole) ? "friends" : "opponents"); // Reset to appropriate tab on refresh
       fetchOpponents();
     }
-  }, [refreshTrigger]);
+  }, [refreshTrigger, currentUserRole]);
 
   const handleRefresh = () => {
     setRefreshTrigger((prev) => !prev);
@@ -356,13 +362,73 @@ const OpponentRecommendationModalWithNewInvite = ({
     }
   };
 
-  const isMember = (userRole: string | number | undefined) =>
-    userRole === "Member" || userRole === 1;
-
   const isTopContributor = (userLabel: string | undefined) =>
     userLabel === "top_contributor";
 
   if (!open) return null;
+
+  // Conditionally show tabs: hide "Bạn bè" after search or if not a member
+  const tabsData =
+    hasSearched || !isMember(currentUserRole)
+      ? [
+          {
+            label: (
+              <div className="flex items-center gap-2">
+                <FiSearch className="h-5 w-5" />
+                Đối thủ khác
+              </div>
+            ),
+            value: "opponents",
+          },
+          {
+            label: (
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Đã chọn
+                {selectedOpponents.length > 0 && (
+                  <span className="bg-blue-500 text-white rounded-full px-2 py-0.5 text-xs">
+                    {selectedOpponents.length}
+                  </span>
+                )}
+              </div>
+            ),
+            value: "selected",
+          },
+        ]
+      : [
+          {
+            label: (
+              <div className="flex items-center gap-2">
+                <FiUsers className="h-5 w-5" />
+                Bạn bè
+              </div>
+            ),
+            value: "friends",
+          },
+          {
+            label: (
+              <div className="flex items-center gap-2">
+                <FiSearch className="h-5 w-5" />
+                Đối thủ khác
+              </div>
+            ),
+            value: "opponents",
+          },
+          {
+            label: (
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Đã chọn
+                {selectedOpponents.length > 0 && (
+                  <span className="bg-blue-500 text-white rounded-full px-2 py-0.5 text-xs">
+                    {selectedOpponents.length}
+                  </span>
+                )}
+              </div>
+            ),
+            value: "selected",
+          },
+        ];
 
   const renderOpponentList = (
     opponents: Opponent[],
@@ -539,68 +605,6 @@ const OpponentRecommendationModalWithNewInvite = ({
     );
   };
 
-  // Conditionally show tabs: hide "Bạn bè" after search, keep "Đã chọn"
-  const tabsData = hasSearched
-    ? [
-        {
-          label: (
-            <div className="flex items-center gap-2">
-              <FiSearch className="h-5 w-5" />
-              Đối thủ khác
-            </div>
-          ),
-          value: "opponents",
-        },
-        {
-          label: (
-            <div className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Đã chọn
-              {selectedOpponents.length > 0 && (
-                <span className="bg-blue-500 text-white rounded-full px-2 py-0.5 text-xs">
-                  {selectedOpponents.length}
-                </span>
-              )}
-            </div>
-          ),
-          value: "selected",
-        },
-      ]
-    : [
-        {
-          label: (
-            <div className="flex items-center gap-2">
-              <FiUsers className="h-5 w-5" />
-              Bạn bè
-            </div>
-          ),
-          value: "friends",
-        },
-        {
-          label: (
-            <div className="flex items-center gap-2">
-              <FiSearch className="h-5 w-5" />
-              Đối thủ khác
-            </div>
-          ),
-          value: "opponents",
-        },
-        {
-          label: (
-            <div className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Đã chọn
-              {selectedOpponents.length > 0 && (
-                <span className="bg-blue-500 text-white rounded-full px-2 py-0.5 text-xs">
-                  {selectedOpponents.length}
-                </span>
-              )}
-            </div>
-          ),
-          value: "selected",
-        },
-      ];
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 text-black">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
@@ -662,17 +666,19 @@ const OpponentRecommendationModalWithNewInvite = ({
               ))}
             </TabsHeader>
             <TabsBody>
-              <TabPanel value="friends" className="p-0 mt-4">
-                {loading ? (
-                  <div className="flex justify-center py-8">
-                    <Spinner className="h-12 w-12" />
-                  </div>
-                ) : error ? (
-                  <div className="text-center text-red-500 py-4">{error}</div>
-                ) : (
-                  renderOpponentList(friends)
-                )}
-              </TabPanel>
+              {isMember(currentUserRole) && !hasSearched && (
+                <TabPanel value="friends" className="p-0 mt-4">
+                  {loading ? (
+                    <div className="flex justify-center py-8">
+                      <Spinner className="h-12 w-12" />
+                    </div>
+                  ) : error ? (
+                    <div className="text-center text-red-500 py-4">{error}</div>
+                  ) : (
+                    renderOpponentList(friends)
+                  )}
+                </TabPanel>
+              )}
               <TabPanel value="opponents" className="p-0 mt-4">
                 {loading ? (
                   <div className="flex justify-center py-8">

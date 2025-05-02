@@ -24,6 +24,7 @@ import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import Banner from "@/components/banner/banner";
 import { CheckBadgeIcon, StarIcon } from "@heroicons/react/24/solid";
+import TermsDialog from "../chess_category/TermsDialog"; // Import TermsDialog
 
 interface UserNavigation {
   userId: number;
@@ -40,8 +41,8 @@ interface UserNavigation {
   points: number;
   ranking: number;
   status: string;
-  userRole: number | string; // Support both number (1) and string ("Member") for flexibility
-  userLabel?: string | number; // Updated to support string or number for Top Contributor
+  userRole: number | string;
+  userLabel?: string | number;
   wallet: any | null;
   otp: string | null;
   otpExpiry: string | null;
@@ -119,6 +120,7 @@ const AppointmentSendRequestsPage = () => {
   const [currentCancellingId, setCurrentCancellingId] = useState<number | null>(
     null
   );
+  const [openTermsDialog, setOpenTermsDialog] = useState(false); // State for TermsDialog
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
@@ -129,6 +131,7 @@ const AppointmentSendRequestsPage = () => {
   const { balance, loading: walletLoading } = useSelector(
     (state: RootState) => state.wallet
   );
+
   const getUserId = () => {
     const authDataString = localStorage.getItem("authData");
     if (!authDataString) return null;
@@ -440,16 +443,26 @@ const AppointmentSendRequestsPage = () => {
             <h1 className="text-2xl font-bold">
               Những Lời Mời Bạn Đã Gửi Cho Người Khác
             </h1>
-            <Button
-              onClick={handleRefresh}
-              className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600"
-              disabled={isLoading}
-            >
-              <RefreshCw
-                className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
-              />
-              <strong>Làm Mới</strong>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setOpenTermsDialog(true)}
+                variant="outlined"
+                className="px-4 py-2"
+                disabled={isLoading}
+              >
+                Xem Điều Khoản
+              </Button>
+              <Button
+                onClick={handleRefresh}
+                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600"
+                disabled={isLoading}
+              >
+                <RefreshCw
+                  className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+                />
+                <strong>Làm Mới</strong>
+              </Button>
+            </div>
           </div>
 
           {isLoading ? (
@@ -458,12 +471,22 @@ const AppointmentSendRequestsPage = () => {
             </div>
           ) : selectedRequest ? (
             <div className="bg-white rounded-lg shadow-md p-6">
-              <button
-                onClick={handleBackToList}
-                className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
-              >
-                ← <strong>Quay Lại</strong>
-              </button>
+              <div className="flex items-center justify-between space-x-4 mb-4">
+                <button
+                  onClick={handleBackToList}
+                  className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+                >
+                  ← <strong>Quay Lại</strong>
+                </button>
+                <Button
+                  onClick={() => setOpenTermsDialog(true)}
+                  variant="outlined"
+                  className="px-4 py-2"
+                  disabled={isLoading}
+                >
+                  Xem Điều Khoản
+                </Button>
+              </div>
 
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-semibold">
@@ -493,7 +516,7 @@ const AppointmentSendRequestsPage = () => {
                               isTopContributor(
                                 selectedRequest.toUserNavigation.userLabel
                               )
-                            ? "bg-gradient-to-r from-yellow-500 to-orange-500  !h-5 !w-5"
+                            ? "bg-gradient-to-r from-yellow-500 to-orange-500 !h-5 !w-5"
                             : "bg-blue-gray-100"
                       }`}
                       content={
@@ -571,7 +594,7 @@ const AppointmentSendRequestsPage = () => {
                           isTopContributor(
                             selectedRequest.toUserNavigation.userLabel
                           ) && (
-                            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white ">
+                            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
                               TOP CONTRIBUTOR
                             </span>
                           )}
@@ -738,7 +761,7 @@ const AppointmentSendRequestsPage = () => {
                                   isTopContributor(
                                     request.toUserNavigation.userLabel
                                   )
-                                ? "bg-gradient-to-r from-yellow-500 to-orange-500 !h-5 !w-5 "
+                                ? "bg-gradient-to-r from-yellow-500 to-orange-500 !h-5 !w-5"
                                 : "bg-blue-gray-100"
                           }`}
                           content={
@@ -815,7 +838,7 @@ const AppointmentSendRequestsPage = () => {
                               isTopContributor(
                                 request.toUserNavigation.userLabel
                               ) && (
-                                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white ">
+                                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
                                   TOP CONTRIBUTOR
                                 </span>
                               )}
@@ -932,6 +955,11 @@ const AppointmentSendRequestsPage = () => {
         onConfirm={confirmCancelRequest}
         refundInfo={refundInfo}
         isLoading={isCancelling}
+      />
+
+      <TermsDialog
+        open={openTermsDialog}
+        onClose={() => setOpenTermsDialog(false)}
       />
     </div>
   );

@@ -272,6 +272,12 @@ export default function LoginPage() {
                     Đăng ký miễn phí
                   </Link>
                 </p>
+                <Link
+                  href={`/${localActive}/forgot_password`}
+                  className="text-gray-300 hover:underline cursor-pointer"
+                >
+                  Quên mật khẩu?
+                </Link>
               </div>
             </div>
           </div>

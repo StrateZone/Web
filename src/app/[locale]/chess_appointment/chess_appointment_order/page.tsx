@@ -17,6 +17,7 @@ import OpponentRecommendationModal from "./FriendListModal ";
 import { toast } from "react-toastify";
 import { ConfirmCancelPopup } from "./ConfirmCancelPopup";
 import { CloseTimeWarningPopup } from "./CloseTimeWarningPopup";
+import TermsDialog from "../chess_category/TermsDialog";
 
 interface InvitedUser {
   userId: number;
@@ -30,7 +31,7 @@ interface ChessBooking {
   roomName: string;
   roomType: string;
   durationInHours: number;
-  endDate: string; // ISO format, e.g., "2025-04-29T13:00:00"
+  endDate: string;
   gameType: {
     typeId: number;
     typeName: string;
@@ -39,18 +40,17 @@ interface ChessBooking {
   gameTypePrice: number;
   roomDescription: string;
   roomTypePrice: number;
-  startDate: string; // ISO format, e.g., "2025-04-29T12:00:00"
+  startDate: string;
   totalPrice: number;
   hasInvitations?: boolean;
   originalPrice?: number;
   invitedUsers?: InvitedUser[];
 }
 
-// Interface for backend error response (TABLE_NOT_AVAILABLE)
 interface BackendUnavailableTable {
   table_id: number;
-  start_time: string; // ISO format
-  end_time: string; // ISO format
+  start_time: string;
+  end_time: string;
 }
 
 interface TableNotAvailableError {
@@ -61,17 +61,15 @@ interface TableNotAvailableError {
   };
 }
 
-// Interface for UnavailableTablesPopup props
 interface UnavailableTable {
   tableId: number;
-  startTime: string; // Formatted for display, e.g., "12:00"
-  endTime: string; // Formatted for display, e.g., "13:00"
+  startTime: string;
+  endTime: string;
 }
 
-// Extended interface for internal use with raw timestamps
 interface UnavailableTableWithRaw extends UnavailableTable {
-  rawStartTime: string; // Matches ChessBooking startDate format
-  rawEndTime: string; // Matches ChessBooking endDate format
+  rawStartTime: string;
+  rawEndTime: string;
 }
 
 const TableBookingPage = () => {
@@ -88,6 +86,7 @@ const TableBookingPage = () => {
   const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
   const [selectedStartDate, setSelectedStartDate] = useState<string>("");
   const [selectedEndDate, setSelectedEndDate] = useState<string>("");
+  const [openTermsDialog, setOpenTermsDialog] = useState(false); // State for TermsDialog
 
   const handleCancelInvitation = async (
     tableId: number,
@@ -432,9 +431,9 @@ const TableBookingPage = () => {
               unavailableTablesWithRaw = errorData.error.unavailable_tables.map(
                 (t: BackendUnavailableTable) => ({
                   tableId: t.table_id,
-                  startTime: formatTime(t.start_time), // Formatted for display
+                  startTime: formatTime(t.start_time),
                   endTime: formatTime(t.end_time),
-                  rawStartTime: t.start_time, // Raw for filtering
+                  rawStartTime: t.start_time,
                   rawEndTime: t.end_time,
                 })
               );
@@ -447,13 +446,12 @@ const TableBookingPage = () => {
                 /Table ID (\d+), schedule time: ([^,]+), end time: ([^"]+)/
               );
               if (match) {
-                // Convert to ISO format to match ChessBooking startDate/endDate
                 const rawStartTime = new Date(match[2]).toISOString();
                 const rawEndTime = new Date(match[3]).toISOString();
                 unavailableTablesWithRaw = [
                   {
                     tableId: parseInt(match[1]),
-                    startTime: formatTime(match[2]), // Formatted for display
+                    startTime: formatTime(match[2]),
                     endTime: formatTime(match[3]),
                     rawStartTime,
                     rawEndTime,
@@ -464,7 +462,6 @@ const TableBookingPage = () => {
               }
             }
 
-            // Pass only the required fields to UnavailableTablesPopup
             const unavailableTables: UnavailableTable[] =
               unavailableTablesWithRaw.map(
                 ({ tableId, startTime, endTime }) => ({
@@ -824,7 +821,15 @@ const TableBookingPage = () => {
               </p>
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end space-x-4">
+              <Button
+                onClick={() => setOpenTermsDialog(true)}
+                variant="outlined"
+                className="px-6 py-3 text-base"
+                disabled={isLoading}
+              >
+                Xem Điều Khoản
+              </Button>
               <Button
                 onClick={handleConfirmBooking}
                 className="hover:bg-gray-900 text-white px-12 py-3 text-base"
@@ -863,6 +868,10 @@ const TableBookingPage = () => {
           }
         />
       )}
+      <TermsDialog
+        open={openTermsDialog}
+        onClose={() => setOpenTermsDialog(false)}
+      />
 
       <Footer />
     </div>

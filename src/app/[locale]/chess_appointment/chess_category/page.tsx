@@ -18,9 +18,11 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import BusinessHoursNotice from "@/components/BusinessHoursNotice/page";
 import Banner from "@/components/banner/banner";
+import TermsDialog from "./TermsDialog";
+
 interface Room {
   roomId: number;
-  roomName: string; // Đây là trường chứa tên phòng như "PR002"
+  roomName: string;
   type: string;
   description: string;
   capacity: number;
@@ -29,6 +31,7 @@ interface Room {
   unit: string;
   tables: { tableId: number; tableName: string; status: string }[];
 }
+
 interface ChessBooking {
   durationInHours: number;
   endDate: string;
@@ -124,11 +127,13 @@ export default function ChessCategoryPage() {
     closeHour: "22:00",
   });
   const [isLoadingHours, setIsLoadingHours] = useState(false);
+  const [openTermsDialog, setOpenTermsDialog] = useState(false); // State for dialog
 
   const systemId = 1;
   const [rooms, setRooms] = useState<Room[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
   const [isLoadingRooms, setIsLoadingRooms] = useState(false);
+
   useEffect(() => {
     const storedBookings = localStorage.getItem("chessBookings");
     if (storedBookings && storedBookings !== "undefined") {
@@ -163,12 +168,11 @@ export default function ChessCategoryPage() {
         const closeTime = closeHourRes.data;
 
         setBusinessHours({
-          openHour: openTime.substring(0, 5), // Extract HH:mm from HH:mm:ss
-          closeHour: closeTime.substring(0, 5), // Extract HH:mm from HH:mm:ss
+          openHour: openTime.substring(0, 5),
+          closeHour: closeTime.substring(0, 5),
         });
       } catch (error) {
         console.error("Error fetching business hours:", error);
-        // Fallback to default hours if API fails
         setBusinessHours({
           openHour: "08:00",
           closeHour: "22:00",
@@ -198,6 +202,7 @@ export default function ChessCategoryPage() {
       );
     });
   };
+
   const viewBookingDetail = (bookingInfo: {
     id: number;
     startDate: string;
@@ -209,6 +214,7 @@ export default function ChessCategoryPage() {
       )}&endTime=${encodeURIComponent(bookingInfo.endDate)}`
     );
   };
+
   const generateTimeOptions = () => {
     const now = new Date();
     const isSelectedToday = isToday(startDate);
@@ -420,17 +426,14 @@ export default function ChessCategoryPage() {
       return;
     }
 
-    // Tính khoảng thời gian giữa start và end (tính bằng phút)
     const timeDiffInMinutes =
       (selectedEndTime.getTime() - selectedStartTime.getTime()) / (1000 * 60);
 
-    // Kiểm tra nếu khoảng thời gian ít hơn 1 tiếng (60 phút)
     if (timeDiffInMinutes < 60) {
       toast.error("Khoảng thời gian đặt bàn phải cách nhau ít nhất 1 tiếng!");
       return;
     }
 
-    // Kiểm tra nếu khoảng thời gian không phải là bội số của 60 phút (1 tiếng)
     if (timeDiffInMinutes % 60 !== 0) {
       toast.error(
         "Vui lòng chọn khung giờ chẵn (1 tiếng, 2 tiếng...) không chấp nhận khung giờ lẻ như 1 tiếng rưỡi!"
@@ -462,6 +465,7 @@ export default function ChessCategoryPage() {
     const date = new Date(dateString);
     return `${date.getHours()}h${date.getMinutes().toString().padStart(2, "0")}`;
   };
+
   const fetchRoomsByType = async (type: string) => {
     setIsLoadingRooms(true);
     try {
@@ -469,7 +473,7 @@ export default function ChessCategoryPage() {
         `https://backend-production-ac5e.up.railway.app/api/rooms/by-type?roomType=${type}`
       );
       setRooms(response.data.pagedList || []);
-      setSelectedRoomId(null); // Reset selected room when type changes
+      setSelectedRoomId(null);
     } catch (error) {
       console.error("Error fetching rooms:", error);
       setRooms([]);
@@ -478,7 +482,6 @@ export default function ChessCategoryPage() {
     }
   };
 
-  // Thêm useEffect để gọi API khi roomType thay đổi
   useEffect(() => {
     if (roomType) {
       fetchRoomsByType(roomType);
@@ -487,6 +490,7 @@ export default function ChessCategoryPage() {
       setSelectedRoomId(null);
     }
   }, [roomType]);
+
   return (
     <div>
       <Navbar />
@@ -667,8 +671,21 @@ export default function ChessCategoryPage() {
             <Box marginTop="auto">
               <Button onClick={handleSearch}>Tìm kiếm</Button>
             </Box>
+            <Box marginTop="auto">
+              <Button
+                onClick={() => setOpenTermsDialog(true)} // Open dialog
+                variant="outlined"
+              >
+                Xem Điều Khoản
+              </Button>
+            </Box>
           </Stack>
         </div>
+
+        <TermsDialog
+          open={openTermsDialog}
+          onClose={() => setOpenTermsDialog(false)}
+        />
 
         {!hasSearched ? (
           <div className="max-w-7xl mx-auto px-2 mt-12 text-center">
@@ -677,8 +694,8 @@ export default function ChessCategoryPage() {
                 Vui lòng nhập thông tin tìm kiếm
               </h3>
               <p className="text-gray-600 mt-2">
-                Chọn loại cờ, loại phòng, thời gian và nhấn &quot;Tìm kiếm&quot;
-                để xem các bàn cờ có sẵn trong khung thời gian bạn mong muốn
+                Chọn loại cờ, loại phòng, thời gian và nhấn "Tìm kiếm" để xem
+                các bàn cờ có sẵn trong khung thời gian bạn mong muốn
               </p>
             </div>
           </div>
@@ -880,7 +897,6 @@ export default function ChessCategoryPage() {
                               const newStart = new Date(chessBooking.startDate);
                               const newEnd = new Date(chessBooking.endDate);
 
-                              // Kiểm tra xem bàn đã được đặt trong khung giờ này chưa
                               const isAlreadyBooked = localBookings.some(
                                 (booking) => {
                                   if (booking.tableId !== chessBooking.tableId)
@@ -933,7 +949,6 @@ export default function ChessCategoryPage() {
                                 return;
                               }
 
-                              // Thêm đơn đặt mới mà không gộp với các đơn khác
                               const updatedBookings = [
                                 ...localBookings,
                                 chessBooking,
