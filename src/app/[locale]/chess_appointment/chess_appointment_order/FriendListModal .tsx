@@ -76,8 +76,9 @@ const OpponentRecommendationModal = ({
   const [invitedOpponents, setInvitedOpponents] = useState<number[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("opponents"); // Default to opponents
+  const [activeTab, setActiveTab] = useState("opponents");
   const [hasSearched, setHasSearched] = useState(false);
+  const [maxInvitations, setMaxInvitations] = useState<number>(6); // Default to 6 as fallback
   const hasFetchedInitialData = useRef(false);
 
   // Retrieve user role from localStorage
@@ -87,6 +88,32 @@ const OpponentRecommendationModal = ({
 
   const isMember = (userRole: string | number | undefined) =>
     userRole === "Member" || userRole === 1;
+
+  // Fetch max invitations from API
+  const fetchMaxInvitations = async () => {
+    try {
+      const response = await fetch(
+        "https://backend-production-ac5e.up.railway.app/api/system/1/appointment-requests/max-invitations-to-table",
+        {
+          headers: {
+            accept: "*/*",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Không thể lấy số lượng mời tối đa");
+      }
+
+      const maxInvites = await response.json();
+      setMaxInvitations(maxInvites);
+    } catch (err) {
+      console.error("Error fetching max invitations:", err);
+      toast.error(
+        "Không thể lấy số lượng mời tối đa, sử dụng giá trị mặc định (6)"
+      );
+    }
+  };
 
   const fetchOpponents = async () => {
     try {
@@ -121,9 +148,9 @@ const OpponentRecommendationModal = ({
       if (searchTerm) {
         url.searchParams.append("SearchTerm", searchTerm);
         setHasSearched(true);
-        setActiveTab("opponents"); // Auto-switch to opponents tab on search
+        setActiveTab("opponents");
       } else {
-        setHasSearched(false); // Reset hasSearched when no search term
+        setHasSearched(false);
       }
 
       const response = await fetch(url.toString(), {
@@ -164,7 +191,8 @@ const OpponentRecommendationModal = ({
     if (open && !hasFetchedInitialData.current) {
       hasFetchedInitialData.current = true;
       setHasSearched(false);
-      setActiveTab(isMember(currentUserRole) ? "friends" : "opponents"); // Set default tab based on role
+      setActiveTab(isMember(currentUserRole) ? "friends" : "opponents");
+      fetchMaxInvitations(); // Fetch max invitations when modal opens
       fetchOpponents();
     }
   }, [open, currentUserRole]);
@@ -172,14 +200,15 @@ const OpponentRecommendationModal = ({
   useEffect(() => {
     if (refreshTrigger && open) {
       setHasSearched(false);
-      setActiveTab(isMember(currentUserRole) ? "friends" : "opponents"); // Reset to appropriate tab on refresh
+      setActiveTab(isMember(currentUserRole) ? "friends" : "opponents");
+      fetchMaxInvitations(); // Re-fetch max invitations on refresh
       fetchOpponents();
     }
   }, [refreshTrigger, currentUserRole]);
 
   const handleRefresh = () => {
     setRefreshTrigger((prev) => !prev);
-    setSearchTerm(""); // Clear search term on refresh
+    setSearchTerm("");
   };
 
   const handleAddOpponent = (opponent: Opponent) => {
@@ -203,8 +232,9 @@ const OpponentRecommendationModal = ({
     }
 
     const currentInvitedCount = currentBooking.invitedUsers?.length || 0;
-    if (currentInvitedCount >= 6) {
-      toast.error("Mỗi bàn chỉ có thể mời tối đa 6 người");
+    if (currentInvitedCount >= maxInvitations) {
+      // Use dynamic maxInvitations
+      toast.error(`Mỗi bàn chỉ có thể mời tối đa ${maxInvitations} người`);
       return;
     }
 
@@ -266,7 +296,6 @@ const OpponentRecommendationModal = ({
 
   if (!open) return null;
 
-  // Conditionally show tabs: only "Đối thủ khác" after search or if not a member
   const tabsData =
     hasSearched || !isMember(currentUserRole)
       ? [

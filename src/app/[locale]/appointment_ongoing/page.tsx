@@ -522,7 +522,7 @@ function Page() {
                   >
                     Xem Điều Khoản
                   </Button>
-                  <Button
+                  {/* <Button
                     onClick={handleRefreshDetails}
                     className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2"
                     disabled={isLoading}
@@ -531,7 +531,7 @@ function Page() {
                       className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
                     />
                     <strong>Làm Mới</strong>
-                  </Button>
+                  </Button> */}
                 </div>
               </div>
 
