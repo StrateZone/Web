@@ -152,7 +152,7 @@ export default function OTPVerificationPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <div className="relative flex-grow w-full bg-[url('https://png.pngtree.com/background/20230611/original/pngtree-rain-storm-and-a-chess-board-picture-image_3129264.jpg')] bg-cover bg-center bg-no-repeat flex items-center justify-center">
+      <div className="relative flex-grow w-full h-[800px] bg-[url('https://png.pngtree.com/background/20230611/original/pngtree-rain-storm-and-a-chess-board-picture-image_3129264.jpg')] bg-cover bg-center bg-no-repeat flex items-center justify-center">
         <Navbar />
         <div className="absolute inset-0 bg-gray-900/60" />
         <div className="relative w-full max-w-md mx-auto my-32 px-4 sm:px-0">

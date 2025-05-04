@@ -78,21 +78,23 @@ const VoucherModal = ({
   if (!open || !selectedBooking) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 text-black">
-      <div className="bg-white p-6 rounded-lg max-w-md w-full max-h-[80vh] flex flex-col">
-        <h2 className="text-xl font-bold mb-4">
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 text-gray-800">
+      <div className="bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl max-w-md w-full max-h-[80vh] flex flex-col shadow-2xl">
+        <h2 className="text-2xl font-bold mb-4 text-indigo-700 flex items-center justify-between">
           Chọn Voucher
           {userPoints !== null && (
-            <span className="text-sm text-gray-600 ml-2">
-              (Điểm hiện tại của bạn: {userPoints.toLocaleString()})
+            <span className="text-sm text-indigo-500 bg-indigo-100 px-3 py-1 rounded-full">
+              Điểm: {userPoints.toLocaleString()}
             </span>
           )}
         </h2>
-        <div className="flex-1 overflow-y-auto mb-4">
-          <div className="mb-4">
-            <h3 className="font-semibold">Voucher của bạn</h3>
+        <div className="flex-1 overflow-y-auto mb-6">
+          <div className="mb-6">
+            <h3 className="font-semibold text-lg text-gray-900 mb-3">
+              Voucher của bạn
+            </h3>
             {userVouchers.length === 0 ? (
-              <p className="text-gray-500">Bạn chưa có voucher nào</p>
+              <p className="text-gray-500 italic">Bạn chưa có voucher nào</p>
             ) : (
               userVouchers.map((voucher) => {
                 const isUsed = chessBookings.some(
@@ -124,23 +126,30 @@ const VoucherModal = ({
                 return (
                   <div
                     key={voucher.voucherId}
-                    className="border p-2 my-2 rounded"
+                    className="border border-gray-200 p-4 my-3 rounded-lg bg-white hover:shadow-md transition-shadow duration-200"
                   >
-                    <p>
-                      <strong>{voucher.voucherName}</strong> - Giảm{" "}
-                      {voucher.value.toLocaleString()}đ
+                    <p className="text-lg font-semibold text-gray-900">
+                      {voucher.voucherName} -{" "}
+                      <span className="text-green-600">
+                        Giảm {voucher.value.toLocaleString()}đ
+                      </span>
                     </p>
-                    <p className="text-sm">{voucher.description}</p>
-                    <p className="text-sm">
-                      Giá bàn hiện tại: {basePrice.toLocaleString()}đ
+                    <p className="text-sm text-gray-600 mt-1">
+                      {voucher.description}
+                    </p>
+                    <p className="text-sm text-gray-700 mt-1">
+                      Giá bàn hiện tại:{" "}
+                      <span className="font-medium">
+                        {basePrice.toLocaleString()}đ
+                      </span>
                     </p>
                     {isUsed && (
-                      <p className="text-sm text-red-500">
+                      <p className="text-sm text-red-600 font-medium mt-1">
                         Đã sử dụng cho bàn khác
                       </p>
                     )}
                     {isInvalid && (
-                      <p className="text-sm text-red-500">
+                      <p className="text-sm text-red-600 font-medium mt-1">
                         Cần tối thiểu{" "}
                         {voucher.minPriceCondition.toLocaleString()}đ
                       </p>
@@ -154,7 +163,11 @@ const VoucherModal = ({
                           voucher
                         )
                       }
-                      className="mt-2 text-sm"
+                      className={`mt-3 text-sm ${
+                        isAppliedToCurrentBooking
+                          ? "bg-green-500 hover:bg-green-600"
+                          : "bg-indigo-600 hover:bg-indigo-700"
+                      } transition-colors duration-200`}
                       disabled={
                         isLoading ||
                         isUsed ||
@@ -170,7 +183,7 @@ const VoucherModal = ({
             )}
           </div>
         </div>
-        <div className="flex justify-between">
+        <div className="flex justify-between gap-3">
           <Button
             onClick={() =>
               handleApplyVoucher(
@@ -181,12 +194,16 @@ const VoucherModal = ({
               )
             }
             variant="outlined"
-            className="text-sm"
+            className="text-sm border-indigo-500 text-indigo-600 hover:bg-indigo-50 transition-colors duration-200 flex-1"
             disabled={isLoading}
           >
             Bỏ Chọn Voucher
           </Button>
-          <Button onClick={onClose} className="text-sm" disabled={isLoading}>
+          <Button
+            onClick={onClose}
+            className="text-sm bg-gray-600 hover:bg-gray-700 transition-colors duration-200 flex-1"
+            disabled={isLoading}
+          >
             Đóng
           </Button>
         </div>
