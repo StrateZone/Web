@@ -34,6 +34,7 @@ export interface Voucher {
   minPriceCondition: number;
   description: string;
   pointsCost: number;
+  contributionPointsCost: number;
   isSample?: boolean;
   userId?: number;
   expireDate?: string | null;
