@@ -16,6 +16,7 @@ import {
   PowerIcon,
   ClockIcon,
   CheckBadgeIcon,
+  GifIcon,
 } from "@heroicons/react/24/solid";
 import { useRouter } from "next/navigation";
 import {
@@ -27,6 +28,8 @@ import {
   Newspaper,
   FileText,
   PlayCircleIcon,
+  Coins,
+  CoinsIcon,
 } from "lucide-react";
 import { useLocale } from "next-intl";
 
@@ -37,6 +40,11 @@ const menuConfig = [
     items: [
       { label: "Thông Tin Cá Nhân", icon: User, path: "profile" },
       { label: "Ví Tiền", icon: Wallet, path: "wallet" },
+      {
+        label: "Hoạt Động Điểm Thưởng",
+        icon: CoinsIcon,
+        path: "reward_history",
+      },
     ],
   },
   {

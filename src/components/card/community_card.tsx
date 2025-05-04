@@ -82,7 +82,6 @@ export default function CommunityCard({
   const authDataString = localStorage.getItem("authData");
   const parsedAuthData = authDataString ? JSON.parse(authDataString) : {};
   const token = parsedAuthData.token;
-
   useEffect(() => {
     if (authDataString) {
       try {
@@ -104,8 +103,6 @@ export default function CommunityCard({
         (like) =>
           like.userId === currentUser.userId && like.threadId === threadId
       );
-      console.log("Thread likes:", threadData.likes);
-      console.log("User like:", userLike);
       setIsLiked(!!userLike);
       setLikeId(userLike?.id || null);
       setLikeCount(likes);

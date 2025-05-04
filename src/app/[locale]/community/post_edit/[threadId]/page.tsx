@@ -114,7 +114,7 @@ export default function EditPost() {
         ["bold", "italic", "underline", "strike"],
         ["blockquote", "code-block"],
         [{ list: "ordered" }, { list: "bullet" }],
-        ["link", "image"],
+        ["link"],
         ["clean"],
       ],
     },
@@ -129,14 +129,12 @@ export default function EditPost() {
       "list",
       "bullet",
       "link",
-      "image",
     ],
   });
 
   // Sync content with Quill editor
   useEffect(() => {
     if (quill) {
-      console.log("Quill initialized, setting content:", content);
       // Chỉ set nội dung nếu Quill mới được khởi tạo và không có nội dung
       if (
         quill.root.innerHTML === "<p><br></p>" ||
@@ -148,7 +146,6 @@ export default function EditPost() {
       // Update content state on text change
       const handleTextChange = () => {
         const newContent = quill.root.innerHTML;
-        console.log("Quill text changed, new content:", newContent);
         setContent(newContent);
         setTouched((prev) => ({ ...prev, content: true }));
       };
@@ -156,23 +153,10 @@ export default function EditPost() {
       quill.on("text-change", handleTextChange);
 
       return () => {
-        console.log("Cleaning up Quill event listener");
         quill.off("text-change", handleTextChange);
       };
     }
   }, [quill]); // Loại bỏ content khỏi dependency để tránh vòng lặp
-
-  // Log state changes for debugging
-  useEffect(() => {
-    console.log("Current state:", {
-      title,
-      content,
-      selectedTagIds,
-      previewImage,
-      thumbnail: thumbnail ? thumbnail.name : null,
-      isPreview,
-    });
-  }, [title, content, selectedTagIds, previewImage, thumbnail, isPreview]);
 
   // Hàm lấy màu chữ tương phản
   const getContrastColor = (hexColor: string) => {
@@ -355,7 +339,6 @@ export default function EditPost() {
 
         // Fetch thumbnail file if thumbnailUrl exists
         if (thread.thumbnailUrl) {
-          console.log("Setting thumbnail URL:", thread.thumbnailUrl);
           try {
             const response = await fetch(thread.thumbnailUrl);
             if (!response.ok) throw new Error("Failed to fetch thumbnail");
@@ -475,7 +458,6 @@ export default function EditPost() {
     reader.onload = (event) => {
       if (event.target?.result) {
         const imageUrl = event.target.result as string;
-        console.log("Thumbnail selected, preview URL:", imageUrl);
         setPreviewImage(imageUrl);
       }
     };
@@ -709,7 +691,6 @@ export default function EditPost() {
       setContent(currentContent);
     }
 
-    console.log("Switching to preview mode, content:", content);
     setIsPreview(true);
   };
 
@@ -856,10 +837,6 @@ export default function EditPost() {
                   <div className="mt-6">
                     <Button
                       onClick={() => {
-                        console.log(
-                          "Returning to edit mode, content:",
-                          content
-                        );
                         setIsPreview(false);
                       }}
                       className="w-full bg-gray-600 hover:bg-gray-700"
@@ -1026,7 +1003,6 @@ export default function EditPost() {
                       <button
                         type="button"
                         onClick={() => {
-                          console.log("Removing thumbnail");
                           setThumbnail(null);
                           setPreviewImage("");
                           if (fileInputRef.current) {

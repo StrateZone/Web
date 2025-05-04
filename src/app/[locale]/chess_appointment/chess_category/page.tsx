@@ -63,6 +63,11 @@ interface BusinessHours {
   closeHour: string;
 }
 
+interface GameType {
+  typeId: number;
+  typeName: string;
+}
+
 const saveSearchParams = (params: SearchParams) => {
   const localDateStr = params.startDate.toLocaleDateString("en-CA");
   sessionStorage.setItem(
@@ -115,7 +120,11 @@ export default function ChessCategoryPage() {
   const [startTime, setStartTime] = useState<string>("");
   const [endTime, setEndTime] = useState<string>("");
   const [roomType, setRoomType] = useState("");
-  const [gameType, setGameType] = useState("chess");
+  const [gameType, setGameType] = useState("chess"); // Default to 'chess'
+  const [gameTypes, setGameTypes] = useState<GameType[]>([]); // Store fetched game types
+  const [isLoadingGameTypes, setIsLoadingGameTypes] = useState(false); // Loading state for game types
+  const [roomTypes, setRoomTypes] = useState<string[]>([]); // Store fetched room types
+  const [isLoadingRoomTypes, setIsLoadingRoomTypes] = useState(false); // Loading state for room types
   const [hasSearched, setHasSearched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -127,12 +136,57 @@ export default function ChessCategoryPage() {
     closeHour: "22:00",
   });
   const [isLoadingHours, setIsLoadingHours] = useState(false);
-  const [openTermsDialog, setOpenTermsDialog] = useState(false); // State for dialog
-
+  const [openTermsDialog, setOpenTermsDialog] = useState(false);
   const systemId = 1;
   const [rooms, setRooms] = useState<Room[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
   const [isLoadingRooms, setIsLoadingRooms] = useState(false);
+
+  // Fetch game types from API
+  useEffect(() => {
+    const fetchGameTypes = async () => {
+      setIsLoadingGameTypes(true);
+      try {
+        const response = await axios.get(
+          "https://backend-production-ac5e.up.railway.app/api/game_types/all"
+        );
+        setGameTypes(response.data || []);
+        // Set default game type to the first one if available
+        if (response.data.length > 0 && !gameType) {
+          setGameType(response.data[0].typeName);
+        }
+      } catch (error) {
+        console.error("Error fetching game types:", error);
+        toast.error("Không thể tải danh sách loại cờ!");
+        setGameTypes([]);
+      } finally {
+        setIsLoadingGameTypes(false);
+      }
+    };
+
+    fetchGameTypes();
+  }, []);
+
+  // Fetch room types from API
+  useEffect(() => {
+    const fetchRoomTypes = async () => {
+      setIsLoadingRoomTypes(true);
+      try {
+        const response = await axios.get(
+          "https://backend-production-ac5e.up.railway.app/api/rooms/roomtypes"
+        );
+        setRoomTypes(response.data || []);
+      } catch (error) {
+        console.error("Error fetching room types:", error);
+        toast.error("Không thể tải danh sách loại phòng!");
+        setRoomTypes([]);
+      } finally {
+        setIsLoadingRoomTypes(false);
+      }
+    };
+
+    fetchRoomTypes();
+  }, []);
 
   useEffect(() => {
     const storedBookings = localStorage.getItem("chessBookings");
@@ -231,7 +285,9 @@ export default function ChessCategoryPage() {
       for (const minute of [0, 30]) {
         if (hour === closeHour && minute > closeMinute) continue;
 
-        const timeString = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+        const timeString = `${hour.toString().padStart(2, "0")}:${minute
+          .toString()
+          .padStart(2, "0")}`;
 
         const disabled =
           isSelectedToday &&
@@ -323,10 +379,7 @@ export default function ChessCategoryPage() {
         StartTime: toLocalISOString(selectedStartTime),
         EndTime: toLocalISOString(selectedEndTime),
         gameTypes: [effectiveGameType],
-        roomTypes:
-          effectiveRoomType === ""
-            ? ["basic", "premium", "openspaced"]
-            : [effectiveRoomType],
+        roomTypes: effectiveRoomType === "" ? roomTypes : [effectiveRoomType],
         RoomName: selectedRoomId
           ? [
               rooms.find((room) => room.roomId === selectedRoomId)?.roomName ||
@@ -521,13 +574,26 @@ export default function ChessCategoryPage() {
               value={gameType}
               onChange={(e) => setGameType(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm 
-    focus:outline-none focus:ring-2 focus:ring-blue-500 
-    focus:border-blue-500 bg-white text-gray-700"
+              focus:outline-none focus:ring-2 focus:ring-blue-500 
+              focus:border-blue-500 bg-white text-gray-700"
               required
+              disabled={isLoadingGameTypes}
             >
-              <option value="chess">Cờ Vua</option>
-              <option value="xiangqi">Cờ Tướng</option>
-              <option value="go">Cờ Vây</option>
+              {isLoadingGameTypes ? (
+                <option value="" disabled>
+                  Đang tải danh sách loại cờ...
+                </option>
+              ) : gameTypes.length === 0 ? (
+                <option value="" disabled>
+                  Không có loại cờ nào
+                </option>
+              ) : (
+                gameTypes.map((type) => (
+                  <option key={type.typeId} value={type.typeName}>
+                    {type.typeName}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
@@ -539,16 +605,30 @@ export default function ChessCategoryPage() {
               Chọn Loại Phòng
             </label>
             <select
+              id="roomType"
               value={roomType}
               onChange={(e) => setRoomType(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm 
-     focus:outline-none focus:ring-2 focus:ring-blue-500 
-     focus:border-blue-500 bg-white text-gray-700"
+              focus:outline-none focus:ring-2 focus:ring-blue-500 
+              focus:border-blue-500 bg-white text-gray-700"
+              disabled={isLoadingRoomTypes}
             >
               <option value="">Tất cả loại phòng</option>
-              <option value="basic">Phòng Thường</option>
-              <option value="premium">Phòng Cao Cấp</option>
-              <option value="openspaced">Không Gian Mở</option>
+              {isLoadingRoomTypes ? (
+                <option value="" disabled>
+                  Đang tải danh sách loại phòng...
+                </option>
+              ) : roomTypes.length === 0 ? (
+                <option value="" disabled>
+                  Không có loại phòng nào
+                </option>
+              ) : (
+                roomTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))
+              )}
             </select>
           </div>
           {roomType && (
@@ -567,8 +647,8 @@ export default function ChessCategoryPage() {
                 }
                 disabled={!roomType || isLoadingRooms}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm 
-       focus:outline-none focus:ring-2 focus:ring-blue-500 
-       focus:border-blue-500 bg-white text-gray-700"
+                focus:outline-none focus:ring-2 focus:ring-blue-500 
+                focus:border-blue-500 bg-white text-gray-700"
               >
                 <option value="">Tất cả phòng</option>
                 {isLoadingRooms ? (
@@ -673,7 +753,7 @@ export default function ChessCategoryPage() {
             </Box>
             <Box marginTop="auto">
               <Button
-                onClick={() => setOpenTermsDialog(true)} // Open dialog
+                onClick={() => setOpenTermsDialog(true)}
                 variant="outlined"
               >
                 Xem Điều Khoản
@@ -703,13 +783,7 @@ export default function ChessCategoryPage() {
           <div className="max-w-7xl mx-auto px-2">
             <div className="mt-8 ml-4 flex justify-between items-center">
               <h2 className="text-2xl font-bold text-black">
-                {selectedGameType === "chess"
-                  ? "Cờ Vua"
-                  : selectedGameType === "xiangqi"
-                    ? "Cờ Tướng"
-                    : selectedGameType === "go"
-                      ? "Cờ Vây"
-                      : "Tất cả loại cờ"}
+                {selectedGameType}
               </h2>
             </div>
 
@@ -763,14 +837,7 @@ export default function ChessCategoryPage() {
                         🔍 Bấm vào để xem chi tiết bàn
                       </p>
                       <h3 className="text-base font-medium mt-2 text-black">
-                        Loại cờ:{" "}
-                        {chessBooking.gameType.typeName === "go"
-                          ? "Cờ Vây"
-                          : chessBooking.gameType.typeName === "chess"
-                            ? "Cờ Vua"
-                            : chessBooking.gameType.typeName === "xiangqi"
-                              ? "Cờ Tướng"
-                              : chessBooking.gameType.typeName}{" "}
+                        Loại cờ: {chessBooking.gameType.typeName}{" "}
                         <span className="font-medium text-black text-sm ml-1">
                           (
                           {Number(chessBooking.gameTypePrice).toLocaleString(
@@ -784,13 +851,7 @@ export default function ChessCategoryPage() {
                         <span className="font-medium text-black">
                           Loại Phòng:{" "}
                         </span>{" "}
-                        {chessBooking.roomType === "basic"
-                          ? "Phòng Thường"
-                          : chessBooking.roomType === "premium"
-                            ? "Phòng Cao Cấp"
-                            : chessBooking.roomType === "openspaced"
-                              ? "Không Gian Mở"
-                              : chessBooking.roomType}{" "}
+                        {chessBooking.roomType}{" "}
                         <span className="font-medium text-black text-sm ml-1">
                           (
                           {Number(chessBooking.roomTypePrice).toLocaleString(
@@ -874,7 +935,7 @@ export default function ChessCategoryPage() {
                           : "Không xác định"}
                       </p>
 
-                      <div className="flex gap-2 mt-3">
+                      <div className="flex gap-2 mt-offer-3">
                         <Button
                           variant="gradient"
                           color="amber"
@@ -998,7 +1059,9 @@ export default function ChessCategoryPage() {
                             router.push(
                               `/${locale}/chess_appointment/${chessBooking.tableId}?startTime=${encodeURIComponent(
                                 chessBooking.startDate
-                              )}&endTime=${encodeURIComponent(chessBooking.endDate)}`
+                              )}&endTime=${encodeURIComponent(
+                                chessBooking.endDate
+                              )}`
                             );
                           }}
                           className="text-xs px-2 py-1 bg-green-600"
@@ -1011,7 +1074,7 @@ export default function ChessCategoryPage() {
                 </div>
 
                 {totalPages >= 1 && (
-                  <div className="flex justify-center mt-8 mb-8 ">
+                  <div className="flex justify-center mt-8 mb-8">
                     <DefaultPagination
                       currentPage={currentPage}
                       totalPages={totalPages}

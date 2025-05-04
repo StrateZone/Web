@@ -54,7 +54,7 @@ const NotificationsPage = () => {
               Accept: "application/json",
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
-          },
+          }
         );
 
         if (!response.ok) {
@@ -104,7 +104,7 @@ const NotificationsPage = () => {
             Accept: "application/json",
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
-        },
+        }
       );
 
       if (!response.ok) {
@@ -121,14 +121,14 @@ const NotificationsPage = () => {
       if (!userId) return;
 
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/notifications/users/${userId}/mark-all-as-read`,
+        `https://backend-production-ac5e.up.railway.app/api/notifications/read-all/${userId}`,
         {
           method: "PUT",
           headers: {
             Accept: "application/json",
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
-        },
+        }
       );
 
       if (response.ok) {
@@ -143,7 +143,7 @@ const NotificationsPage = () => {
     if (notification.status === 1) {
       await markAsRead(notification.id);
       setNotifications((prev) =>
-        prev.map((n) => (n.id === notification.id ? { ...n, status: 0 } : n)),
+        prev.map((n) => (n.id === notification.id ? { ...n, status: 0 } : n))
       );
     }
 
