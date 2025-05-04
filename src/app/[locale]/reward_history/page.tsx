@@ -16,6 +16,11 @@ interface PointHistory {
   createdAt: string;
 }
 
+interface PointsData {
+  points: number;
+  contributionPoints: number;
+}
+
 const RewardHistoryPage = () => {
   const [history, setHistory] = useState<PointHistory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,6 +28,9 @@ const RewardHistoryPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [pointsData, setPointsData] = useState<PointsData | null>(null);
+  const [loadingPoints, setLoadingPoints] = useState(true);
+  const [errorPoints, setErrorPoints] = useState<string | null>(null);
   const { locale } = useParams();
 
   const getUserId = () => {
@@ -80,7 +88,42 @@ const RewardHistoryPage = () => {
       }
     };
 
+    const fetchPoints = async () => {
+      try {
+        setLoadingPoints(true);
+        setErrorPoints(null);
+
+        const userId = getUserId();
+        if (!userId) {
+          setErrorPoints("Vui lòng đăng nhập để xem điểm thưởng");
+          return;
+        }
+
+        const response = await fetch(
+          `https://backend-production-ac5e.up.railway.app/api/users/points/${userId}`,
+          {
+            headers: {
+              Accept: "*/*",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Không thể tải thông tin điểm");
+        }
+
+        const data = await response.json();
+        setPointsData(data);
+      } catch (error) {
+        console.error("Error fetching points:", error);
+        setErrorPoints("Đã xảy ra lỗi khi tải thông tin điểm");
+      } finally {
+        setLoadingPoints(false);
+      }
+    };
+
     fetchPointHistory();
+    fetchPoints();
   }, [currentPage]);
 
   const handlePageChange = (newPage: number) => {
@@ -98,6 +141,10 @@ const RewardHistoryPage = () => {
       default:
         return pointType;
     }
+  };
+
+  const formatPoints = (points: number) => {
+    return new Intl.NumberFormat("vi-VN").format(points) + " điểm";
   };
 
   return (
@@ -121,9 +168,23 @@ const RewardHistoryPage = () => {
         </div>
       </div>
       <div className="container mx-auto py-8 text-black">
-        <Typography variant="h2" className="mb-6">
+        <Typography variant="h2" className="mb-4">
           Lịch Sử Điểm Thưởng
         </Typography>
+        {/* Points Display */}
+        <div className="mb-6">
+          <Typography variant="h5" className="text-gray-800">
+            {loadingPoints ? (
+              "Đang tải thông tin điểm..."
+            ) : errorPoints ? (
+              <span className="text-red-600">{errorPoints}</span>
+            ) : pointsData ? (
+              `Tổng điểm hiện có: ${formatPoints(pointsData.points)} `
+            ) : (
+              "Không có dữ liệu điểm"
+            )}
+          </Typography>
+        </div>
 
         {loading ? (
           <div className="text-center py-8">

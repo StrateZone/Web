@@ -376,7 +376,7 @@ function ProfilePage() {
       setNewPasswordError("");
       setConfirmNewPasswordError("");
       setIsPasswordModalOpen(false);
-      toast.success("Đổi mật khẩu thành công");
+      toast.info("Đổi mật khẩu thành công!");
     } catch (error: any) {
       console.error("Password change failed:", error);
       const errorMap: { [key: string]: string } = {
