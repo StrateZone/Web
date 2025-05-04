@@ -9,7 +9,6 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button, Typography } from "@material-tailwind/react";
 import { toast, ToastContainer } from "react-toastify";
 import Swal from "sweetalert2";
-import "react-toastify/dist/ReactToastify.css";
 import { InsufficientBalancePopup } from "../../chess_appointment/chess_appointment_order/InsufficientBalancePopup";
 import { useQuill } from "react-quilljs";
 import "quill/dist/quill.snow.css";
@@ -68,7 +67,7 @@ export default function CreatePost() {
         ["bold", "italic", "underline", "strike"],
         ["blockquote", "code-block"],
         [{ list: "ordered" }, { list: "bullet" }],
-        ["link", "image"],
+        ["link"],
         ["clean"],
       ],
     },
@@ -83,24 +82,36 @@ export default function CreatePost() {
       "list",
       "bullet",
       "link",
-      "image",
     ],
   });
 
   // Sync content with Quill editor
   useEffect(() => {
     if (quill) {
-      // Update Quill editor content whenever content state changes
-      quill.root.innerHTML = DOMPurify.sanitize(content || "<p></p>", {
+      // Ensure LTR direction
+      quill.container.style.direction = "ltr";
+      quill.container.style.textAlign = "left";
+
+      // Sanitize and set content
+      const sanitizedContent = DOMPurify.sanitize(content || "<p></p>", {
         ADD_TAGS: ["img", "iframe"],
         ADD_ATTR: ["src", "alt", "style"],
+        FORCE_BODY: true,
       });
+      console.log("Sanitized content:", sanitizedContent); // Debug
 
-      // Update content state on text change
+      // Only update if content differs
+      if (quill.root.innerHTML !== sanitizedContent) {
+        quill.root.innerHTML = sanitizedContent;
+      }
+
       const handleTextChange = () => {
         const newContent = quill.root.innerHTML;
-        setContent(newContent);
-        setTouched((prev) => ({ ...prev, content: true }));
+        console.log("Quill content on change:", newContent); // Debug
+        if (newContent !== content) {
+          setContent(newContent);
+          setTouched((prev) => ({ ...prev, content: true }));
+        }
       };
 
       quill.on("text-change", handleTextChange);
@@ -109,9 +120,7 @@ export default function CreatePost() {
         quill.off("text-change", handleTextChange);
       };
     }
-  }, [quill, content]); // Include content in the dependency array
-
-  // Log state changes for debugging
+  }, [quill, content]);
 
   // Hàm lấy màu chữ tương phản
   const getContrastColor = (hexColor: string) => {
@@ -170,7 +179,12 @@ export default function CreatePost() {
   const fetchMembershipPrice = async () => {
     try {
       const response = await axios.get(
-        "https://backend-production-ac5e.up.railway.app/api/prices/membership"
+        "https://backend-production-ac5e.up.railway.app/api/prices/membership",
+        {
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+          },
+        }
       );
       setMembershipPrice(response.data);
     } catch (error) {
@@ -188,7 +202,7 @@ export default function CreatePost() {
         {},
         {
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type": "application/json; charset=utf-8",
           },
         }
       );
@@ -269,6 +283,7 @@ export default function CreatePost() {
             headers: {
               accept: "*/*",
               Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json; charset=utf-8",
             },
           }
         );
@@ -304,11 +319,13 @@ export default function CreatePost() {
           {
             headers: {
               Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json; charset=utf-8",
             },
           }
         );
 
         const draft = response.data;
+        console.log("Draft data:", draft); // Debug
         if (draft.createdBy !== userId) {
           toast.error("Bạn không có quyền truy cập vào nháp này.");
           router.push(`/${locale}/community/post_history`);
@@ -320,7 +337,14 @@ export default function CreatePost() {
           return;
         }
         setTitle(draft.title || "");
-        setContent(draft.content || "<p></p>");
+        const draftContent = draft.content
+          ? DOMPurify.sanitize(draft.content, {
+              ADD_TAGS: ["img", "iframe"],
+              ADD_ATTR: ["src", "alt", "style"],
+              FORCE_BODY: true,
+            })
+          : "<p></p>";
+        setContent(draftContent);
         setSelectedTagIds(
           draft.threadsTags?.map((tag: { tagId: number }) => tag.tagId) || []
         );
@@ -449,19 +473,21 @@ export default function CreatePost() {
 
     try {
       let threadId;
+      const threadData = {
+        createdBy: userId,
+        title: title,
+        content: content,
+        tagIds: selectedTagIds,
+        isDrafted: false,
+      };
+
       if (draftId) {
         const threadResponse = await axios.post(
           `https://backend-production-ac5e.up.railway.app/api/threads`,
-          {
-            createdBy: userId,
-            title: title,
-            content: content,
-            tagIds: selectedTagIds,
-            isDrafted: false,
-          },
+          threadData,
           {
             headers: {
-              "Content-Type": "application/json",
+              "Content-Type": "application/json; charset=utf-8",
               Authorization: `Bearer ${token}`,
             },
           }
@@ -470,16 +496,10 @@ export default function CreatePost() {
       } else {
         const threadResponse = await axios.post(
           "https://backend-production-ac5e.up.railway.app/api/threads",
-          {
-            createdBy: userId,
-            title: title,
-            content: content,
-            tagIds: selectedTagIds,
-            isDrafted: false,
-          },
+          threadData,
           {
             headers: {
-              "Content-Type": "application/json",
+              "Content-Type": "application/json; charset=utf-8",
               Authorization: `Bearer ${token}`,
             },
           }
@@ -549,19 +569,21 @@ export default function CreatePost() {
 
     try {
       let threadId;
+      const threadData = {
+        createdBy: userId,
+        title: title,
+        content: content || "<p></p>",
+        tagIds: selectedTagIds,
+        isDrafted: true,
+      };
+
       if (draftId) {
         const threadResponse = await axios.post(
           `https://backend-production-ac5e.up.railway.app/api/threads`,
-          {
-            createdBy: userId,
-            title: title,
-            content: content || "<p></p>",
-            tagIds: selectedTagIds,
-            isDrafted: true,
-          },
+          threadData,
           {
             headers: {
-              "Content-Type": "application/json",
+              "Content-Type": "application/json; charset=utf-8",
               Authorization: `Bearer ${token}`,
             },
           }
@@ -570,16 +592,10 @@ export default function CreatePost() {
       } else {
         const threadResponse = await axios.post(
           "https://backend-production-ac5e.up.railway.app/api/threads",
-          {
-            createdBy: userId,
-            title: title,
-            content: content || "<p></p>",
-            tagIds: selectedTagIds,
-            isDrafted: true,
-          },
+          threadData,
           {
             headers: {
-              "Content-Type": "application/json",
+              "Content-Type": "application/json; charset=utf-8",
               Authorization: `Bearer ${token}`,
             },
           }
@@ -658,7 +674,7 @@ export default function CreatePost() {
       return;
     }
 
-    // Lưu nội dung hiện tại của Quill trước khi chuyển sang preview
+    // Save current Quill content
     if (quill) {
       const currentContent = quill.root.innerHTML;
       setContent(currentContent);
@@ -787,6 +803,7 @@ export default function CreatePost() {
                   __html: DOMPurify.sanitize(content, {
                     ADD_TAGS: ["img", "iframe"],
                     ADD_ATTR: ["src", "alt", "style"],
+                    FORCE_BODY: true,
                   }),
                 }}
               />
@@ -977,7 +994,7 @@ export default function CreatePost() {
               </label>
               <div
                 ref={quillRef}
-                className="h-64 bg-white border border-gray-300 rounded-lg"
+                className="h-64 bg-white border border-gray-300 rounded-lg direction-ltr text-left"
               />
               <p
                 className={`text-sm mt-12 ${
@@ -1058,6 +1075,15 @@ export default function CreatePost() {
         )
       )}
       <Footer />
+      <style jsx>{`
+        .ql-container,
+        .ql-editor {
+          direction: ltr !important;
+          text-align: left !important;
+          unicode-bidi: embed !important;
+          font-family: "Roboto", sans-serif !important;
+        }
+      `}</style>
     </div>
   );
 }

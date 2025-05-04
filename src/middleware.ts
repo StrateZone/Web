@@ -1,35 +1,44 @@
 import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
-// Các route cần bảo vệ
 const protectedRoutes = [
   "/appointment_ongoing",
   "/appointment_history",
   "/wallet",
+  "/reward_history",
   "/profile",
 ];
-// Các route công khai
 const publicRoutes = ["/login", "/register", "/otp_verification", "/login_otp"];
 
-import { NextRequest } from "next/server";
-
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
   const locale = pathname.split("/")[1];
   const basePath = pathname.replace(`/${locale}`, "") || "/";
   const accessToken = request.cookies.get("accessToken")?.value;
 
-  // Handle root URL (/)
+  // Xử lý URL thanh toán ZaloPay thành công
+  if (basePath === "/wallet" && searchParams.get("success") === "true") {
+    const newUrl = new URL(`/${locale || "vi"}/`, request.url);
+
+    // Thêm thông báo thanh toán thành công (tuỳ chọn)
+    newUrl.searchParams.set("payment", "success");
+    newUrl.searchParams.set("amount", searchParams.get("amount") || "");
+
+    // Chuyển hướng và THAY ĐỔI URL TRÊN TRÌNH DUYỆT
+    return NextResponse.redirect(newUrl);
+  }
+
+  // Xử lý các route khác
   if (pathname === "/") {
     return NextResponse.redirect(new URL("/vi", request.url));
   }
 
-  // Nếu là route công khai
   if (publicRoutes.includes(basePath)) {
     if (
       accessToken &&
       (basePath === "/login" ||
         basePath === "/login_otp" ||
-        basePath === "/register" || // Allow register only if not logged in
+        basePath === "/register" ||
         basePath === "/otp_verification")
     ) {
       return NextResponse.redirect(new URL(`/${locale || "vi"}/`, request.url));
@@ -37,7 +46,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Nếu là route cần bảo vệ
   if (protectedRoutes.some((route) => basePath.startsWith(route))) {
     if (!accessToken) {
       return NextResponse.redirect(new URL(`/${locale || "vi"}/`, request.url));
@@ -49,7 +57,7 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/", // Add root path to matcher
+    "/",
     "/:locale/login",
     "/:locale/register",
     "/:locale/otp_verification",
@@ -60,5 +68,6 @@ export const config = {
     "/:locale/appointment_ongoing/:path*",
     "/:locale/wallet/:path*",
     "/:locale/profile/:path*",
+    "/:locale/reward_history/:path*",
   ],
 };

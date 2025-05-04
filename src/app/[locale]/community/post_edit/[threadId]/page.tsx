@@ -114,7 +114,7 @@ export default function EditPost() {
         ["bold", "italic", "underline", "strike"],
         ["blockquote", "code-block"],
         [{ list: "ordered" }, { list: "bullet" }],
-        ["link", "image"],
+        ["link"],
         ["clean"],
       ],
     },
@@ -129,7 +129,6 @@ export default function EditPost() {
       "list",
       "bullet",
       "link",
-      "image",
     ],
   });
 

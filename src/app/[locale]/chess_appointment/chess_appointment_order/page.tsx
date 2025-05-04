@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Button, Input } from "@material-tailwind/react";
+import { Button, Input, Select, Option } from "@material-tailwind/react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { UserPlus, UserX, X } from "lucide-react";
@@ -18,6 +18,8 @@ import { toast } from "react-toastify";
 import { ConfirmCancelPopup } from "./ConfirmCancelPopup";
 import { CloseTimeWarningPopup } from "./CloseTimeWarningPopup";
 import TermsDialog from "../chess_category/TermsDialog";
+import VoucherModal from "./VoucherModal";
+import RedeemVoucherModal from "./RedeemVoucherModal";
 
 interface InvitedUser {
   userId: number;
@@ -25,7 +27,20 @@ interface InvitedUser {
   avatarUrl: string | null;
 }
 
-interface ChessBooking {
+export interface Voucher {
+  voucherId: number;
+  voucherName: string;
+  value: number;
+  minPriceCondition: number;
+  description: string;
+  pointsCost: number;
+  isSample?: boolean;
+  userId?: number;
+  expireDate?: string | null;
+  status?: number;
+}
+
+export interface ChessBooking {
   tableId: number;
   roomId: number;
   roomName: string;
@@ -45,6 +60,7 @@ interface ChessBooking {
   hasInvitations?: boolean;
   originalPrice?: number;
   invitedUsers?: InvitedUser[];
+  appliedVoucher?: Voucher | null;
 }
 
 interface BackendUnavailableTable {
@@ -72,6 +88,12 @@ interface UnavailableTableWithRaw extends UnavailableTable {
   rawEndTime: string;
 }
 
+interface Opponent {
+  userId: number;
+  username: string;
+  avatarUrl: string | null;
+}
+
 const TableBookingPage = () => {
   const router = useRouter();
   const [coupon, setCoupon] = useState("");
@@ -86,7 +108,187 @@ const TableBookingPage = () => {
   const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
   const [selectedStartDate, setSelectedStartDate] = useState<string>("");
   const [selectedEndDate, setSelectedEndDate] = useState<string>("");
-  const [openTermsDialog, setOpenTermsDialog] = useState(false); // State for TermsDialog
+  const [openTermsDialog, setOpenTermsDialog] = useState(false);
+  const [openRedeemVoucherModal, setOpenRedeemVoucherModal] = useState(false);
+  const [availableVouchers, setAvailableVouchers] = useState<Voucher[]>([]);
+  const [userVouchers, setUserVouchers] = useState<Voucher[]>([]);
+  const [showVoucherModal, setShowVoucherModal] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<{
+    tableId: number;
+    startDate: string;
+    endDate: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchVouchers = async () => {
+      try {
+        const sampleResponse = await fetch(
+          "https://backend-production-ac5e.up.railway.app/api/vouchers/samples",
+          { headers: { accept: "*/*" } }
+        );
+        if (sampleResponse.ok) {
+          const sampleData = await sampleResponse.json();
+          setAvailableVouchers(sampleData.pagedList);
+        }
+
+        const authDataString = localStorage.getItem("authData");
+        if (authDataString) {
+          const authData = JSON.parse(authDataString);
+          const userResponse = await fetch(
+            `https://backend-production-ac5e.up.railway.app/api/vouchers/of-user/${authData.userId}`,
+            { headers: { accept: "*/*" } }
+          );
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            setUserVouchers(userData.pagedList);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching vouchers:", error);
+        toast.error("Không thể tải danh sách voucher");
+      }
+    };
+
+    fetchVouchers();
+  }, []);
+
+  useEffect(() => {
+    const savedBookings = localStorage.getItem("chessBookings");
+    if (savedBookings) {
+      try {
+        const parsedBookings: ChessBooking[] = JSON.parse(savedBookings);
+        setChessBookings(parsedBookings);
+      } catch (error) {
+        console.error("Error parsing data from localStorage:", error);
+      }
+    }
+  }, []);
+
+  const handleRedeemSuccess = (newVoucher: Voucher) => {
+    setUserVouchers((prev) => [...prev, newVoucher]);
+  };
+
+  const handleApplyVoucher = (
+    tableId: number,
+    startDate: string,
+    endDate: string,
+    voucher: Voucher | null
+  ) => {
+    console.log("=== Starting handleApplyVoucher ===");
+    console.log("Input parameters:", {
+      tableId,
+      startDate,
+      endDate,
+      voucher: voucher
+        ? {
+            voucherId: voucher.voucherId,
+            voucherName: voucher.voucherName,
+            value: voucher.value,
+            minPriceCondition: voucher.minPriceCondition,
+          }
+        : null,
+    });
+
+    let voucherApplied = false;
+    const updatedBookings = chessBookings.map((booking) => {
+      if (
+        voucher &&
+        booking.appliedVoucher?.voucherId === voucher.voucherId &&
+        (booking.tableId !== tableId ||
+          booking.startDate !== startDate ||
+          booking.endDate !== endDate)
+      ) {
+        console.log(
+          `Removing voucher ${voucher.voucherId} from table ${booking.tableId}`
+        );
+        const basePrice =
+          (booking.roomTypePrice + booking.gameTypePrice) *
+          booking.durationInHours;
+        let newTotalPrice = basePrice;
+        if (booking.hasInvitations) {
+          newTotalPrice *= 0.5;
+        }
+        return {
+          ...booking,
+          appliedVoucher: null,
+          totalPrice: newTotalPrice,
+          originalPrice: basePrice,
+        };
+      }
+
+      if (
+        booking.tableId === tableId &&
+        booking.startDate === startDate &&
+        booking.endDate === endDate
+      ) {
+        const basePrice =
+          (booking.roomTypePrice + booking.gameTypePrice) *
+          booking.durationInHours;
+        let newTotalPrice = basePrice;
+        let voucherDiscount = 0;
+
+        if (voucher) {
+          if (basePrice >= voucher.minPriceCondition) {
+            console.log(
+              `Applying voucher ${voucher.voucherId} to table ${tableId}`
+            );
+            voucherDiscount = voucher.value;
+            newTotalPrice -= voucherDiscount;
+            voucherApplied = true;
+          } else {
+            console.log(
+              `Cannot apply voucher ${voucher.voucherId}: basePrice = ${basePrice} < minPriceCondition = ${voucher.minPriceCondition}`
+            );
+            toast.error(
+              `Giá bàn (${basePrice.toLocaleString()}đ) nhỏ hơn giá tối thiểu để sử dụng voucher (${voucher.minPriceCondition.toLocaleString()}đ)`
+            );
+            return booking;
+          }
+        } else {
+          console.log(`Removing voucher from table ${tableId}`);
+        }
+
+        if (booking.hasInvitations) {
+          newTotalPrice *= 0.5;
+        }
+
+        console.log("Final calculations:", {
+          basePrice,
+          voucherDiscount,
+          hasInvitations: booking.hasInvitations,
+          newTotalPrice,
+        });
+
+        return {
+          ...booking,
+          appliedVoucher: voucher,
+          totalPrice: newTotalPrice,
+          originalPrice: basePrice,
+        };
+      }
+
+      return booking;
+    });
+
+    console.log(
+      "Updated bookings:",
+      updatedBookings.map((b) => ({
+        tableId: b.tableId,
+        totalPrice: b.totalPrice,
+        appliedVoucher: b.appliedVoucher ? b.appliedVoucher.voucherId : null,
+      }))
+    );
+
+    setChessBookings(updatedBookings);
+    localStorage.setItem("chessBookings", JSON.stringify(updatedBookings));
+    setShowVoucherModal(false);
+    if (voucherApplied) {
+      toast.success("Áp dụng voucher thành công!");
+    } else if (!voucher) {
+      toast.success("Đã xóa voucher!");
+    }
+    console.log("=== Finished handleApplyVoucher ===");
+  };
 
   const handleCancelInvitation = async (
     tableId: number,
@@ -95,9 +297,9 @@ const TableBookingPage = () => {
   ) => {
     if (isLoading) return;
 
-    const bookingKey = `${tableId}-${startDate}-${endDate}`;
+    const loadingKey = `${tableId}|${startDate}|${endDate}`;
     try {
-      setLocalLoading((prev) => ({ ...prev, [bookingKey]: true }));
+      setLocalLoading((prev) => ({ ...prev, [loadingKey]: true }));
 
       const updatedBookings = chessBookings.map((booking) => {
         if (
@@ -105,12 +307,23 @@ const TableBookingPage = () => {
           booking.startDate === startDate &&
           booking.endDate === endDate
         ) {
+          const basePrice =
+            (booking.roomTypePrice + booking.gameTypePrice) *
+            booking.durationInHours;
+          let newTotalPrice = basePrice;
+          if (
+            booking.appliedVoucher &&
+            basePrice >= booking.appliedVoucher.minPriceCondition
+          ) {
+            newTotalPrice -= booking.appliedVoucher.value;
+          }
+
           return {
             ...booking,
             hasInvitations: false,
             invitedUsers: [],
-            totalPrice: booking.originalPrice || booking.totalPrice * 2,
-            originalPrice: undefined,
+            totalPrice: newTotalPrice,
+            originalPrice: basePrice,
           };
         }
         return booking;
@@ -118,23 +331,18 @@ const TableBookingPage = () => {
 
       setChessBookings(updatedBookings);
       localStorage.setItem("chessBookings", JSON.stringify(updatedBookings));
-
       toast.info(
-        `Đã hủy tất cả lời mời cho bàn số ${tableId} (${formatTime(startDate)} - ${formatTime(endDate)})`
+        `Đã hủy tất cả lời mời cho bàn số ${tableId} (${formatTime(
+          startDate
+        )} - ${formatTime(endDate)})`
       );
     } catch (error) {
       console.error("Error canceling invitations:", error);
       toast.error("Có lỗi xảy ra khi hủy lời mời");
     } finally {
-      setLocalLoading((prev) => ({ ...prev, [bookingKey]: false }));
+      setLocalLoading((prev) => ({ ...prev, [loadingKey]: false }));
     }
   };
-
-  interface Opponent {
-    userId: number;
-    username: string;
-    avatarUrl: string | null;
-  }
 
   const handleInviteSuccess = (opponent: Opponent, tableId: number) => {
     const invitedUser: InvitedUser = {
@@ -156,19 +364,29 @@ const TableBookingPage = () => {
 
         const newInvitedUsers = [...existingInvites, invitedUser];
         const hasInvitations = newInvitedUsers.length > 0;
+        let newTotalPrice =
+          (booking.roomTypePrice + booking.gameTypePrice) *
+          booking.durationInHours;
 
-        const shouldApplyDiscount = existingInvites.length === 0;
+        if (
+          booking.appliedVoucher &&
+          newTotalPrice >= booking.appliedVoucher.minPriceCondition
+        ) {
+          newTotalPrice -= booking.appliedVoucher.value;
+        }
+
+        if (hasInvitations) {
+          newTotalPrice *= 0.5;
+        }
 
         return {
           ...booking,
           invitedUsers: newInvitedUsers,
           hasInvitations,
-          originalPrice: shouldApplyDiscount
-            ? booking.totalPrice
-            : booking.originalPrice,
-          totalPrice: shouldApplyDiscount
-            ? booking.totalPrice * 0.5
-            : booking.totalPrice,
+          totalPrice: newTotalPrice,
+          originalPrice:
+            (booking.roomTypePrice + booking.gameTypePrice) *
+            booking.durationInHours,
         };
       }
       return booking;
@@ -185,9 +403,9 @@ const TableBookingPage = () => {
   ) => {
     if (isLoading) return;
 
-    const bookingKey = `${tableId}-${startDate}-${endDate}`;
+    const loadingKey = `${tableId}|${startDate}|${endDate}`;
     try {
-      setLocalLoading((prev) => ({ ...prev, [bookingKey]: true }));
+      setLocalLoading((prev) => ({ ...prev, [loadingKey]: true }));
 
       const booking = chessBookings.find(
         (b) =>
@@ -218,21 +436,9 @@ const TableBookingPage = () => {
       console.error("Error removing table:", error);
       toast.error("Có lỗi xảy ra khi xóa bàn");
     } finally {
-      setLocalLoading((prev) => ({ ...prev, [bookingKey]: false }));
+      setLocalLoading((prev) => ({ ...prev, [loadingKey]: false }));
     }
   };
-
-  useEffect(() => {
-    const savedBookings = localStorage.getItem("chessBookings");
-    if (savedBookings) {
-      try {
-        const parsedBookings: ChessBooking[] = JSON.parse(savedBookings);
-        setChessBookings(parsedBookings);
-      } catch (error) {
-        console.error("Error parsing data from localStorage:", error);
-      }
-    }
-  }, []);
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -278,7 +484,7 @@ const TableBookingPage = () => {
     (sum, booking) => sum + booking.totalPrice,
     0
   );
-  const finalPrice = totalPrice - discount;
+  const finalPrice = totalPrice;
 
   const viewBookingDetail = (bookingInfo: {
     id: number;
@@ -355,6 +561,7 @@ const TableBookingPage = () => {
           scheduleTime: booking.startDate,
           endTime: booking.endDate,
           invitedUsers: booking.invitedUsers?.map((user) => user.userId) || [],
+          voucherId: booking.appliedVoucher?.voucherId || null,
         })),
         totalPrice: finalPrice,
       };
@@ -582,12 +789,12 @@ const TableBookingPage = () => {
                 </div>
               ) : (
                 chessBookings.map((booking) => {
-                  const bookingKey = `${booking.tableId}-${booking.startDate}-${booking.endDate}`;
-                  const isLoadingLocal = localLoading[bookingKey] || false;
+                  const loadingKey = `${booking.tableId}|${booking.startDate}|${booking.endDate}`;
+                  const isLoadingLocal = localLoading[loadingKey] || false;
 
                   return (
                     <div
-                      key={bookingKey}
+                      key={`${booking.tableId}|${booking.startDate}|${booking.endDate}`}
                       className="border-2 p-4 rounded-lg flex items-center relative"
                     >
                       <div className="flex-1 grid grid-cols-2 gap-4 text-base">
@@ -660,32 +867,56 @@ const TableBookingPage = () => {
                             </span>
                             {formatTime(booking.endDate)}
                           </p>
-                          <div>
-                            <p className="font-medium text-base">
-                              <span className="font-bold text-lg">
-                                Giá Thuê Theo Giờ:{" "}
-                              </span>
-                              {(
-                                booking.roomTypePrice + booking.gameTypePrice
-                              ).toLocaleString("vi-VN")}
-                              đ
-                            </p>
-                          </div>
+                          <p>
+                            <span className="font-bold text-lg">
+                              Giá Thuê Theo Giờ:{" "}
+                            </span>
+                            {(
+                              booking.roomTypePrice + booking.gameTypePrice
+                            ).toLocaleString("vi-VN")}
+                            đ
+                          </p>
                           <p className="mt-2">
                             <span className="font-bold text-lg">Tổng: </span>
                             {booking.totalPrice?.toLocaleString()}đ
-                            {booking.hasInvitations ? (
+                            {booking.hasInvitations && (
                               <span className="text-green-600 ml-2">
                                 (Thanh Toán Trước 50%)
                               </span>
-                            ) : (
-                              booking.originalPrice && (
+                            )}
+                            {booking.appliedVoucher && (
+                              <span className="text-blue-600 ml-2">
+                                (Voucher: -
+                                {booking.appliedVoucher.value.toLocaleString()}
+                                đ)
+                              </span>
+                            )}
+                            {booking.originalPrice &&
+                              booking.originalPrice !== booking.totalPrice && (
                                 <span className="text-gray-500 ml-2 line-through">
                                   {booking.originalPrice.toLocaleString()}đ
                                 </span>
-                              )
-                            )}
+                              )}
                           </p>
+                          <div className="mt-4">
+                            <Button
+                              onClick={() => {
+                                setSelectedBooking({
+                                  tableId: booking.tableId,
+                                  startDate: booking.startDate,
+                                  endDate: booking.endDate,
+                                });
+                                setShowVoucherModal(true);
+                              }}
+                              variant="outlined"
+                              className="text-sm"
+                              disabled={isLoading || isLoadingLocal}
+                            >
+                              {booking.appliedVoucher
+                                ? `Voucher: ${booking.appliedVoucher.voucherName}`
+                                : "Chọn Voucher"}
+                            </Button>
+                          </div>
                         </div>
                       </div>
 
@@ -710,7 +941,10 @@ const TableBookingPage = () => {
                                       }}
                                     />
                                   ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-blue-500 text-white text-xs font-bold">
+                                    <div
+                                      className="w-full h-full flex items-center justify-center bg-blue-500 text-white text \n
+                                    text-xs font-bold"
+                                    >
                                       {user.username?.charAt(0).toUpperCase()}
                                     </div>
                                   )}
@@ -831,6 +1065,14 @@ const TableBookingPage = () => {
                 Xem Điều Khoản
               </Button>
               <Button
+                onClick={() => setOpenRedeemVoucherModal(true)}
+                variant="outlined"
+                className="px-6 py-3 text-base"
+                disabled={isLoading}
+              >
+                Đổi Voucher
+              </Button>
+              <Button
                 onClick={handleConfirmBooking}
                 className="hover:bg-gray-900 text-white px-12 py-3 text-base"
                 disabled={chessBookings.length === 0 || isLoading}
@@ -848,6 +1090,24 @@ const TableBookingPage = () => {
           </div>
         </div>
       </div>
+
+      <VoucherModal
+        open={showVoucherModal}
+        onClose={() => setShowVoucherModal(false)}
+        userVouchers={userVouchers}
+        availableVouchers={availableVouchers}
+        selectedBooking={selectedBooking}
+        chessBookings={chessBookings}
+        handleApplyVoucher={handleApplyVoucher}
+        handleRedeemVoucher={() => {}}
+      />
+
+      <RedeemVoucherModal
+        open={openRedeemVoucherModal}
+        onClose={() => setOpenRedeemVoucherModal(false)}
+        availableVouchers={availableVouchers}
+        onRedeemSuccess={handleRedeemSuccess}
+      />
 
       {showCouponModal && (
         <CouponsPage
