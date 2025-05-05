@@ -135,7 +135,7 @@ const NotificationsPage = () => {
         setNotifications((prev) => prev.map((n) => ({ ...n, status: 0 })));
       }
     } catch (error) {
-      console.error("Error marking all notifications as read:", error);
+      console.error("Error marking all notifications as read!:", error);
     }
   };
 

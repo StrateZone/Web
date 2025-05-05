@@ -38,8 +38,7 @@ const RedeemVoucherModal = ({
     try {
       const authDataString = localStorage.getItem("authData");
       if (!authDataString) {
-        console.error("No auth data found in localStorage");
-        return;
+        throw new Error("Không có dữ liệu xác thực trong localStorage");
       }
       const authData = JSON.parse(authDataString);
       const userId = authData.userId;
@@ -56,7 +55,7 @@ const RedeemVoucherModal = ({
       );
 
       if (!pointsResponse.ok) {
-        throw new Error("Failed to fetch user points");
+        throw new Error("Không thể lấy thông tin điểm");
       }
 
       const pointsData = await pointsResponse.json();
@@ -74,13 +73,17 @@ const RedeemVoucherModal = ({
       );
 
       if (!userResponse.ok) {
-        throw new Error("Failed to fetch user data");
+        throw new Error("Không thể lấy thông tin người dùng");
       }
       const userData = await userResponse.json();
       setUserLabel(userData.userLabel || null);
     } catch (error) {
-      console.error("Error fetching user data:", error);
-      toast.error("Không thể tải thông tin của bạn");
+      console.error("Lỗi khi lấy dữ liệu người dùng:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Lỗi khi lấy dữ liệu người dùng"
+      );
     }
   };
 
@@ -95,8 +98,7 @@ const RedeemVoucherModal = ({
       setIsLoading(true);
       const authDataString = localStorage.getItem("authData");
       if (!authDataString) {
-        toast.error("Vui lòng đăng nhập để đổi voucher");
-        return;
+        throw new Error("Vui lòng đăng nhập để đổi voucher");
       }
       const authData = JSON.parse(authDataString);
 
@@ -117,32 +119,30 @@ const RedeemVoucherModal = ({
 
       if (!response.ok) {
         const errorData = await response.json();
-        let errorMessage = errorData.message || "Không thể đổi voucher";
-        if (response.status === 500) {
-          errorMessage = "Lỗi hệ thống, vui lòng thử lại sau";
-        } else if (
-          errorData.message ===
-          "You don't have enough points to exchange this voucher."
-        ) {
-          errorMessage = "Bạn không đủ điểm để đổi voucher này";
-        }
-        throw new Error(errorMessage);
+        throw new Error(errorData.message || "Không thể đổi voucher");
       }
 
       const newVoucher = await response.json();
       onRedeemSuccess(newVoucher);
       toast.success("Đổi voucher thành công!");
-      await fetchUserData(); // Refresh points after redemption
+      await fetchUserData();
     } catch (error) {
-      console.error("Error redeeming voucher:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Đã xảy ra lỗi khi đổi voucher, vui lòng thử lại";
-      toast.error(errorMessage);
+      console.error("Lỗi khi đổi voucher:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Lỗi khi đổi voucher"
+      );
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const canRedeemVoucher = (voucher: Voucher) => {
+    if (userPoints === null) return false;
+    const requiredPoints =
+      userLabel === "top_contributor"
+        ? voucher.contributionPointsCost
+        : voucher.pointsCost;
+    return userPoints >= requiredPoints;
   };
 
   if (!open) return null;
@@ -217,10 +217,36 @@ const RedeemVoucherModal = ({
                   </p>
                   <Button
                     onClick={() => handleRedeemVoucher(voucher.voucherId)}
-                    className="mt-3 text-sm bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200"
-                    disabled={isLoading}
+                    className="mt-3 text-sm bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 relative"
+                    disabled={isLoading || !canRedeemVoucher(voucher)}
                   >
-                    Đổi voucher
+                    {isLoading ? (
+                      <div className="flex items-center justify-center">
+                        <svg
+                          className="animate-spin h-5 w-5 mr-2 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Đang đổi...
+                      </div>
+                    ) : (
+                      "Đổi Voucher"
+                    )}
                   </Button>
                 </div>
               ))

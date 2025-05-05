@@ -120,7 +120,7 @@ export default function ChessCategoryPage() {
   const [startTime, setStartTime] = useState<string>("");
   const [endTime, setEndTime] = useState<string>("");
   const [roomType, setRoomType] = useState("");
-  const [gameType, setGameType] = useState("chess"); // Default to 'chess'
+  const [gameType, setGameType] = useState("Cờ Vua"); // Default to 'chess'
   const [gameTypes, setGameTypes] = useState<GameType[]>([]); // Store fetched game types
   const [isLoadingGameTypes, setIsLoadingGameTypes] = useState(false); // Loading state for game types
   const [roomTypes, setRoomTypes] = useState<string[]>([]); // Store fetched room types
@@ -331,7 +331,8 @@ export default function ChessCategoryPage() {
 
   useEffect(() => {
     const savedParams = getSavedSearchParams();
-    if (savedParams) {
+    if (savedParams && roomTypes.length > 0) {
+      // Chỉ gọi khi roomTypes đã được tải
       setStartDate(savedParams.startDate);
       setStartTime(savedParams.startTime);
       setEndTime(savedParams.endTime);
@@ -341,7 +342,7 @@ export default function ChessCategoryPage() {
       setHasSearched(true);
       fetchChessBookings(1);
     }
-  }, []);
+  }, [roomTypes]); // Thêm roomTypes vào dependencies
 
   const getLocalBooking = (tableId: number, searchDate: Date) => {
     const bookings = JSON.parse(localStorage.getItem("chessBookings") || "[]");

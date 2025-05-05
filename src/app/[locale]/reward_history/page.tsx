@@ -1,10 +1,11 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Typography } from "@material-tailwind/react";
+import { Typography, Spinner } from "@material-tailwind/react";
 import { useParams } from "next/navigation";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { DefaultPagination } from "@/components/pagination";
+import Banner from "@/components/banner/banner";
 
 interface PointHistory {
   id: number;
@@ -31,7 +32,7 @@ const RewardHistoryPage = () => {
   const [pointsData, setPointsData] = useState<PointsData | null>(null);
   const [loadingPoints, setLoadingPoints] = useState(true);
   const [errorPoints, setErrorPoints] = useState<string | null>(null);
-  const { locale } = useParams();
+  const [orderBy, setOrderBy] = useState("created-at-desc");
 
   const getUserId = () => {
     const authDataString = localStorage.getItem("authData");
@@ -48,12 +49,12 @@ const RewardHistoryPage = () => {
 
         const userId = getUserId();
         if (!userId) {
-          setError("Vui lòng đăng nhập để xem lịch sử điểm thưởng");
+          setError("Vui lòng đăng nhập để xem lịch sử điểm thưởng!");
           return;
         }
 
         const response = await fetch(
-          `https://backend-production-ac5e.up.railway.app/api/points-history/of-user/${userId}?page-number=${currentPage}&page-size=10`,
+          `https://backend-production-ac5e.up.railway.app/api/points-history/of-user/${userId}?page-number=${currentPage}&page-size=10&order-by=${orderBy}`,
           {
             headers: {
               Accept: "*/*",
@@ -124,7 +125,7 @@ const RewardHistoryPage = () => {
 
     fetchPointHistory();
     fetchPoints();
-  }, [currentPage]);
+  }, [currentPage, orderBy]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -136,8 +137,8 @@ const RewardHistoryPage = () => {
     switch (pointType) {
       case "contribution_point":
         return "Điểm đóng góp";
-      case "regular_point":
-        return "Điểm thường";
+      case "personal_point":
+        return "Điểm cá nhân";
       default:
         return pointType;
     }
@@ -147,108 +148,166 @@ const RewardHistoryPage = () => {
     return new Intl.NumberFormat("vi-VN").format(points) + " điểm";
   };
 
+  const formatHistoryEntry = (entry: PointHistory) => {
+    return `${entry.content}`;
+  };
+
+  const handleOrderByChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setOrderBy(e.target.value);
+    setCurrentPage(1);
+  };
+
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
-      {/* Background Banner */}
-      <div className="relative font-sans">
-        <div className="absolute inset-0 w-full h-full bg-gray-900/60 opacity-60 z-20"></div>
-        <img
-          src="https://png.pngtree.com/background/20230524/original/pngtree-the-game-of-chess-picture-image_2710450.jpg"
-          alt="Banner Image"
-          className="absolute inset-0 w-full h-full object-cover z-10"
-        />
-        <div className="min-h-[400px] relative z-30 h-full max-w-7xl mx-auto flex flex-col justify-center items-center text-center text-white p-6">
-          <h2 className="sm:text-5xl text-3xl font-bold mb-6">
-            Lịch Sử Điểm Thưởng
-          </h2>
-          <p className="sm:text-xl text-lg text-center text-gray-200">
-            Theo dõi điểm thưởng của bạn tại StrateZone
-          </p>
-        </div>
-      </div>
-      <div className="container mx-auto py-8 text-black">
-        <Typography variant="h2" className="mb-4">
-          Lịch Sử Điểm Thưởng
-        </Typography>
+      <Banner
+        title="Lịch Sử Điểm Thưởng"
+        subtitle="Theo dõi và quản lý điểm thưởng của bạn tại StrateZone"
+      />
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Points Display */}
-        <div className="mb-6">
-          <Typography variant="h5" className="text-gray-800">
-            {loadingPoints ? (
-              "Đang tải thông tin điểm..."
-            ) : errorPoints ? (
-              <span className="text-red-600">{errorPoints}</span>
-            ) : pointsData ? (
-              `Tổng điểm hiện có: ${formatPoints(pointsData.points)} `
-            ) : (
-              "Không có dữ liệu điểm"
-            )}
-          </Typography>
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          {loadingPoints ? (
+            <div className="flex justify-center items-center h-20">
+              <Spinner className="h-8 w-8 text-blue-500" />
+            </div>
+          ) : errorPoints ? (
+            <Typography variant="h6" className="text-red-600 text-center">
+              {errorPoints}
+            </Typography>
+          ) : pointsData ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="text-center sm:text-left">
+                <Typography
+                  variant="h6"
+                  className="text-gray-700 font-semibold"
+                >
+                  Tổng điểm cá nhân
+                </Typography>
+                <Typography variant="h4" className="text-blue-600 font-bold">
+                  {formatPoints(pointsData.points)}
+                </Typography>
+              </div>
+              <div className="text-center sm:text-left">
+                <Typography
+                  variant="h6"
+                  className="text-gray-700 font-semibold"
+                >
+                  Tổng điểm đóng góp
+                </Typography>
+                <Typography variant="h4" className="text-blue-600 font-bold">
+                  {formatPoints(pointsData.contributionPoints || 0)}
+                </Typography>
+              </div>
+            </div>
+          ) : (
+            <Typography variant="h6" className="text-gray-600 text-center">
+              Không có dữ liệu điểm
+            </Typography>
+          )}
         </div>
 
+        {/* Sort Controls */}
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
+          <Typography
+            variant="h3"
+            className="text-gray-800 font-bold mb-4 sm:mb-0"
+          >
+            Lịch Sử Điểm Thưởng
+          </Typography>
+          <div className="flex items-center gap-3">
+            <label htmlFor="orderBy" className="text-gray-700 font-medium">
+              Sắp xếp theo:
+            </label>
+            <select
+              id="orderBy"
+              value={orderBy}
+              onChange={handleOrderByChange}
+              className="border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-blue-500 transition duration-200 text-black"
+            >
+              <option value="created-at-desc">Mới nhất</option>
+              <option value="created-at">Cũ nhất</option>
+              <option value="amount">Điểm cao nhất</option>
+              <option value="amount-desc">Điểm thấp nhất</option>
+            </select>
+          </div>
+        </div>
+
+        {/* History List */}
         {loading ? (
-          <div className="text-center py-8">
-            Đang tải lịch sử điểm thưởng...
+          <div className="flex justify-center items-center py-12">
+            <Spinner className="h-12 w-12 text-blue-500" />
           </div>
         ) : error ? (
-          <div className="text-center py-8">
-            <Typography variant="h5" className="text-red-600">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+            <Typography variant="h6" className="text-red-600">
               {error}
             </Typography>
           </div>
         ) : history.length === 0 ? (
-          <div className="text-center py-8">
-            <Typography variant="h5">Không có lịch sử điểm thưởng</Typography>
+          <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
+            <Typography variant="h6" className="text-gray-600">
+              Không có lịch sử điểm thưởng
+            </Typography>
           </div>
         ) : (
-          <div>
-            <div className="space-y-4 mb-6">
-              {history.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="p-4 border rounded-lg hover:shadow-md transition-shadow border-gray-200"
-                >
-                  <div className="flex justify-between items-start">
+          <div className="space-y-6">
+            {history.map((entry) => (
+              <div
+                key={entry.id}
+                className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300 border border-gray-100"
+              >
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
                     <Typography
-                      variant="h5"
-                      className="font-semibold text-gray-800"
+                      variant="h6"
+                      className="text-gray-800 font-semibold"
                     >
-                      {entry.content}
+                      {formatHistoryEntry(entry)}
                     </Typography>
+                    <Typography className="text-sm text-gray-600 mt-1">
+                      Loại điểm: {getPointTypeLabel(entry.pointType)}
+                    </Typography>
+                    {entry.description && (
+                      <Typography className="text-sm text-gray-600 mt-1">
+                        Mô tả: {entry.description}
+                      </Typography>
+                    )}
+                  </div>
+                  <div className="text-right">
                     <span
-                      className={`text-sm font-semibold ${
+                      className={`text-lg font-semibold ${
                         entry.amount >= 0 ? "text-green-600" : "text-red-600"
                       }`}
                     >
                       {entry.amount >= 0 ? "+" : ""}
                       {entry.amount} điểm
                     </span>
-                  </div>
-                  <Typography className="mt-2 text-sm text-gray-600">
-                    Loại điểm: {getPointTypeLabel(entry.pointType)}
-                  </Typography>
-                  {entry.description && (
-                    <Typography className="mt-1 text-sm text-gray-600">
-                      Mô tả: {entry.description}
+                    <Typography className="text-sm text-gray-500 mt-1">
+                      {new Date(entry.createdAt).toLocaleString("vi-VN", {
+                        hour12: false,
+                        year: "numeric",
+                        month: "numeric",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </Typography>
-                  )}
-                  <Typography className="mt-2 text-sm text-gray-500">
-                    {new Date(entry.createdAt).toLocaleString("vi-VN")}
-                  </Typography>
+                  </div>
                 </div>
-              ))}
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex justify-center mt-8">
-                <DefaultPagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={handlePageChange}
-                />
               </div>
-            )}
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center mt-12">
+            <DefaultPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
           </div>
         )}
       </div>
