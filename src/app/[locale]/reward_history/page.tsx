@@ -50,7 +50,7 @@ const RewardHistoryPage = () => {
 
         const userId = getUserId();
         if (!userId) {
-          setError("Vui lòng đăng nhập để xem lịch sử điểm thưởng");
+          setError("Vui lòng đăng nhập để xem lịch sử điểm thưởng!");
           return;
         }
 
