@@ -86,6 +86,13 @@ export default function TermsDialog({ open, onClose }: TermsDialogProps) {
         setRefundHours(3.5); // Fallback for refund hours
         setNonCancelableHours(1.5); // Fallback for non-cancelable hours
         setMinutesBeforeCheckIn(5); // Fallback for check-in minutes
+        setContributionPoints_PerThread(35); // Fallback for thread points
+        setContributionPoints_PerComment(5); // Fallback for comment points
+        setUserPoints_PerCheckinTable_ByPercentageOfTablesPrice(0.002); // Fallback for check-in points
+        setMax_NumberOfTables_CancelPerWeek(5); // Fallback for max cancellations
+        setNumberof_TopContributors_PerWeek(10); // Fallback for top contributors
+        setMax_NumberOfUsers_InvitedToTable(6); // Fallback for max invites
+        setAppointmentRequest_MaxHours_UntilExpiration(48); // Fallback for invite expiration
       }
     };
 
@@ -137,8 +144,8 @@ export default function TermsDialog({ open, onClose }: TermsDialogProps) {
           paragraph
           sx={{ color: "#475569", lineHeight: "1.6", fontSize: "0.95rem" }}
         >
-          - Hệ thống chỉ hỗ trợ các loại cờ có 2 người chơi (ví dụ: Cờ Vua, Cờ
-          Tướng, Cờ Vây).
+          - Hệ thống chỉ hỗ trợ các loại cờ có 2 người chơi: Cờ Vua, Cờ Tướng,
+          Cờ Vây.
           <br />
           - Người dùng chỉ có thể chọn giờ chơi trong khoảng thời gian mở cửa và
           đóng cửa của hệ thống, được quy định bởi giờ mở và giờ đóng hàng ngày.
@@ -168,14 +175,17 @@ export default function TermsDialog({ open, onClose }: TermsDialogProps) {
           - Lời mời chỉ có thể được gửi sau khi lịch đặt bàn đã được thanh toán.
           <br />
           - Nếu đặt bàn có lời mời, hóa đơn sẽ được chia đều cho người gửi lời
-          mời và những người được mời đã xác nhận.
-          <br />- Người dùng chấp nhận lời mời phải thanh toán phần còn lại của
-          lịch đặt bàn đó.
-          <br />- Mỗi bàn chỉ được mời tối đa{" "}
+          mời và những người được mời đã chấp nhận.
+          <br />
+          - Người dùng chấp nhận lời mời phải thanh toán phần còn lại của lịch
+          đặt bàn đó.
+          <br />- Mỗi bàn chỉ được gửi tối đa{" "}
           <strong className="text-indigo-700">
             {max_NumberOfUsers_InvitedToTable ?? "Lỗi hiển thị"}
           </strong>{" "}
-          người.
+          lời mời cùng lúc (không tính các lời mời bị từ chối, hết hạn,...),
+          nhưng chỉ có 1 người được mời có thể chấp nhận lời mời. Khi chấp nhận
+          lời mời thành công, những lời mời đã gửi khác sẽ tự động bị hủy.
           <br />- Thời hạn tối đa của lời mời chơi cờ là{" "}
           <strong className="text-indigo-700">
             {appointmentRequest_MaxHours_UntilExpiration ?? "Lỗi hiển thị"}
@@ -193,29 +203,24 @@ export default function TermsDialog({ open, onClose }: TermsDialogProps) {
           paragraph
           sx={{ color: "#475569", lineHeight: "1.6", fontSize: "0.95rem" }}
         >
-          - Nếu thời gian hiện tại chưa đến{" "}
+          - Khi hủy hẹn và thời gian hiện tại chưa đến{" "}
           <strong className="text-indigo-700">
             {refundHours ?? "Lỗi hiển thị"}
           </strong>{" "}
-          tiếng trước giờ hẹn, lịch hẹn bị hủy sẽ được hoàn tiền 100%.
+          tiếng trước giờ hẹn: lịch hẹn bị hủy sẽ được hoàn tiền 100%.
           <br />
-          - Nếu thời gian hiện tại nằm trong khoảng REF, lịch hẹn bị hủy sẽ được
-          hoàn tiền dưới 100% theo chính sách hệ thống.
+          - Khi hủy hẹn và thời gian hiện tại nằm trong khoảng &lt;3.5 - 1.5
+          tiếng trước giờ hẹn: lịch hẹn bị hủy sẽ được hoàn tiền 50%, con số này
+          có thể thay đổi tùy theo chính sách hệ thống.
           <br />- Nếu thời gian hiện tại chỉ còn dưới{" "}
           <strong className="text-indigo-700">
             {nonCancelableHours ?? "Lỗi hiển thị"}
           </strong>{" "}
-          tiếng trước giờ hẹn, lịch đặt bàn không thể bị hủy.
+          tiếng trước giờ hẹn: lịch đặt bàn không thể bị hủy.
           <br />
-          - Quản trị viên chỉ có thể hủy các lịch đặt của người dùng nếu thời
-          gian hiện tại chưa đến ICT.
-          <br />- Tất cả các lịch đặt bị hủy bởi quản trị viên sẽ được hoàn tiền
-          100%.
-          <br />- Thời gian bắt đầu check-in sẽ là{" "}
-          <strong className="text-indigo-700">
-            {minutesBeforeCheckIn ?? "Lỗi hiển thị"}
-          </strong>{" "}
-          phút trước giờ hẹn.
+          - Quản trị viên chỉ có thể hủy các lịch hẹn của người dùng nếu thời
+          gian hiện tại trên 1.5 tiếng trước giờ hẹn. Tất cả các lịch đặt bị hủy
+          bởi quản trị viên sẽ được hoàn tiền 100%.
           <br />- Mỗi tuần bạn chỉ được hủy bàn tối đa{" "}
           <strong className="text-indigo-700">
             {max_NumberOfTables_CancelPerWeek ?? "Lỗi hiển thị"}
@@ -234,10 +239,14 @@ export default function TermsDialog({ open, onClose }: TermsDialogProps) {
           paragraph
           sx={{ color: "#475569", lineHeight: "1.6", fontSize: "0.95rem" }}
         >
-          - Nếu thời gian hiện tại chưa đến ICT và chưa có ai chấp nhận lời mời,
-          người dùng có thể mời người khác.
-          <br />- Nếu thời gian hiện tại đã qua ICT, người dùng không thể gửi
-          lời mời nữa.
+          - Nếu đơn bàn có gửi lời mời đến người chơi khác, thời gian hiện tại
+          còn trên 1.5 tiếng trước giờ hẹn và những lời mời gửi đi trước đó đều
+          đã hết hạn hoặc bị từ chối, người dùng có thể mời thêm người khác.
+          <br />- Nếu đơn bàn có gửi lời mời đến người chơi khác, thời gian hiện
+          tại chỉ còn dưới 1.5 tiếng trước giờ hẹn, người dùng không thể gửi lời
+          mời nữa. Nếu những lời mời gửi đi trước đó đều đã hết hạn hoặc bị từ
+          chối, đơn bàn này sẽ tự động được hủy và người đặt bàn sẽ được hoàn
+          tiền 100%.
         </Typography>
 
         <Typography
@@ -250,6 +259,12 @@ export default function TermsDialog({ open, onClose }: TermsDialogProps) {
           paragraph
           sx={{ color: "#475569", lineHeight: "1.6", fontSize: "0.95rem" }}
         >
+          - Thời gian bắt đầu check-in sẽ là{" "}
+          <strong className="text-indigo-700">
+            {minutesBeforeCheckIn ?? "Lỗi hiển thị"}
+          </strong>{" "}
+          phút trước giờ hẹn.
+          <br />
           - Khi đến giờ chơi, chỉ có chủ lịch hẹn mới có quyền check-in.
           <br />- Người dùng phải check-out sau khi kết thúc buổi chơi.
         </Typography>
@@ -273,46 +288,55 @@ export default function TermsDialog({ open, onClose }: TermsDialogProps) {
           viên.
           <br />
           - Bình luận không được chứa từ ngữ tục tĩu.
-          <br />
-          - Chỉ được sử dụng số lượng thẻ (tag) giới hạn do hệ thống quy định
-          khi tạo bài viết.
-          <br />- Điểm đóng góp có thể được tích lũy bằng cách đăng bài và bình
-          luận. Người dùng có điểm cao nhất trong tuần sẽ được gắn nhãn “TOP
-          CONTRIBUTOR”.
-          <br />- Số lượng người dùng có thể được gắn nhãn “TOP CONTRIBUTOR” mỗi
-          tuần là{" "}
-          <strong className="text-indigo-700">
-            {numberof_TopContributors_PerWeek ?? "Lỗi hiển thị"}
-          </strong>
-          .
+          <br />- Chỉ được sử dụng số lượng thẻ (tag) giới hạn do hệ thống quy
+          định khi tạo bài viết.
         </Typography>
 
         <Typography
           variant="h6"
           sx={{ fontWeight: "600", color: "#1e40af", mt: 2, mb: 1 }}
         >
-          7. Điểm Đóng Góp Và Cơ Chế Đổi Thưởng
+          7. Điểm Cá Nhân, Điểm Đóng Góp và Cơ Chế Đổi Thưởng
         </Typography>
         <Typography
           paragraph
           sx={{ color: "#475569", lineHeight: "1.6", fontSize: "0.95rem" }}
         >
-          - Với mỗi bài viết được đăng tải người dùng sẽ nhận được{" "}
-          <strong className="text-indigo-700">
-            {contributionPoints_PerThread ?? "Lỗi hiển thị"}
-          </strong>{" "}
-          điểm.
-          <br />- Với mỗi bình luận được đăng tải người dùng sẽ nhận được{" "}
-          <strong className="text-indigo-700">
-            {contributionPoints_PerComment ?? "Lỗi hiển thị"}
-          </strong>{" "}
-          điểm.
-          <br />- Với mỗi bàn check-in thành công bạn sẽ nhận được{" "}
+          - Điểm cá nhân:
+          <br />
+          &nbsp;&nbsp;+ Với mỗi bàn check-in thành công, người dùng sẽ nhận được
+          điểm cá nhân tương đương{" "}
           <strong className="text-indigo-700">
             {userPoints_PerCheckinTable_ByPercentageOfTablesPrice ??
               "Lỗi hiển thị"}
-          </strong>{" "}
+          </strong>
           % giá trị thanh toán.
+          <br />
+          &nbsp;&nbsp;+ Điểm cá nhân khi tích lũy đủ có thể dùng để đổi các
+          voucher giảm giá cho những lần đặt bàn kế tiếp. "Top Contributor" sẽ
+          được hưởng ưu đãi giảm giá khi đổi voucher.
+          <br />
+          - Điểm đóng góp: Điểm đóng góp có thể được tích lũy bằng cách đăng bài
+          và bình luận.
+          <br />
+          &nbsp;&nbsp;+ Với mỗi bài viết được đăng tải: người dùng sẽ nhận được{" "}
+          <strong className="text-indigo-700">
+            {contributionPoints_PerThread ?? "Lỗi hiển thị"}
+          </strong>{" "}
+          điểm đóng góp.
+          <br />
+          &nbsp;&nbsp;+ Với mỗi bình luận được đăng tải: người dùng sẽ nhận được{" "}
+          <strong className="text-indigo-700">
+            {contributionPoints_PerComment ?? "Lỗi hiển thị"}
+          </strong>{" "}
+          điểm đóng góp.
+          <br />
+          &nbsp;&nbsp;+ Hằng tuần, hệ thống sẽ chọn ra{" "}
+          <strong className="text-indigo-700">
+            {numberof_TopContributors_PerWeek ?? "Lỗi hiển thị"}
+          </strong>{" "}
+          người dùng có điểm đóng góp cao nhất để công nhận là "Top
+          Contributor", và được hưởng ưu đãi giảm giá khi mua voucher.
         </Typography>
 
         <Typography
@@ -328,10 +352,10 @@ export default function TermsDialog({ open, onClose }: TermsDialogProps) {
           Nếu bạn có câu hỏi hoặc cần hỗ trợ, vui lòng liên hệ với chúng tôi qua
           email:{" "}
           <a
-            href="mailto:support@stratezone.com"
+            href="mailto:stratezone.app@gmail.com"
             className="text-indigo-600 hover:underline"
           >
-            support@stratezone.com
+            stratezone.app@gmail.com
           </a>{" "}
           hoặc số điện thoại:{" "}
           <span className="text-indigo-600">0123-456-789</span>.
