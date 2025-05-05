@@ -164,7 +164,6 @@ const RewardHistoryPage = () => {
       <Banner
         title="Lịch Sử Điểm Thưởng"
         subtitle="Theo dõi và quản lý điểm thưởng của bạn tại StrateZone"
-        className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
       />
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Points Display */}
