@@ -11,24 +11,12 @@ const protectedRoutes = [
 const publicRoutes = ["/login", "/register", "/otp_verification", "/login_otp"];
 
 export function middleware(request: NextRequest) {
-  const { pathname, searchParams } = request.nextUrl;
+  const { pathname } = request.nextUrl;
   const locale = pathname.split("/")[1];
   const basePath = pathname.replace(`/${locale}`, "") || "/";
   const accessToken = request.cookies.get("accessToken")?.value;
 
-  // Xử lý URL thanh toán ZaloPay thành công
-  if (basePath === "/wallet" && searchParams.get("success") === "true") {
-    const newUrl = new URL(`/${locale || "vi"}/`, request.url);
-
-    // Thêm thông báo thanh toán thành công (tuỳ chọn)
-    newUrl.searchParams.set("payment", "success");
-    newUrl.searchParams.set("amount", searchParams.get("amount") || "");
-
-    // Chuyển hướng và THAY ĐỔI URL TRÊN TRÌNH DUYỆT
-    return NextResponse.redirect(newUrl);
-  }
-
-  // Xử lý các route khác
+  // Xử lý các route
   if (pathname === "/") {
     return NextResponse.redirect(new URL("/vi", request.url));
   }

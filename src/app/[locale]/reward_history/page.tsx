@@ -32,7 +32,6 @@ const RewardHistoryPage = () => {
   const [pointsData, setPointsData] = useState<PointsData | null>(null);
   const [loadingPoints, setLoadingPoints] = useState(true);
   const [errorPoints, setErrorPoints] = useState<string | null>(null);
-  const { locale } = useParams();
   const [orderBy, setOrderBy] = useState("created-at-desc");
 
   const getUserId = () => {
