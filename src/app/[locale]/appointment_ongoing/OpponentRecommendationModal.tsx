@@ -400,67 +400,66 @@ const OpponentRecommendationModalWithNewInvite = ({
 
   if (!open) return null;
 
-  const tabsData =
-    hasSearched || !isMember(currentUserRole)
-      ? [
-          {
-            label: (
-              <div className="flex items-center gap-2">
-                <FiSearch className="h-5 w-5" />
-                Đối thủ khác
-              </div>
-            ),
-            value: "opponents",
-          },
-          {
-            label: (
-              <div className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Đã chọn
-                {selectedOpponents.length > 0 && (
-                  <span className="bg-blue-500 text-white rounded-full px-2 py-0.5 text-xs">
-                    {selectedOpponents.length}
-                  </span>
-                )}
-              </div>
-            ),
-            value: "selected",
-          },
-        ]
-      : [
-          {
-            label: (
-              <div className="flex items-center gap-2">
-                <FiUsers className="h-5 w-5" />
-                Bạn bè
-              </div>
-            ),
-            value: "friends",
-          },
-          {
-            label: (
-              <div className="flex items-center gap-2">
-                <FiSearch className="h-5 w-5" />
-                Đối thủ khác
-              </div>
-            ),
-            value: "opponents",
-          },
-          {
-            label: (
-              <div className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Đã chọn
-                {selectedOpponents.length > 0 && (
-                  <span className="bg-blue-500 text-white rounded-full px-2 py-0.5 text-xs">
-                    {selectedOpponents.length}
-                  </span>
-                )}
-              </div>
-            ),
-            value: "selected",
-          },
-        ];
+  const tabsData = isMember(currentUserRole)
+    ? [
+        {
+          label: (
+            <div className="flex items-center gap-2">
+              <FiUsers className="h-5 w-5" />
+              Bạn bè
+            </div>
+          ),
+          value: "friends",
+        },
+        {
+          label: (
+            <div className="flex items-center gap-2">
+              <FiSearch className="h-5 w-5" />
+              {hasSearched ? "Kết quả tìm kiếm" : "Đối thủ khác"}
+            </div>
+          ),
+          value: "opponents",
+        },
+        {
+          label: (
+            <div className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Đã chọn
+              {selectedOpponents.length > 0 && (
+                <span className="bg-blue-500 text-white rounded-full px-2 py-0.5 text-xs">
+                  {selectedOpponents.length}
+                </span>
+              )}
+            </div>
+          ),
+          value: "selected",
+        },
+      ]
+    : [
+        {
+          label: (
+            <div className="flex items-center gap-2">
+              <FiSearch className="h-5 w-5" />
+              {hasSearched ? "Kết quả tìm kiếm" : "Đối thủ khác"}
+            </div>
+          ),
+          value: "opponents",
+        },
+        {
+          label: (
+            <div className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Đã chọn
+              {selectedOpponents.length > 0 && (
+                <span className="bg-blue-500 text-white rounded-full px-2 py-0.5 text-xs">
+                  {selectedOpponents.length}
+                </span>
+              )}
+            </div>
+          ),
+          value: "selected",
+        },
+      ];
 
   const renderOpponentList = (
     opponents: Opponent[],
