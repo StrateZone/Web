@@ -298,8 +298,8 @@ const AppointmentRequestsPage = () => {
           body: JSON.stringify({
             fromUser: request.fromUser,
             toUser: request.toUser,
-            tableId: request.tableId,
-            appointmentId: request.appointmentId,
+            // tableId: request.tableId,
+            tableAppointmentId: request.tablesAppointmentId,
           }),
         }
       );

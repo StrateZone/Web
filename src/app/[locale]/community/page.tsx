@@ -390,7 +390,7 @@ export default function CommunityPage() {
       <Navbar />
       <Banner
         title="Tham Gia Cộng Đồng Chơi Cờ"
-        subtitle="Kết nối với những người đam mê cờ vua, tham gia các giải đấu và cải thiện kỹ năng của bạn tại StrateZone!"
+        subtitle="Kết nối với những người đam mê cờ vua, cải thiện kỹ năng của bạn tại StrateZone!"
       />
 
       <MembershipUpgradeDialog
