@@ -1,4 +1,5 @@
 "use client";
+
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
 import { DefaultPagination } from "@/components/pagination";
@@ -12,7 +13,6 @@ import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import Banner from "@/components/banner/banner";
 import OpponentDetailsPopup from "../appointment_history/OpponentDetailsPopup";
-import { RefreshCw } from "lucide-react";
 import { Button } from "@material-tailwind/react";
 import TermsDialog from "../chess_appointment/chess_category/TermsDialog";
 
@@ -157,6 +157,82 @@ function Page() {
   const { balance, loading: walletLoading } = useSelector(
     (state: RootState) => state.wallet
   );
+  const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
+
+  let isRefreshing = false;
+  let refreshPromise: Promise<void> | null = null;
+
+  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
+    if (isRefreshing) {
+      await refreshPromise;
+      await retryCallback();
+      return;
+    }
+
+    isRefreshing = true;
+    refreshPromise = new Promise(async (resolve, reject) => {
+      try {
+        const refreshToken = localStorage.getItem("refreshToken");
+        if (!refreshToken) {
+          throw new Error("Không có refresh token, vui lòng đăng nhập lại");
+        }
+
+        console.log("Sending refreshToken:", refreshToken);
+        const response = await fetch(
+          `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(
+            refreshToken
+          )}`,
+          {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error("Lỗi refresh token:", errorData);
+          throw new Error(errorData || "Không thể làm mới token");
+        }
+
+        const data = await response.json();
+        if (!data.data?.newToken) {
+          throw new Error("Không có token mới trong phản hồi");
+        }
+
+        localStorage.setItem("accessToken", data.data.newToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem("refreshToken", data.data.refreshToken);
+        }
+
+        console.log("Refresh token thành công:", {
+          newToken: data.data.newToken,
+          newRefreshToken: data.data.refreshToken,
+        });
+
+        await retryCallback();
+        resolve();
+      } catch (error) {
+        console.error("Refresh token thất bại:", error);
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        window.location.href = `/${localActive}/login`;
+        reject(error);
+      } finally {
+        isRefreshing = false;
+        refreshPromise = null;
+      }
+    });
+
+    await refreshPromise;
+  };
 
   // Fetch data from API
   const fetchData = async () => {
@@ -164,16 +240,28 @@ function Page() {
     setError(null);
     try {
       const apiUrl = new URL(
-        `https://backend-production-ac5e.up.railway.app/api/appointments/users/${userId}`
+        `${API_BASE_URL}/api/appointments/users/${userId}`
       );
       apiUrl.searchParams.append("page-number", currentPage.toString());
       apiUrl.searchParams.append("page-size", pageSize.toString());
       apiUrl.searchParams.append("order-by", orderBy);
 
-      const response = await fetch(apiUrl.toString());
+      const response = await fetch(apiUrl.toString(), {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
+
+      if (response.status === 401) {
+        await handleTokenExpiration(fetchData);
+        return;
+      }
 
       if (!response.ok) {
-        throw new Error("Không thể tải dữ liệu đơn đặt");
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể tải dữ liệu đơn đặt");
       }
 
       const result: ApiResponse = await response.json();
@@ -199,16 +287,23 @@ function Page() {
     setError(null);
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/appointments/${appointment.appointmentId}`,
+        `${API_BASE_URL}/api/appointments/${appointment.appointmentId}`,
         {
           headers: {
-            accept: "*/*",
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );
 
+      if (response.status === 401) {
+        await handleTokenExpiration(() => handleAppointmentClick(appointment));
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error("Không thể tải chi tiết đơn đặt");
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể tải chi tiết đơn đặt");
       }
 
       const result: Appointment = await response.json();
@@ -218,44 +313,6 @@ function Page() {
         err instanceof Error ? err.message : "Đã xảy ra lỗi khi tải chi tiết"
       );
       setSelectedAppointment(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Refresh appointment details
-  const handleRefreshDetails = async () => {
-    if (!selectedAppointment) return;
-
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/appointments/${selectedAppointment.appointmentId}`,
-        {
-          headers: {
-            accept: "*/*",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Không thể tải chi tiết bàn");
-      }
-
-      const result: Appointment = await response.json();
-      setSelectedAppointment((prev) =>
-        prev
-          ? {
-              ...prev,
-              tablesAppointments: result.tablesAppointments,
-            }
-          : null
-      );
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Đã xảy ra lỗi khi làm mới dữ liệu"
-      );
     } finally {
       setIsLoading(false);
     }
@@ -309,11 +366,26 @@ function Page() {
       const currentTime = toLocalISOString(new Date());
 
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`
+        `${API_BASE_URL}/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
       );
 
+      if (response.status === 401) {
+        await handleTokenExpiration(() =>
+          checkCancelCondition(tablesAppointmentId)
+        );
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error("Không thể kiểm tra điều kiện hủy");
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể kiểm tra điều kiện hủy");
       }
 
       const data = await response.json();
@@ -338,25 +410,33 @@ function Page() {
   };
 
   const confirmCancelAppointment = async () => {
-    const authData = JSON.parse(localStorage.getItem("authData") || "{}");
-    const userId = authData.userId;
-
     if (!currentCancellingId || !userId) {
-      console.error("Missing currentCancellingId or userId");
+      console.error("Thiếu currentCancellingId hoặc userId");
       return;
     }
 
     try {
       setIsLoading(true);
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel/${currentCancellingId}/users/${userId}`,
+        `${API_BASE_URL}/api/tables-appointment/cancel/${currentCancellingId}/users/${userId}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
         }
       );
+
+      if (response.status === 401) {
+        await handleTokenExpiration(confirmCancelAppointment);
+        return;
+      }
+
       const responseData = await response.json();
-      if (!response.ok) throw new Error("Hủy đơn đặt không thành công");
+      if (!response.ok) {
+        throw new Error(responseData.message || "Hủy đơn đặt không thành công");
+      }
 
       dispatch(fetchWallet(userId));
       await fetchData();
@@ -470,7 +550,17 @@ function Page() {
         />
 
         <div className="container mx-auto px-4 py-8">
-          <h1 className="text-3xl font-bold mb-8">Cuộc Hẹn Sắp Diễn Ra</h1>
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-bold">Cuộc Hẹn Sắp Diễn Ra</h1>
+            <Button
+              onClick={() => setOpenTermsDialog(true)}
+              variant="outlined"
+              className="px-4 py-2"
+              disabled={isLoading}
+            >
+              Xem Điều Khoản
+            </Button>
+          </div>
 
           {/* Controls */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -513,26 +603,6 @@ function Page() {
                 >
                   ← Quay lại danh sách
                 </button>
-                <div className="flex items-center space-x-4">
-                  <Button
-                    onClick={() => setOpenTermsDialog(true)}
-                    variant="outlined"
-                    className="px-4 py-2"
-                    disabled={isLoading}
-                  >
-                    Xem Điều Khoản
-                  </Button>
-                  {/* <Button
-                    onClick={handleRefreshDetails}
-                    className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2"
-                    disabled={isLoading}
-                  >
-                    <RefreshCw
-                      className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
-                    />
-                    <strong>Làm Mới</strong>
-                  </Button> */}
-                </div>
               </div>
 
               <div className="flex justify-between items-center mb-6">
@@ -608,7 +678,7 @@ function Page() {
                                 ? "Phòng cao cấp"
                                 : tableAppointment.table.roomType ===
                                     "openspaced"
-                                  ? "không gian mở"
+                                  ? "Không gian mở"
                                   : tableAppointment.table.roomType}
                           </td>
                           <td className="py-2 px-4 border text-center">
@@ -745,7 +815,7 @@ function Page() {
 
                   {/* Pagination */}
                   <div className="flex flex-col sm:flex-row justify-center items-center mt-4 gap-4">
-                    {totalPages >= 100 && (
+                    {totalPages > 1 && (
                       <div className="flex justify-center mt-8 mb-8">
                         <DefaultPagination
                           currentPage={currentPage}

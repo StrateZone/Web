@@ -28,6 +28,7 @@ const NotificationsPage = () => {
   const [totalCount, setTotalCount] = useState(0);
   const { locale } = useParams();
   const router = useRouter();
+  const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
 
   const getUserId = () => {
     const authDataString = localStorage.getItem("authData");
@@ -35,7 +36,61 @@ const NotificationsPage = () => {
     const authData = JSON.parse(authDataString);
     return authData.userId;
   };
+  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
+    try {
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (!refreshToken) {
+        throw new Error("Không có refresh token, vui lòng đăng nhập lại");
+      }
 
+      console.log("Sending refreshToken:", refreshToken); // Debug
+      const response = await fetch(
+        `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(refreshToken)}`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "*/*",
+            // Remove Content-Type since we're not sending a JSON body
+            // Authorization header may still be needed if the API requires it
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Refresh token error:", errorData); // Debug
+        throw new Error(errorData.message || "Không thể làm mới token");
+      }
+
+      // Since the API returns 204, there may be no response body
+      // Check if the API sets the new token in headers or elsewhere
+      const newToken = response.headers.get("x-access-token"); // Adjust based on API behavior
+      if (newToken) {
+        localStorage.setItem("accessToken", newToken);
+      } else {
+        // If the API returns a JSON body (based on your original code), parse it
+        const data = await response.json();
+        localStorage.setItem("accessToken", data.data.newToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem("refreshToken", data.data.refreshToken);
+        }
+      }
+
+      await retryCallback();
+    } catch (error) {
+      console.error("Token refresh failed:", error);
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("authData");
+      // Chỉ chuyển hướng nếu cần
+      document.cookie =
+        "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      document.cookie =
+        "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      window.location.href = "/login";
+    }
+  };
   useEffect(() => {
     const fetchAllNotifications = async () => {
       try {
@@ -57,6 +112,10 @@ const NotificationsPage = () => {
           }
         );
 
+        if (response.status === 401) {
+          await handleTokenExpiration(fetchAllNotifications);
+          return;
+        }
         if (!response.ok) {
           return;
         }
@@ -107,6 +166,10 @@ const NotificationsPage = () => {
         }
       );
 
+      if (response.status === 401) {
+        await handleTokenExpiration(() => markAsRead(notificationId));
+        return;
+      }
       if (!response.ok) {
         console.error("Failed to mark notification as read");
       }
@@ -131,6 +194,10 @@ const NotificationsPage = () => {
         }
       );
 
+      if (response.status === 401) {
+        await handleTokenExpiration(markAllAsRead);
+        return;
+      }
       if (response.ok) {
         setNotifications((prev) => prev.map((n) => ({ ...n, status: 0 })));
       }

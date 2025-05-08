@@ -119,14 +119,78 @@ const TableBookingPage = () => {
     startDate: string;
     endDate: string;
   } | null>(null);
+  const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
+  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
+    try {
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (!refreshToken) {
+        throw new Error("Không có refresh token, vui lòng đăng nhập lại");
+      }
 
+      console.log("Sending refreshToken:", refreshToken); // Debug
+      const response = await fetch(
+        `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(refreshToken)}`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "*/*",
+            // Remove Content-Type since we're not sending a JSON body
+            // Authorization header may still be needed if the API requires it
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Refresh token error:", errorData); // Debug
+        throw new Error(errorData.message || "Không thể làm mới token");
+      }
+
+      // Since the API returns 204, there may be no response body
+      // Check if the API sets the new token in headers or elsewhere
+      const newToken = response.headers.get("x-access-token"); // Adjust based on API behavior
+      if (newToken) {
+        localStorage.setItem("accessToken", newToken);
+      } else {
+        // If the API returns a JSON body (based on your original code), parse it
+        const data = await response.json();
+        localStorage.setItem("accessToken", data.data.newToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem("refreshToken", data.data.refreshToken);
+        }
+      }
+
+      await retryCallback();
+    } catch (error) {
+      console.error("Token refresh failed:", error);
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("authData");
+      // Chỉ chuyển hướng nếu cần
+      document.cookie =
+        "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      document.cookie =
+        "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      window.location.href = "/login";
+    }
+  };
   useEffect(() => {
     const fetchVouchers = async () => {
       try {
         const sampleResponse = await fetch(
           "https://backend-production-ac5e.up.railway.app/api/vouchers/samples",
-          { headers: { accept: "*/*" } }
+          {
+            headers: {
+              accept: "*/*",
+              authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
         );
+        if (sampleResponse.status === 401) {
+          await handleTokenExpiration(fetchVouchers);
+          return;
+        }
         if (sampleResponse.ok) {
           const sampleData = await sampleResponse.json();
           setAvailableVouchers(sampleData.pagedList);
@@ -137,8 +201,17 @@ const TableBookingPage = () => {
           const authData = JSON.parse(authDataString);
           const userResponse = await fetch(
             `https://backend-production-ac5e.up.railway.app/api/vouchers/of-user/${authData.userId}`,
-            { headers: { accept: "*/*" } }
+            {
+              headers: {
+                accept: "*/*",
+                authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+              },
+            }
           );
+          if (userResponse.status === 401) {
+            await handleTokenExpiration(fetchVouchers);
+            return;
+          }
           if (userResponse.ok) {
             const userData = await userResponse.json();
             setUserVouchers(userData.pagedList);
@@ -574,11 +647,15 @@ const TableBookingPage = () => {
           headers: {
             accept: "text/plain",
             "Content-Type": "application/json-patch+json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
           body: JSON.stringify(requestData),
         }
       );
-
+      if (response.status === 401) {
+        await handleTokenExpiration(() => handleConfirmBooking());
+        return;
+      }
       const responseText = await response.text();
       if (!response.ok) {
         throw new Error(responseText || `HTTP ${response.status}`);

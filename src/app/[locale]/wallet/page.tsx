@@ -30,7 +30,57 @@ function WalletPage() {
   const [errorTransactions, setErrorTransactions] = useState<string | null>(
     null
   );
+  const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
 
+  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
+    try {
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (!refreshToken) {
+        throw new Error("Không có refresh token, vui lòng đăng nhập lại");
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(
+          refreshToken
+        )}`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "*/*",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Không thể làm mới token");
+      }
+
+      const newToken = response.headers.get("x-access-token");
+      if (newToken) {
+        localStorage.setItem("accessToken", newToken);
+      } else {
+        const data = await response.json();
+        localStorage.setItem("accessToken", data.data.newToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem("refreshToken", data.data.refreshToken);
+        }
+      }
+
+      await retryCallback();
+    } catch (error) {
+      console.error("Token refresh failed:", error);
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("authData");
+      document.cookie =
+        "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      document.cookie =
+        "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      window.location.href = "/en/login";
+    }
+  };
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading, error } = useSelector(
     (state: RootState) => state.wallet
@@ -65,9 +115,20 @@ function WalletPage() {
     setErrorTransactions(null);
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/transactions/users/${userId}?page-number=${page}&page-size=${size}`
+        `https://backend-production-ac5e.up.railway.app/api/transactions/users/${userId}?page-number=${page}&page-size=${size}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            "Content-Type": "application/json",
+          },
+        }
       );
-
+      if (response.status === 401) {
+        await handleTokenExpiration(() =>
+          fetchTransactions(userId, currentPage, pageSize)
+        );
+        return;
+      }
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

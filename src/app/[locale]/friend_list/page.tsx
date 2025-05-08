@@ -4,7 +4,7 @@ import Banner from "@/components/banner/banner";
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
 import React, { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import {
   FiSearch,
   FiUserPlus,
@@ -118,6 +118,8 @@ export default function FriendManagementPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const { locale } = useParams();
+  const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
   const [userId, setUserId] = useState<number | null>(null);
   const [selectedUser, setSelectedUser] = useState<
     User | SearchFriendResult | null
@@ -125,15 +127,15 @@ export default function FriendManagementPage() {
   const [openProfileDialog, setOpenProfileDialog] = useState(false);
   const [isSendingRequest, setIsSendingRequest] = useState<{
     [key: number]: boolean;
-  }>({}); // Trạng thái loading cho từng yêu cầu kết bạn
+  }>({});
   const [isProcessingRequest, setIsProcessingRequest] = useState<{
     [key: number]: boolean;
-  }>({}); // Trạng thái loading cho chấp nhận/từ chối yêu cầu
+  }>({});
 
   useEffect(() => {
     const authDataString = localStorage.getItem("authData");
     if (!authDataString) {
-      router.push("/login");
+      router.push(`/${locale}/login`);
       return;
     }
 
@@ -146,22 +148,117 @@ export default function FriendManagementPage() {
       }
     } catch (error) {
       console.error("Lỗi phân tích dữ liệu xác thực:", error);
-      router.push("/login");
+      router.push(`/${locale}/login`);
     }
-  }, [router]);
+  }, [router, locale]);
+
+  let isRefreshing = false;
+  let refreshPromise: Promise<void> | null = null;
+
+  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
+    if (isRefreshing) {
+      await refreshPromise;
+      await retryCallback();
+      return;
+    }
+
+    isRefreshing = true;
+    refreshPromise = new Promise(async (resolve, reject) => {
+      try {
+        const refreshToken = localStorage.getItem("refreshToken");
+        if (!refreshToken) {
+          throw new Error("Không có refresh token, vui lòng đăng nhập lại");
+        }
+
+        console.log("Sending refreshToken:", refreshToken);
+        const response = await fetch(
+          `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(
+            refreshToken
+          )}`,
+          {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error("Lỗi refresh token:", errorData);
+          throw new Error(errorData || "Không thể làm mới token");
+        }
+
+        const data = await response.json();
+        if (!data.data?.newToken) {
+          throw new Error("Không có token mới trong phản hồi");
+        }
+
+        localStorage.setItem("accessToken", data.data.newToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem("refreshToken", data.data.refreshToken);
+        }
+
+        console.log("Refresh token thành công:", {
+          newToken: data.data.newToken,
+          newRefreshToken: data.data.refreshToken,
+        });
+
+        await retryCallback();
+        resolve();
+      } catch (error) {
+        // console.error("Refresh token thất bại:", error);
+        // localStorage.removeItem("accessToken");
+        // localStorage.removeItem("refreshToken");
+        // localStorage.removeItem("authData");
+        // document.cookie =
+        //   "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        // document.cookie =
+        //   "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        // router.push(`/${locale}/login`);
+        reject(error);
+      } finally {
+        isRefreshing = false;
+        refreshPromise = null;
+      }
+    });
+
+    await refreshPromise;
+  };
 
   const loadFriendRequests = useCallback(async () => {
     if (!userId) return;
 
     setIsLoading(true);
+    setError("");
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/friendrequests/to/${userId}`
+        `${API_BASE_URL}/api/friendrequests/to/${userId}`,
+        {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
       );
+
+      if (response.status === 401) {
+        await handleTokenExpiration(loadFriendRequests);
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể tải yêu cầu kết bạn");
+      }
+
       const data = await response.json();
       setFriendRequests(data.pagedList || []);
     } catch (err) {
-      setError("Không thể tải yêu cầu kết bạn");
+      setError(
+        err instanceof Error ? err.message : "Không thể tải yêu cầu kết bạn"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -171,14 +268,34 @@ export default function FriendManagementPage() {
     if (!userId) return;
 
     setIsLoading(true);
+    setError("");
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/friendlists/user/${userId}`
+        `${API_BASE_URL}/api/friendlists/user/${userId}`,
+        {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
       );
+
+      if (response.status === 401) {
+        await handleTokenExpiration(loadFriendList);
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể tải danh sách bạn bè");
+      }
+
       const data = await response.json();
       setFriendList(data.pagedList || []);
     } catch (err) {
-      setError("Không thể tải danh sách bạn bè");
+      setError(
+        err instanceof Error ? err.message : "Không thể tải danh sách bạn bè"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -195,15 +312,40 @@ export default function FriendManagementPage() {
     if (!searchTerm.trim() || !userId) return;
 
     setIsLoading(true);
+    setError("");
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/users/${userId}/search-friends?username=${searchTerm}`
+        `${API_BASE_URL}/api/users/${userId}/search-friends?username=${searchTerm}`,
+        {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
       );
+
+      if (response.status === 401) {
+        await handleTokenExpiration(handleSearch);
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Không tìm thấy người dùng");
+      }
+
       const data = await response.json();
       setSearchResults(data.pagedList || []);
       setActiveTab("search");
     } catch (err) {
-      toast.error("Không tìm thấy người dùng bạn đã tìm kiếm");
+      setError(
+        err instanceof Error ? err.message : "Không tìm thấy người dùng"
+      );
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Không tìm thấy người dùng bạn đã tìm kiếm"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -215,22 +357,27 @@ export default function FriendManagementPage() {
     setIsSendingRequest((prev) => ({ ...prev, [targetUserId]: true }));
 
     try {
-      const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/friendrequests`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            fromUser: userId,
-            toUser: targetUserId,
-          }),
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/api/friendrequests`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+        body: JSON.stringify({
+          fromUser: userId,
+          toUser: targetUserId,
+        }),
+      });
+
+      if (response.status === 401) {
+        await handleTokenExpiration(() => sendFriendRequest(targetUserId));
+        return;
+      }
 
       if (!response.ok) {
-        throw new Error("Gửi yêu cầu thất bại");
+        const errorData = await response.text();
+        throw new Error(errorData || "Gửi yêu cầu kết bạn thất bại");
       }
 
       setSearchResults((prevResults) =>
@@ -240,7 +387,9 @@ export default function FriendManagementPage() {
       );
       toast.success("Yêu cầu kết bạn đã được gửi");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gửi yêu cầu thất bại");
+      toast.error(
+        err instanceof Error ? err.message : "Gửi yêu cầu kết bạn thất bại"
+      );
     } finally {
       setIsSendingRequest((prev) => ({ ...prev, [targetUserId]: false }));
     }
@@ -253,14 +402,24 @@ export default function FriendManagementPage() {
 
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/friendrequests/sender/${userId}/receiver/${receiverId}`,
+        `${API_BASE_URL}/api/friendrequests/sender/${userId}/receiver/${receiverId}`,
         {
           method: "DELETE",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
         }
       );
 
+      if (response.status === 401) {
+        await handleTokenExpiration(() => cancelFriendRequest(receiverId));
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error("Hủy yêu cầu thất bại");
+        const errorData = await response.text();
+        throw new Error(errorData || "Hủy yêu cầu kết bạn thất bại");
       }
 
       setSearchResults((prevResults) =>
@@ -270,7 +429,9 @@ export default function FriendManagementPage() {
       );
       toast.success("Đã hủy yêu cầu kết bạn");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Hủy yêu cầu thất bại");
+      toast.error(
+        err instanceof Error ? err.message : "Hủy yêu cầu kết bạn thất bại"
+      );
     } finally {
       setIsSendingRequest((prev) => ({ ...prev, [receiverId]: false }));
     }
@@ -278,25 +439,44 @@ export default function FriendManagementPage() {
 
   const acceptFriendRequest = async (requestId: number) => {
     setIsProcessingRequest((prev) => ({ ...prev, [requestId]: true }));
+
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/friendrequests/accept/${requestId}`,
+        `${API_BASE_URL}/api/friendrequests/accept/${requestId}`,
         {
           method: "PUT",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
         }
       );
 
+      if (response.status === 401) {
+        await handleTokenExpiration(() => acceptFriendRequest(requestId));
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error("Chấp nhận yêu cầu thất bại");
+        const errorData = await response.text();
+        throw new Error(errorData || "Chấp nhận yêu cầu kết bạn thất bại");
       }
 
       await loadFriendRequests();
       await loadFriendList();
       toast.success("Đã chấp nhận yêu cầu kết bạn");
     } catch (err) {
-      loadFriendRequests();
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Chấp nhận yêu cầu kết bạn thất bại"
+      );
+      await loadFriendRequests();
       toast.error(
-        err instanceof Error ? err.message : "Chấp nhận yêu cầu thất bại"
+        err instanceof Error
+          ? err.message
+          : "Chấp nhận yêu cầu kết bạn thất bại"
       );
     } finally {
       setIsProcessingRequest((prev) => ({ ...prev, [requestId]: false }));
@@ -305,25 +485,40 @@ export default function FriendManagementPage() {
 
   const rejectFriendRequest = async (requestId: number) => {
     setIsProcessingRequest((prev) => ({ ...prev, [requestId]: true }));
+
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/friendrequests/reject/${requestId}`,
+        `${API_BASE_URL}/api/friendrequests/reject/${requestId}`,
         {
           method: "PUT",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
         }
       );
 
+      if (response.status === 401) {
+        await handleTokenExpiration(() => rejectFriendRequest(requestId));
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error("Từ chối yêu cầu thất bại");
+        const errorData = await response.text();
+        throw new Error(errorData || "Từ chối yêu cầu kết bạn thất bại");
       }
 
       await loadFriendRequests();
       await loadFriendList();
       toast.success("Đã từ chối yêu cầu kết bạn");
     } catch (err) {
-      loadFriendRequests();
+      setError(
+        err instanceof Error ? err.message : "Từ chối yêu cầu kết bạn thất bại"
+      );
+      await loadFriendRequests();
       toast.error(
-        err instanceof Error ? err.message : "Từ chối yêu cầu thất bại"
+        err instanceof Error ? err.message : "Từ chối yêu cầu kết bạn thất bại"
       );
     } finally {
       setIsProcessingRequest((prev) => ({ ...prev, [requestId]: false }));
@@ -334,20 +529,28 @@ export default function FriendManagementPage() {
     if (!userId) return;
 
     try {
-      const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/friendlists/${id}`,
-        {
-          method: "DELETE",
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/api/friendlists/${id}`, {
+        method: "DELETE",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
+
+      if (response.status === 401) {
+        await handleTokenExpiration(() => removeFriend(id));
+        return;
+      }
 
       if (!response.ok) {
-        throw new Error("Hủy kết bạn thất bại");
+        const errorData = await response.text();
+        throw new Error(errorData || "Hủy kết bạn thất bại");
       }
 
       await loadFriendList();
       toast.success("Đã hủy kết bạn");
     } catch (err) {
+      setError(err instanceof Error ? err.message : "Hủy kết bạn thất bại");
       toast.error(err instanceof Error ? err.message : "Hủy kết bạn thất bại");
     }
   };
@@ -422,7 +625,15 @@ export default function FriendManagementPage() {
       <Banner title="Quản lý bạn bè" subtitle="Kết nối với người chơi khác" />
 
       <div className="container mx-auto px-4 py-8 flex-grow">
-        {/* Thanh tìm kiếm */}
+        {error && (
+          <div
+            className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6"
+            role="alert"
+          >
+            <strong className="font-bold">Lỗi! </strong>
+            <span className="block sm:inline">{error}</span>
+          </div>
+        )}
         <div className="mb-8 max-w-2xl mx-auto">
           <div className="relative flex items-center gap-2">
             <Input
@@ -444,7 +655,6 @@ export default function FriendManagementPage() {
           </div>
         </div>
 
-        {/* Các tab */}
         <Tabs value={activeTab} className="mb-8">
           <TabsHeader>
             {tabsData.map(({ label, value }) => (

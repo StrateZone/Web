@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Typography, Spinner } from "@material-tailwind/react";
-import { useParams } from "next/navigation";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { DefaultPagination } from "@/components/pagination";
@@ -22,6 +21,12 @@ interface PointsData {
   contributionPoints: number;
 }
 
+interface PointHistoryResponse {
+  pagedList: PointHistory[];
+  totalPages: number;
+  totalCount: number;
+}
+
 const RewardHistoryPage = () => {
   const [history, setHistory] = useState<PointHistory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +38,7 @@ const RewardHistoryPage = () => {
   const [loadingPoints, setLoadingPoints] = useState(true);
   const [errorPoints, setErrorPoints] = useState<string | null>(null);
   const [orderBy, setOrderBy] = useState("created-at-desc");
+  const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
 
   const getUserId = () => {
     const authDataString = localStorage.getItem("authData");
@@ -41,90 +47,194 @@ const RewardHistoryPage = () => {
     return authData.userId;
   };
 
+  const getAccessToken = () => {
+    const accessTokenString = localStorage.getItem("accessToken");
+    if (!accessTokenString) return null;
+    return accessTokenString;
+  };
+
+  let isRefreshing = false;
+  let refreshPromise: Promise<void> | null = null;
+
+  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
+    if (isRefreshing) {
+      await refreshPromise;
+      await retryCallback();
+      return;
+    }
+
+    isRefreshing = true;
+    refreshPromise = new Promise(async (resolve, reject) => {
+      try {
+        const refreshToken = localStorage.getItem("refreshToken");
+        if (!refreshToken) {
+          throw new Error("Không có refresh token, vui lòng đăng nhập lại");
+        }
+
+        console.log("Sending refreshToken:", refreshToken);
+        const response = await fetch(
+          `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(refreshToken)}`,
+          {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error("Lỗi refresh token:", errorData);
+          throw new Error(errorData || "Không thể làm mới token");
+        }
+
+        const data = await response.json();
+        if (!data.data?.newToken) {
+          throw new Error("Không có token mới trong phản hồi");
+        }
+
+        localStorage.setItem("accessToken", data.data.newToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem("refreshToken", data.data.refreshToken);
+        }
+
+        console.log("Refresh token thành công:", {
+          newToken: data.data.newToken,
+          newRefreshToken: data.data.refreshToken,
+        });
+
+        await retryCallback();
+        resolve();
+      } catch (error) {
+        console.error("Refresh token thất bại:", error);
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        window.location.href = "/login";
+        reject(error);
+      } finally {
+        isRefreshing = false;
+        refreshPromise = null;
+      }
+    });
+
+    await refreshPromise;
+  };
+
+  const fetchPoints = async () => {
+    try {
+      setLoadingPoints(true);
+      setErrorPoints(null);
+
+      const userId = getUserId();
+      if (!userId) {
+        setErrorPoints("Vui lòng đăng nhập để xem điểm thưởng");
+        return;
+      }
+      const accessToken = getAccessToken();
+      const response = await fetch(
+        `${API_BASE_URL}/api/users/points/${userId}`,
+        {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (response.status === 401) {
+        await handleTokenExpiration(fetchPoints);
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể tải thông tin điểm");
+      }
+
+      const data = await response.json();
+      setPointsData(data);
+    } catch (error) {
+      console.error("Lỗi tải điểm thưởng:", error);
+      if (error instanceof Error) {
+        setErrorPoints(`Không thể tải thông tin điểm: ${error.message}`);
+      } else {
+        setErrorPoints("Không thể tải thông tin điểm: Lỗi không xác định");
+      }
+    } finally {
+      setLoadingPoints(false);
+    }
+  };
+
+  const fetchPointHistory = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const userId = getUserId();
+      const accessToken = getAccessToken();
+      if (!userId) {
+        setError("Vui lòng đăng nhập để xem lịch sử điểm thưởng!");
+        return;
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/points-history/of-user/${userId}?page-number=${currentPage}&page-size=10&order-by=${orderBy}`,
+        {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (response.status === 401) {
+        await handleTokenExpiration(fetchPointHistory);
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể tải lịch sử điểm thưởng");
+      }
+
+      const data: PointHistoryResponse = await response.json();
+      const formattedHistory = data.pagedList.map((item) => ({
+        id: item.id,
+        ofUser: item.ofUser,
+        description: item.description,
+        amount: item.amount,
+        content: item.content,
+        pointType: item.pointType,
+        createdAt: item.createdAt,
+      }));
+
+      setHistory(formattedHistory);
+      setTotalPages(data.totalPages);
+      setTotalCount(data.totalCount);
+    } catch (error) {
+      console.error("Lỗi tải lịch sử điểm thưởng:", error);
+      if (error instanceof Error) {
+        setError(`Không thể tải lịch sử điểm thưởng: ${error.message}`);
+      } else {
+        setError("Không thể tải lịch sử điểm thưởng: Lỗi không xác định");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchPointHistory = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const userId = getUserId();
-        if (!userId) {
-          setError("Vui lòng đăng nhập để xem lịch sử điểm thưởng!");
-          return;
-        }
-
-        const response = await fetch(
-          `https://backend-production-ac5e.up.railway.app/api/points-history/of-user/${userId}?page-number=${currentPage}&page-size=10&order-by=${orderBy}`,
-          {
-            headers: {
-              Accept: "*/*",
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Không thể tải lịch sử điểm thưởng");
-        }
-
-        const data = await response.json();
-
-        const formattedHistory = data.pagedList.map((item: any) => ({
-          id: item.id,
-          ofUser: item.ofUser,
-          description: item.description,
-          amount: item.amount,
-          content: item.content,
-          pointType: item.pointType,
-          createdAt: item.createdAt,
-        }));
-
-        setHistory(formattedHistory);
-        setTotalPages(data.totalPages);
-        setTotalCount(data.totalCount);
-      } catch (error) {
-        console.error("Error fetching point history:", error);
-        setError("Đã xảy ra lỗi khi tải lịch sử điểm thưởng");
-      } finally {
-        setLoading(false);
-      }
+    const fetchData = async () => {
+      await fetchPoints();
+      await fetchPointHistory();
     };
-
-    const fetchPoints = async () => {
-      try {
-        setLoadingPoints(true);
-        setErrorPoints(null);
-
-        const userId = getUserId();
-        if (!userId) {
-          setErrorPoints("Vui lòng đăng nhập để xem điểm thưởng");
-          return;
-        }
-
-        const response = await fetch(
-          `https://backend-production-ac5e.up.railway.app/api/users/points/${userId}`,
-          {
-            headers: {
-              Accept: "*/*",
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Không thể tải thông tin điểm");
-        }
-
-        const data = await response.json();
-        setPointsData(data);
-      } catch (error) {
-        console.error("Error fetching points:", error);
-        setErrorPoints("Đã xảy ra lỗi khi tải thông tin điểm");
-      } finally {
-        setLoadingPoints(false);
-      }
-    };
-
-    fetchPointHistory();
-    fetchPoints();
+    fetchData();
   }, [currentPage, orderBy]);
 
   const handlePageChange = (newPage: number) => {

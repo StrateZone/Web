@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Navbar from "@/components/navbar";
@@ -91,23 +92,18 @@ function getContrastColor(hexColor: string) {
   return luminance > 0.5 ? "#000000" : "#FFFFFF";
 }
 
-// Hàm làm sạch nội dung HTML
 const cleanContent = (htmlContent: string): string => {
-  // Loại bỏ các thẻ <span class="ql-ui" contenteditable="false">
   let cleanedContent = htmlContent.replace(
     /<span class="ql-ui" contenteditable="false"><\/span>/g,
     ""
   );
 
-  // Chuyển đổi <ol> thành <ul> nếu danh sách có data-list="bullet"
   cleanedContent = cleanedContent.replace(
     /<ol>([\s\S]*?(<li[^>]*data-list="bullet"[^>]*>[\s\S]*?)<\/ol>)/g,
     "<ul>$1</ul>"
   );
 
-  // Loại bỏ <p><br></p> ở cuối nếu có
   cleanedContent = cleanedContent.replace(/<p><br><\/p>$/, "");
-
   return cleanedContent;
 };
 
@@ -118,6 +114,7 @@ function PostDetailPage() {
   const { locale } = useParams();
   const [thread, setThread] = useState<Thread | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialLoading, setInitialLoading] = useState(true);
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
@@ -137,7 +134,6 @@ function PostDetailPage() {
     typeof window !== "undefined" ? localStorage.getItem("authData") : null;
   const parsedAuthData = authDataString ? JSON.parse(authDataString) : {};
   const userInfo = parsedAuthData.userInfo || {};
-  const token = parsedAuthData.token;
 
   const [currentUser] = useState({
     userId: userInfo.userId,
@@ -150,6 +146,82 @@ function PostDetailPage() {
   const [replyCommentContent, setReplyCommentContent] = useState("");
 
   const isTopContributor = thread?.createdByNavigation?.userLabel === 1;
+  const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
+
+  let isRefreshing = false;
+  let refreshPromise: Promise<void> | null = null;
+
+  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
+    if (isRefreshing) {
+      await refreshPromise;
+      await retryCallback();
+      return;
+    }
+
+    isRefreshing = true;
+    refreshPromise = new Promise(async (resolve, reject) => {
+      try {
+        const refreshToken = localStorage.getItem("refreshToken");
+        if (!refreshToken) {
+          throw new Error("Không có refresh token, vui lòng đăng nhập lại");
+        }
+
+        console.log("Sending refreshToken:", refreshToken);
+        const response = await fetch(
+          `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(
+            refreshToken
+          )}`,
+          {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error("Lỗi refresh token:", errorData);
+          throw new Error(errorData || "Không thể làm mới token");
+        }
+
+        const data = await response.json();
+        if (!data.data?.newToken) {
+          throw new Error("Không có token mới trong phản hồi");
+        }
+
+        localStorage.setItem("accessToken", data.data.newToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem("refreshToken", data.data.refreshToken);
+        }
+
+        console.log("Refresh token thành công:", {
+          newToken: data.data.newToken,
+          newRefreshToken: data.data.refreshToken,
+        });
+
+        await retryCallback();
+        resolve();
+      } catch (error) {
+        console.error("Refresh token thất bại:", error);
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        window.location.href = `/${locale}/login`;
+        reject(error);
+      } finally {
+        isRefreshing = false;
+        refreshPromise = null;
+      }
+    });
+
+    await refreshPromise;
+  };
 
   useEffect(() => {
     const checkUserMembership = () => {
@@ -184,14 +256,30 @@ function PostDetailPage() {
 
   const fetchMembershipPrice = async () => {
     try {
-      const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/prices/membership"
-      );
-      if (!response.ok) throw new Error("Failed to fetch membership price");
+      const response = await fetch(`${API_BASE_URL}/api/prices/membership`, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
+
+      if (response.status === 401) {
+        await handleTokenExpiration(fetchMembershipPrice);
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể lấy giá thành viên");
+      }
+
       const data: MembershipPrice = await response.json();
       setMembershipPrice(data);
     } catch (error) {
-      console.error("Error fetching membership price:", error);
+      console.error("Lỗi khi lấy giá thành viên:", error);
+      setError(
+        error instanceof Error ? error.message : "Lỗi khi lấy giá thành viên"
+      );
     }
   };
 
@@ -201,19 +289,25 @@ function PostDetailPage() {
     setPaymentProcessing(true);
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/payments/membership-payment/${userId}`,
+        `${API_BASE_URL}/api/payments/membership-payment/${userId}`,
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );
 
+      if (response.status === 401) {
+        await handleTokenExpiration(handleMembershipPayment);
+        return;
+      }
+
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.message || "Payment failed");
+        throw new Error(result.message || "Thanh toán thất bại");
       }
 
       if (result.success) {
@@ -250,7 +344,7 @@ function PostDetailPage() {
         }
       }
     } catch (error: any) {
-      console.error("Payment error:", error);
+      console.error("Lỗi thanh toán:", error);
 
       if (error.message && error.message.includes("Balance is not enough")) {
         try {
@@ -262,7 +356,7 @@ function PostDetailPage() {
             router.push(`/${locale}/wallet`);
           }
         } catch (swalError) {
-          console.error("Popup error:", swalError);
+          console.error("Lỗi popup:", swalError);
         }
       } else {
         Swal.fire({
@@ -283,20 +377,30 @@ function PostDetailPage() {
 
   const fetchData = async () => {
     try {
-      const threadResponse = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/threads/${id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (!threadResponse.ok) {
-        throw new Error(`HTTP error! status: ${threadResponse.status}`);
+      setLoading(true);
+      setError(null);
+
+      const threadResponse = await fetch(`${API_BASE_URL}/api/threads/${id}`, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
+
+      if (threadResponse.status === 401) {
+        await handleTokenExpiration(fetchData);
+        return;
       }
+
+      if (!threadResponse.ok) {
+        const errorData = await threadResponse.text();
+        throw new Error(
+          errorData || `Lỗi HTTP! trạng thái: ${threadResponse.status}`
+        );
+      }
+
       const threadData = await threadResponse.json();
 
-      // Allow post owner to view edit_pending or pending posts
       if (
         threadData.status !== "published" &&
         threadData.createdBy !== userId &&
@@ -323,8 +427,25 @@ function PostDetailPage() {
 
       if (threadData.status === "published") {
         const commentsResponse = await fetch(
-          `https://backend-production-ac5e.up.railway.app/api/comments/thread/${id}`
+          `${API_BASE_URL}/api/comments/thread/${id}`,
+          {
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
         );
+
+        if (commentsResponse.status === 401) {
+          await handleTokenExpiration(fetchData);
+          return;
+        }
+
+        if (!commentsResponse.ok) {
+          const errorData = await commentsResponse.text();
+          throw new Error(errorData || "Không thể lấy bình luận");
+        }
+
         let commentsData = await commentsResponse.json();
 
         const commentsMap = new Map<number, Comment>();
@@ -363,10 +484,13 @@ function PostDetailPage() {
         setComments([]);
       }
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Lỗi khi tải dữ liệu:", error);
       setHasPermission(false);
-      toast.error("Không thể tải bài viết hoặc bạn không có quyền xem.");
-      router.push(`/${locale}/community`);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải bài viết hoặc bạn không có quyền xem"
+      );
     } finally {
       setLoading(false);
     }
@@ -384,22 +508,25 @@ function PostDetailPage() {
 
     setIsLoadingMainComment(true);
     try {
-      const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/comments",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            threadId: parseInt(id),
-            userId: currentUser.userId,
-            content: mainCommentContent,
-            replyTo: null,
-          }),
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/api/comments`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+        body: JSON.stringify({
+          threadId: parseInt(id),
+          userId: currentUser.userId,
+          content: mainCommentContent,
+          replyTo: null,
+        }),
+      });
+
+      if (response.status === 401) {
+        await handleTokenExpiration(() => handleSubmitMainComment(e));
+        return;
+      }
 
       if (response.ok) {
         const newComment = await response.json();
@@ -417,12 +544,16 @@ function PostDetailPage() {
         setMainCommentContent("");
         toast.success("Bình luận đã được đăng");
       } else {
-        const errorData = await response.json();
-        toast.error("Ngôn từ không phù hợp");
+        const errorData = await response.text();
+        throw new Error(errorData || "Ngôn từ không phù hợp");
       }
     } catch (error) {
-      console.error("Error posting comment:", error);
-      toast.error("Có lỗi xảy ra khi đăng bình luận");
+      console.error("Lỗi khi đăng bình luận:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra khi đăng bình luận"
+      );
     } finally {
       setIsLoadingMainComment(false);
     }
@@ -433,22 +564,25 @@ function PostDetailPage() {
     if (!replyCommentContent.trim() || !replyingTo) return;
 
     try {
-      const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/comments",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            threadId: parseInt(id),
-            userId: currentUser.userId,
-            content: replyCommentContent,
-            replyTo: replyingTo,
-          }),
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/api/comments`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+        body: JSON.stringify({
+          threadId: parseInt(id),
+          userId: currentUser.userId,
+          content: replyCommentContent,
+          replyTo: replyingTo,
+        }),
+      });
+
+      if (response.status === 401) {
+        await handleTokenExpiration(() => handleSubmitReply(e));
+        return;
+      }
 
       if (response.ok) {
         const newComment = await response.json();
@@ -501,10 +635,17 @@ function PostDetailPage() {
         setReplyCommentContent("");
         setReplyingTo(null);
         toast.success("Bình luận đã được đăng");
+      } else {
+        const errorData = await response.text();
+        throw new Error(errorData || "Ngôn từ không phù hợp");
       }
     } catch (error) {
-      console.error("Error posting reply:", error);
-      toast.error("Có lỗi xảy ra khi đăng bình luận");
+      console.error("Lỗi khi đăng trả lời:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra khi đăng trả lời"
+      );
     }
   };
 
@@ -514,15 +655,27 @@ function PostDetailPage() {
 
     try {
       if (thread.isLiked && thread.likeId) {
-        await fetch(
-          `https://backend-production-ac5e.up.railway.app/api/likes/${thread.likeId}`,
+        const response = await fetch(
+          `${API_BASE_URL}/api/likes/${thread.likeId}`,
           {
             method: "DELETE",
             headers: {
-              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
           }
         );
+
+        if (response.status === 401) {
+          await handleTokenExpiration(handleLikeThread);
+          return;
+        }
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          throw new Error(errorData || "Không thể bỏ thích bài viết");
+        }
+
         setThread({
           ...thread,
           likesCount: thread.likesCount - 1,
@@ -530,20 +683,29 @@ function PostDetailPage() {
           likeId: null,
         });
       } else {
-        const response = await fetch(
-          "https://backend-production-ac5e.up.railway.app/api/likes",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              userId: currentUser.userId,
-              threadId: thread.threadId,
-            }),
-          }
-        );
+        const response = await fetch(`${API_BASE_URL}/api/likes`, {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+          body: JSON.stringify({
+            userId: currentUser.userId,
+            threadId: thread.threadId,
+          }),
+        });
+
+        if (response.status === 401) {
+          await handleTokenExpiration(handleLikeThread);
+          return;
+        }
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          throw new Error(errorData || "Không thể thích bài viết");
+        }
+
         const data = await response.json();
         setThread({
           ...thread,
@@ -553,8 +715,12 @@ function PostDetailPage() {
         });
       }
     } catch (error) {
-      console.error("Error toggling thread like:", error);
-      toast.error("Có lỗi xảy ra khi thực hiện thao tác");
+      console.error("Lỗi khi thích/bỏ thích bài viết:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra khi thực hiện thao tác"
+      );
     } finally {
       setIsLoadingLike(false);
     }
@@ -570,43 +736,70 @@ function PostDetailPage() {
 
     try {
       if (currentLikeStatus && currentLikeId) {
-        await fetch(
-          `https://backend-production-ac5e.up.railway.app/api/likes/${currentLikeId}`,
+        const response = await fetch(
+          `${API_BASE_URL}/api/likes/${currentLikeId}`,
           {
             method: "DELETE",
             headers: {
-              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
           }
         );
+
+        if (response.status === 401) {
+          await handleTokenExpiration(() =>
+            handleLikeComment(commentId, currentLikeStatus, currentLikeId)
+          );
+          return;
+        }
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          throw new Error(errorData || "Không thể bỏ thích bình luận");
+        }
 
         setComments((prevComments) =>
           updateCommentLikes(prevComments, commentId, false, null, -1)
         );
       } else {
-        const response = await fetch(
-          "https://backend-production-ac5e.up.railway.app/api/likes",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              userId: currentUser.userId,
-              commentId: commentId,
-            }),
-          }
-        );
-        const data = await response.json();
+        const response = await fetch(`${API_BASE_URL}/api/likes`, {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+          body: JSON.stringify({
+            userId: currentUser.userId,
+            commentId: commentId,
+          }),
+        });
 
+        if (response.status === 401) {
+          await handleTokenExpiration(() =>
+            handleLikeComment(commentId, currentLikeStatus, currentLikeId)
+          );
+          return;
+        }
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          throw new Error(errorData || "Không thể thích bình luận");
+        }
+
+        const data = await response.json();
         setComments((prevComments) =>
           updateCommentLikes(prevComments, commentId, true, data.id, 1)
         );
       }
     } catch (error) {
-      console.error("Error toggling comment like:", error);
-      toast.error("Có lỗi xảy ra khi thực hiện thao tác");
+      console.error("Lỗi khi thích/bỏ thích bình luận:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra khi thực hiện thao tác"
+      );
     } finally {
       setIsLoadingCommentLike(false);
     }
@@ -833,6 +1026,14 @@ function PostDetailPage() {
           {loading ? (
             <div className="flex-1 flex items-center justify-center mt-10">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          ) : error ? (
+            <div
+              className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+              role="alert"
+            >
+              <strong className="font-bold">Lỗi! </strong>
+              <span className="block sm:inline">{error}</span>
             </div>
           ) : hasPermission === false ? (
             <div className="text-center py-12">
@@ -1131,7 +1332,7 @@ const getStatusBadge = (status: string) => {
     default:
       return (
         <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded">
-          Unknown
+          Không xác định
         </span>
       );
   }
