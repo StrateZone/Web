@@ -35,6 +35,7 @@ import { InsufficientBalancePopup } from "../../chess_appointment/chess_appointm
 import DOMPurify from "dompurify";
 import TermsDialog from "../../chess_appointment/chess_category/TermsDialog";
 import { MembershipUpgradeDialog } from "../MembershipUpgradeDialog ";
+import axios from "axios";
 
 // Interface for user data from /api/users/${userId}
 interface User {
@@ -140,6 +141,7 @@ function BlogHistory() {
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const [openTermsDialog, setOpenTermsDialog] = useState(false);
+  const [error, setError] = useState("");
   const router = useRouter();
   const pageSize = 10;
   const { locale } = useParams();
@@ -164,26 +166,25 @@ function BlogHistory() {
         }
 
         console.log("Sending refreshToken:", refreshToken);
-        const response = await fetch(
+        const response = await axios.post(
           `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(
             refreshToken
           )}`,
+          {},
           {
-            method: "POST",
             headers: {
               Accept: "application/json",
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+              "Content-Type": "application/json; charset=utf-8",
             },
           }
         );
 
-        if (!response.ok) {
-          const errorData = await response.text();
-          console.error("Lỗi refresh token:", errorData);
-          throw new Error(errorData || "Không thể làm mới token");
+        if (response.status !== 200) {
+          throw new Error("Không thể làm mới token");
         }
 
-        const data = await response.json();
+        const data = response.data;
         if (!data.data?.newToken) {
           throw new Error("Không có token mới trong phản hồi");
         }
@@ -202,14 +203,7 @@ function BlogHistory() {
         resolve();
       } catch (error) {
         console.error("Refresh token thất bại:", error);
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("authData");
-        document.cookie =
-          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-        document.cookie =
-          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-        window.location.href = `/${locale}/login`;
+
         reject(error);
       } finally {
         isRefreshing = false;
@@ -267,10 +261,11 @@ function BlogHistory() {
         throw new Error("Không có access token, vui lòng đăng nhập lại");
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+      const response = await axios.get(`${API_BASE_URL}/api/users/${userId}`, {
         headers: {
           Accept: "application/json",
           Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json; charset=utf-8",
         },
       });
 
@@ -281,14 +276,7 @@ function BlogHistory() {
         return null;
       }
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(
-          errorData || `Không thể lấy dữ liệu người dùng ${userId}`
-        );
-      }
-
-      return await response.json();
+      return response.data;
     } catch (error) {
       console.error(`Lỗi lấy dữ liệu người dùng ${userId}:`, error);
       return null;
@@ -326,39 +314,44 @@ function BlogHistory() {
       } catch (error) {
         console.error("Lỗi phân tích dữ liệu xác thực:", error);
         setIsLoggedIn(false);
+        setError("Dữ liệu xác thực không hợp lệ. Vui lòng đăng nhập lại.");
         toast.error("Dữ liệu xác thực không hợp lệ. Vui lòng đăng nhập lại.");
+        router.push(`/${locale}/login`);
       } finally {
         setInitialLoading(false);
       }
     };
 
     checkUserMembership();
-  }, [locale]);
+  }, [locale, router]);
 
   const fetchMembershipPrice = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/prices/membership`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
-      });
+      setError("");
+      const response = await axios.get(
+        `${API_BASE_URL}/api/prices/membership`,
+        {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            "Content-Type": "application/json; charset=utf-8",
+          },
+        }
+      );
 
       if (response.status === 401) {
         await handleTokenExpiration(fetchMembershipPrice);
         return;
       }
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(errorData || "Không thể lấy giá thành viên");
-      }
-
-      const data: MembershipPrice = await response.json();
-      setMembershipPrice(data);
+      setMembershipPrice(response.data);
     } catch (error) {
       console.error("Lỗi lấy giá thành viên:", error);
+      setError(error.response?.data?.message || "Không thể tải giá thành viên");
+      toast.error(
+        error.response?.data?.message ||
+          "Không thể tải giá thành viên. Vui lòng thử lại."
+      );
     }
   };
 
@@ -367,13 +360,14 @@ function BlogHistory() {
 
     setPaymentProcessing(true);
     try {
-      const response = await fetch(
+      const response = await axios.post(
         `${API_BASE_URL}/api/payments/membership-payment/${userId}`,
+        {},
         {
-          method: "POST",
           headers: {
             Accept: "application/json",
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            "Content-Type": "application/json; charset=utf-8",
           },
         }
       );
@@ -383,9 +377,8 @@ function BlogHistory() {
         return;
       }
 
-      const result = await response.json();
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Thanh toán thất bại");
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Thanh toán thất bại");
       }
 
       const userData = localStorage.getItem("authData");
@@ -417,9 +410,9 @@ function BlogHistory() {
           }
         );
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Lỗi thanh toán:", error);
-
+      setError(error.response?.data?.message || "Thanh toán thất bại");
       if (error.message && error.message.includes("Balance is not enough")) {
         try {
           const shouldNavigate = await InsufficientBalancePopup({
@@ -435,7 +428,7 @@ function BlogHistory() {
       } else {
         Swal.fire({
           title: "Lỗi",
-          text: error.message || "Đã xảy ra lỗi khi thanh toán",
+          text: error.response?.data?.message || "Đã xảy ra lỗi khi thanh toán",
           icon: "error",
           confirmButtonText: "Đóng",
         });
@@ -455,12 +448,14 @@ function BlogHistory() {
 
       try {
         setIsLoading(true);
-        const response = await fetch(
+        setError("");
+        const response = await axios.get(
           `${API_BASE_URL}/api/threads/user/${userId}?page-number=${currentPage}&page-size=${pageSize}`,
           {
             headers: {
               Accept: "application/json",
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+              "Content-Type": "application/json; charset=utf-8",
             },
           }
         );
@@ -470,12 +465,7 @@ function BlogHistory() {
           return;
         }
 
-        if (!response.ok) {
-          const errorData = await response.text();
-          throw new Error(errorData || "Không thể lấy danh sách bài viết");
-        }
-
-        const data: ApiResponse = await response.json();
+        const data: ApiResponse = response.data;
         setThreads(data.pagedList);
         setTotalPages(data.totalPages);
         setTotalCount(data.totalCount);
@@ -496,15 +486,22 @@ function BlogHistory() {
         setUserCache(newUserCache);
       } catch (error) {
         console.error("Lỗi lấy danh sách bài viết:", error);
-        toast.error("Không thể tải danh sách bài viết.", {
-          style: {
-            background: "#FFEBEE",
-            color: "#D32F2F",
-            fontWeight: "500",
-            borderRadius: "8px",
-            padding: "12px",
-          },
-        });
+        setError(
+          error.response?.data?.message || "Không thể tải danh sách bài viết"
+        );
+        toast.error(
+          error.response?.data?.message ||
+            "Không thể tải danh sách bài viết. Vui lòng thử lại.",
+          {
+            style: {
+              background: "#FFEBEE",
+              color: "#D32F2F",
+              fontWeight: "500",
+              borderRadius: "8px",
+              padding: "12px",
+            },
+          }
+        );
       } finally {
         setIsLoading(false);
       }
@@ -591,13 +588,14 @@ function BlogHistory() {
 
     setIsDeleting(true);
     try {
-      const response = await fetch(
+      setError("");
+      const response = await axios.delete(
         `${API_BASE_URL}/api/threads/${threadIdToDelete}`,
         {
-          method: "DELETE",
           headers: {
             Accept: "application/json",
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            "Content-Type": "application/json; charset=utf-8",
           },
         }
       );
@@ -607,18 +605,14 @@ function BlogHistory() {
         return;
       }
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(errorData || "Không thể xóa bài viết");
-      }
-
       try {
-        const fetchResponse = await fetch(
+        const fetchResponse = await axios.get(
           `${API_BASE_URL}/api/threads/user/${userId}?page-number=${currentPage}&page-size=${pageSize}`,
           {
             headers: {
               Accept: "application/json",
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+              "Content-Type": "application/json; charset=utf-8",
             },
           }
         );
@@ -628,11 +622,7 @@ function BlogHistory() {
           return;
         }
 
-        if (!fetchResponse.ok) {
-          throw new Error("Không thể lấy danh sách bài viết sau khi xóa");
-        }
-
-        const data: ApiResponse = await fetchResponse.json();
+        const data: ApiResponse = fetchResponse.data;
         setThreads(data.pagedList);
         setTotalPages(data.totalPages);
         setTotalCount(data.totalCount);
@@ -673,15 +663,22 @@ function BlogHistory() {
       }
     } catch (error) {
       console.error("Lỗi xóa bài viết:", error);
-      toast.error("Đã xảy ra lỗi khi xóa bài viết.", {
-        style: {
-          background: "#FFEBEE",
-          color: "#D32F2F",
-          fontWeight: "500",
-          borderRadius: "8px",
-          padding: "12px",
-        },
-      });
+      setError(
+        error.response?.data?.message || "Đã xảy ra lỗi khi xóa bài viết"
+      );
+      toast.error(
+        error.response?.data?.message ||
+          "Đã xảy ra lỗi khi xóa bài viết. Vui lòng thử lại.",
+        {
+          style: {
+            background: "#FFEBEE",
+            color: "#D32F2F",
+            fontWeight: "500",
+            borderRadius: "8px",
+            padding: "12px",
+          },
+        }
+      );
     } finally {
       setIsDeleting(false);
       setOpenDeleteDialog(false);
@@ -694,13 +691,15 @@ function BlogHistory() {
 
     setIsHiding(true);
     try {
-      const response = await fetch(
+      setError("");
+      const response = await axios.put(
         `${API_BASE_URL}/api/threads/hide/${threadIdToHide}`,
+        {},
         {
-          method: "PUT",
           headers: {
             Accept: "application/json",
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            "Content-Type": "application/json; charset=utf-8",
           },
         }
       );
@@ -710,18 +709,14 @@ function BlogHistory() {
         return;
       }
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(errorData || "Không thể ẩn bài viết");
-      }
-
       try {
-        const fetchResponse = await fetch(
+        const fetchResponse = await axios.get(
           `${API_BASE_URL}/api/threads/user/${userId}?page-number=${currentPage}&page-size=${pageSize}`,
           {
             headers: {
               Accept: "application/json",
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+              "Content-Type": "application/json; charset=utf-8",
             },
           }
         );
@@ -731,11 +726,7 @@ function BlogHistory() {
           return;
         }
 
-        if (!fetchResponse.ok) {
-          throw new Error("Không thể lấy danh sách bài viết sau khi ẩn");
-        }
-
-        const data: ApiResponse = await fetchResponse.json();
+        const data: ApiResponse = fetchResponse.data;
         setThreads(data.pagedList);
         setTotalPages(data.totalPages);
         setTotalCount(data.totalCount);
@@ -776,15 +767,22 @@ function BlogHistory() {
       }
     } catch (error) {
       console.error("Lỗi ẩn bài viết:", error);
-      toast.error("Đã xảy ra lỗi khi ẩn bài viết.", {
-        style: {
-          background: "#FFEBEE",
-          color: "#D32F2F",
-          fontWeight: "500",
-          borderRadius: "8px",
-          padding: "12px",
-        },
-      });
+      setError(
+        error.response?.data?.message || "Đã xảy ra lỗi khi ẩn bài viết"
+      );
+      toast.error(
+        error.response?.data?.message ||
+          "Đã xảy ra lỗi khi ẩn bài viết. Vui lòng thử lại.",
+        {
+          style: {
+            background: "#FFEBEE",
+            color: "#D32F2F",
+            fontWeight: "500",
+            borderRadius: "8px",
+            padding: "12px",
+          },
+        }
+      );
     } finally {
       setIsHiding(false);
       setOpenHideDialog(false);
@@ -797,13 +795,15 @@ function BlogHistory() {
 
     setIsShowing(true);
     try {
-      const response = await fetch(
+      setError("");
+      const response = await axios.put(
         `${API_BASE_URL}/api/threads/show/${threadIdToShow}`,
+        {},
         {
-          method: "PUT",
           headers: {
             Accept: "application/json",
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            "Content-Type": "application/json; charset=utf-8",
           },
         }
       );
@@ -813,18 +813,14 @@ function BlogHistory() {
         return;
       }
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(errorData || "Không thể hiển thị bài viết");
-      }
-
       try {
-        const fetchResponse = await fetch(
+        const fetchResponse = await axios.get(
           `${API_BASE_URL}/api/threads/user/${userId}?page-number=${currentPage}&page-size=${pageSize}`,
           {
             headers: {
               Accept: "application/json",
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+              "Content-Type": "application/json; charset=utf-8",
             },
           }
         );
@@ -834,11 +830,7 @@ function BlogHistory() {
           return;
         }
 
-        if (!fetchResponse.ok) {
-          throw new Error("Không thể lấy danh sách bài viết sau khi hiển thị");
-        }
-
-        const data: ApiResponse = await fetchResponse.json();
+        const data: ApiResponse = fetchResponse.data;
         setThreads(data.pagedList);
         setTotalPages(data.totalPages);
         setTotalCount(data.totalCount);
@@ -879,15 +871,22 @@ function BlogHistory() {
       }
     } catch (error) {
       console.error("Lỗi hiển thị bài viết:", error);
-      toast.error("Đã xảy ra lỗi khi hiển thị bài viết.", {
-        style: {
-          background: "#FFEBEE",
-          color: "#D32F2F",
-          fontWeight: "500",
-          borderRadius: "8px",
-          padding: "12px",
-        },
-      });
+      setError(
+        error.response?.data?.message || "Đã xảy ra lỗi khi hiển thị bài viết"
+      );
+      toast.error(
+        error.response?.data?.message ||
+          "Đã xảy ra lỗi khi hiển thị bài viết. Vui lòng thử lại.",
+        {
+          style: {
+            background: "#FFEBEE",
+            color: "#D32F2F",
+            fontWeight: "500",
+            borderRadius: "8px",
+            padding: "12px",
+          },
+        }
+      );
     } finally {
       setIsShowing(false);
       setOpenShowDialog(false);
@@ -903,24 +902,24 @@ function BlogHistory() {
     if (!currentUser.userId) return;
 
     try {
+      setError("");
       if (isLiked && likeId) {
-        const response = await fetch(`${API_BASE_URL}/api/likes/${likeId}`, {
-          method: "DELETE",
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
+        const response = await axios.delete(
+          `${API_BASE_URL}/api/likes/${likeId}`,
+          {
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+              "Content-Type": "application/json; charset=utf-8",
+            },
+          }
+        );
 
         if (response.status === 401) {
           await handleTokenExpiration(() =>
             handleLike(threadId, isLiked, likeId)
           );
           return;
-        }
-
-        if (!response.ok) {
-          throw new Error("Không thể bỏ thích bài viết");
         }
 
         setThreads((prevThreads) =>
@@ -936,17 +935,20 @@ function BlogHistory() {
           })
         );
       } else {
-        const response = await fetch(`${API_BASE_URL}/api/likes`, {
-          method: "POST",
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-          body: JSON.stringify({
+        const response = await axios.post(
+          `${API_BASE_URL}/api/likes`,
+          {
             userId: currentUser.userId,
             threadId: threadId,
-          }),
-        });
+          },
+          {
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+              "Content-Type": "application/json; charset=utf-8",
+            },
+          }
+        );
 
         if (response.status === 401) {
           await handleTokenExpiration(() =>
@@ -955,12 +957,7 @@ function BlogHistory() {
           return;
         }
 
-        if (!response.ok) {
-          const errorData = await response.text();
-          throw new Error(errorData || "Không thể thích bài viết");
-        }
-
-        const data = await response.json();
+        const data = response.data;
         setThreads((prevThreads) =>
           prevThreads.map((thread) => {
             if (thread.threadId === threadId) {
@@ -976,15 +973,23 @@ function BlogHistory() {
       }
     } catch (error) {
       console.error("Lỗi thực hiện hành động thích:", error);
-      toast.error("Không thể thực hiện hành động thích bài viết.", {
-        style: {
-          background: "#FFEBEE",
-          color: "#D32F2F",
-          fontWeight: "500",
-          borderRadius: "8px",
-          padding: "12px",
-        },
-      });
+      setError(
+        error.response?.data?.message ||
+          "Không thể thực hiện hành động thích bài viết"
+      );
+      toast.error(
+        error.response?.data?.message ||
+          "Không thể thực hiện hành động thích bài viết. Vui lòng thử lại.",
+        {
+          style: {
+            background: "#FFEBEE",
+            color: "#D32F2F",
+            fontWeight: "500",
+            borderRadius: "8px",
+            padding: "12px",
+          },
+        }
+      );
     }
   };
 
@@ -1081,6 +1086,15 @@ function BlogHistory() {
 
       {userRole === "Member" ? (
         <div className="container mx-auto px-4 py-8 flex-grow">
+          {error && (
+            <div
+              className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6"
+              role="alert"
+            >
+              <strong className="font-bold">Lỗi! </strong>
+              <span className="block sm:inline">{error}</span>
+            </div>
+          )}
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>

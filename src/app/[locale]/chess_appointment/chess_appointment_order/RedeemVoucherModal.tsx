@@ -79,14 +79,14 @@ const RedeemVoucherModal = ({
       await retryCallback();
     } catch (error) {
       console.error("Token refresh failed:", error);
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("authData");
-      // Chỉ chuyển hướng nếu cần
-      document.cookie =
-        "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-      document.cookie =
-        "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      // localStorage.removeItem("accessToken");
+      // localStorage.removeItem("refreshToken");
+      // localStorage.removeItem("authData");
+      // // Chỉ chuyển hướng nếu cần
+      // document.cookie =
+      //   "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      // document.cookie =
+      //   "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
       window.location.href = "/login";
     }
   };

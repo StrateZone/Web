@@ -71,14 +71,14 @@ function WalletPage() {
       await retryCallback();
     } catch (error) {
       console.error("Token refresh failed:", error);
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("authData");
-      document.cookie =
-        "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-      document.cookie =
-        "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-      window.location.href = "/en/login";
+      // localStorage.removeItem("accessToken");
+      // localStorage.removeItem("refreshToken");
+      // localStorage.removeItem("authData");
+      // document.cookie =
+      //   "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      // document.cookie =
+      //   "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      // window.location.href = "/en/login";
     }
   };
   const dispatch = useDispatch<AppDispatch>();
