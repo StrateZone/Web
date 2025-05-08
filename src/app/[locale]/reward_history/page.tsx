@@ -219,7 +219,11 @@ const RewardHistoryPage = () => {
       setTotalCount(data.totalCount);
     } catch (error) {
       console.error("Lỗi tải lịch sử điểm thưởng:", error);
-      setError(`Không thể tải lịch sử điểm thưởng: ${error.message}`);
+      if (error instanceof Error) {
+        setError(`Không thể tải lịch sử điểm thưởng: ${error.message}`);
+      } else {
+        setError("Không thể tải lịch sử điểm thưởng: Lỗi không xác định");
+      }
     } finally {
       setLoading(false);
     }
