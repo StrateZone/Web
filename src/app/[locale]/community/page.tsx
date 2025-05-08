@@ -96,7 +96,63 @@ export default function CommunityPage() {
 
   const activeButtonClass = "bg-blue-100 font-semibold text-blue-800";
   const inactiveButtonClass = "text-gray-700 hover:bg-gray-100";
+  const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
 
+  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
+    try {
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (!refreshToken) {
+        throw new Error("Không có refresh token, vui lòng đăng nhập lại");
+      }
+
+      console.log("Sending refreshToken:", refreshToken); // Debug
+      const response = await fetch(
+        `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(refreshToken)}`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "*/*",
+            // Remove Content-Type since we're not sending a JSON body
+            // Authorization header may still be needed if the API requires it
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Refresh token error:", errorData); // Debug
+        throw new Error(errorData.message || "Không thể làm mới token");
+      }
+
+      // Since the API returns 204, there may be no response body
+      // Check if the API sets the new token in headers or elsewhere
+      const newToken = response.headers.get("x-access-token"); // Adjust based on API behavior
+      if (newToken) {
+        localStorage.setItem("accessToken", newToken);
+      } else {
+        // If the API returns a JSON body (based on your original code), parse it
+        const data = await response.json();
+        localStorage.setItem("accessToken", data.data.newToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem("refreshToken", data.data.refreshToken);
+        }
+      }
+
+      await retryCallback();
+    } catch (error) {
+      console.error("Token refresh failed:", error);
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("authData");
+      // Chỉ chuyển hướng nếu cần
+      document.cookie =
+        "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      document.cookie =
+        "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      window.location.href = "/vn/login";
+    }
+  };
   useEffect(() => {
     const checkUserMembership = () => {
       const authDataString = localStorage.getItem("authData");
@@ -156,7 +212,9 @@ export default function CommunityPage() {
       }
 
       if (selectedTags.length > 0) {
-        url += `&TagIds=${selectedTags.join(",")}`;
+        selectedTags.forEach((tagId) => {
+          url += `&TagIds=${tagId}`;
+        });
       }
 
       if (searchQuery.trim()) {
@@ -167,12 +225,8 @@ export default function CommunityPage() {
       if (!response.ok) throw new Error("Failed to fetch threads");
       const data: PaginatedResponse = await response.json();
 
-      const processedThreads = data.pagedList.map((thread) => ({
-        ...thread,
-        commentsCount: thread.comments?.length || 0,
-      }));
-
-      setThreads(processedThreads);
+      // Không ghi đè commentsCount, sử dụng giá trị từ API
+      setThreads(data.pagedList);
       setTotalPages(data.totalPages);
     } catch (error) {
       console.error("Error fetching threads:", error);
@@ -187,8 +241,18 @@ export default function CommunityPage() {
     try {
       setTagLoading(true);
       const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/tags"
+        "https://backend-production-ac5e.up.railway.app/api/tags",
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
       );
+      if (response.status === 401) {
+        await handleTokenExpiration(() => fetchThreads());
+        return;
+      }
       if (!response.ok) throw new Error("Failed to fetch tags");
       const data: Tag[] = await response.json();
       setTags(data);
@@ -203,8 +267,18 @@ export default function CommunityPage() {
   const fetchMembershipPrice = async () => {
     try {
       const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/prices/membership"
+        "https://backend-production-ac5e.up.railway.app/api/prices/membership",
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
       );
+      if (response.status === 401) {
+        await handleTokenExpiration(() => fetchMembershipPrice());
+        return;
+      }
       if (!response.ok) throw new Error("Failed to fetch membership price");
       const data: MembershipPrice = await response.json();
       setMembershipPrice(data);
@@ -247,10 +321,14 @@ export default function CommunityPage() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );
-
+      if (response.status === 401) {
+        await handleTokenExpiration(() => handleMembershipPayment());
+        return;
+      }
       const result = await response.json();
 
       if (!response.ok || !result.success) {

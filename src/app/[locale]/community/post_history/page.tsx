@@ -36,6 +36,14 @@ import DOMPurify from "dompurify";
 import TermsDialog from "../../chess_appointment/chess_category/TermsDialog";
 import { MembershipUpgradeDialog } from "../MembershipUpgradeDialog ";
 
+// Interface for user data from /api/users/${userId}
+interface User {
+  userId: number;
+  username: string;
+  avatarUrl: string;
+  fullName?: string;
+}
+
 interface Thread {
   threadId: number;
   createdBy: number;
@@ -44,6 +52,9 @@ interface Thread {
   content: string;
   rating: number;
   likesCount: number;
+  commentsCount: number;
+  isUserLiked: boolean;
+  updateOfThread: null;
   status:
     | "pending"
     | "published"
@@ -55,24 +66,25 @@ interface Thread {
   createdAt: string;
   updatedAt: string | null;
   comments: Comment[];
-  createdByNavigation: {
-    userId: number;
-    username: string;
-    avatarUrl: string;
-  };
-  threadsTags: {
-    id: number;
-    tagId: number;
-    tag: {
-      tagId: number;
-      tagName: string;
-    };
-  }[];
+  createdByNavigation: null;
+  images: any[];
   likes: Array<{
     id: number;
     userId: number | null;
     threadId: number | null;
   }>;
+  threadsTags: {
+    id: number;
+    threadId: number;
+    tagId: number;
+    tag: {
+      tagId: number;
+      tagName: string;
+      status: string;
+      allowedRole: string;
+      tagColor: string;
+    };
+  }[];
 }
 
 interface Comment {
@@ -112,6 +124,7 @@ function BlogHistory() {
     fullName: "",
     avatarUrl: "",
   });
+  const [userCache, setUserCache] = useState<{ [key: number]: User }>({}); // Cache for user data
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openHideDialog, setOpenHideDialog] = useState(false);
   const [openShowDialog, setOpenShowDialog] = useState(false);
@@ -126,10 +139,86 @@ function BlogHistory() {
     useState<MembershipPrice | null>(null);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
-  const [openTermsDialog, setOpenTermsDialog] = useState(false); // State for TermsDialog
+  const [openTermsDialog, setOpenTermsDialog] = useState(false);
   const router = useRouter();
   const pageSize = 10;
   const { locale } = useParams();
+  const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
+
+  let isRefreshing = false;
+  let refreshPromise: Promise<void> | null = null;
+
+  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
+    if (isRefreshing) {
+      await refreshPromise;
+      await retryCallback();
+      return;
+    }
+
+    isRefreshing = true;
+    refreshPromise = new Promise(async (resolve, reject) => {
+      try {
+        const refreshToken = localStorage.getItem("refreshToken");
+        if (!refreshToken) {
+          throw new Error("Không có refresh token, vui lòng đăng nhập lại");
+        }
+
+        console.log("Sending refreshToken:", refreshToken);
+        const response = await fetch(
+          `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(
+            refreshToken
+          )}`,
+          {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error("Lỗi refresh token:", errorData);
+          throw new Error(errorData || "Không thể làm mới token");
+        }
+
+        const data = await response.json();
+        if (!data.data?.newToken) {
+          throw new Error("Không có token mới trong phản hồi");
+        }
+
+        localStorage.setItem("accessToken", data.data.newToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem("refreshToken", data.data.refreshToken);
+        }
+
+        console.log("Refresh token thành công:", {
+          newToken: data.data.newToken,
+          newRefreshToken: data.data.refreshToken,
+        });
+
+        await retryCallback();
+        resolve();
+      } catch (error) {
+        console.error("Refresh token thất bại:", error);
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        window.location.href = `/${locale}/login`;
+        reject(error);
+      } finally {
+        isRefreshing = false;
+        refreshPromise = null;
+      }
+    });
+
+    await refreshPromise;
+  };
 
   function getTagColor(tagName: string): string {
     const colorMap: Record<string, string> = {
@@ -170,6 +259,42 @@ function BlogHistory() {
     });
   };
 
+  // Fetch user data for a given userId
+  const fetchUserData = async (userId: number): Promise<User | null> => {
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) {
+        throw new Error("Không có access token, vui lòng đăng nhập lại");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (response.status === 401) {
+        await handleTokenExpiration(async () => {
+          await fetchUserData(userId);
+        });
+        return null;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(
+          errorData || `Không thể lấy dữ liệu người dùng ${userId}`
+        );
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Lỗi lấy dữ liệu người dùng ${userId}:`, error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     const checkUserMembership = () => {
       const authDataString = localStorage.getItem("authData");
@@ -196,10 +321,10 @@ function BlogHistory() {
             setShowMembershipDialog(true);
           }
         } else {
-          throw new Error("Invalid auth data");
+          throw new Error("Dữ liệu xác thực không hợp lệ");
         }
       } catch (error) {
-        console.error("Error parsing auth data:", error);
+        console.error("Lỗi phân tích dữ liệu xác thực:", error);
         setIsLoggedIn(false);
         toast.error("Dữ liệu xác thực không hợp lệ. Vui lòng đăng nhập lại.");
       } finally {
@@ -212,14 +337,28 @@ function BlogHistory() {
 
   const fetchMembershipPrice = async () => {
     try {
-      const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/prices/membership"
-      );
-      if (!response.ok) throw new Error("Failed to fetch membership price");
+      const response = await fetch(`${API_BASE_URL}/api/prices/membership`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
+
+      if (response.status === 401) {
+        await handleTokenExpiration(fetchMembershipPrice);
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể lấy giá thành viên");
+      }
+
       const data: MembershipPrice = await response.json();
       setMembershipPrice(data);
     } catch (error) {
-      console.error("Error fetching membership price:", error);
+      console.error("Lỗi lấy giá thành viên:", error);
     }
   };
 
@@ -229,19 +368,24 @@ function BlogHistory() {
     setPaymentProcessing(true);
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/payments/membership-payment/${userId}`,
+        `${API_BASE_URL}/api/payments/membership-payment/${userId}`,
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );
 
-      const result = await response.json();
+      if (response.status === 401) {
+        await handleTokenExpiration(handleMembershipPayment);
+        return;
+      }
 
+      const result = await response.json();
       if (!response.ok || !result.success) {
-        throw new Error(result.message || "Payment failed");
+        throw new Error(result.message || "Thanh toán thất bại");
       }
 
       const userData = localStorage.getItem("authData");
@@ -274,7 +418,7 @@ function BlogHistory() {
         );
       }
     } catch (error: any) {
-      console.error("Payment error:", error);
+      console.error("Lỗi thanh toán:", error);
 
       if (error.message && error.message.includes("Balance is not enough")) {
         try {
@@ -286,7 +430,7 @@ function BlogHistory() {
             router.push(`/${locale}/wallet`);
           }
         } catch (swalError) {
-          console.error("Popup error:", swalError);
+          console.error("Lỗi popup:", swalError);
         }
       } else {
         Swal.fire({
@@ -306,30 +450,52 @@ function BlogHistory() {
   };
 
   useEffect(() => {
-    const fetchThreads = async () => {
+    const fetchThreadsAndUsers = async () => {
       if (!userId || userRole !== "Member") return;
 
       try {
         setIsLoading(true);
         const response = await fetch(
-          `https://backend-production-ac5e.up.railway.app/api/threads/user/${userId}?page-number=${currentPage}&page-size=${pageSize}`,
+          `${API_BASE_URL}/api/threads/user/${userId}?page-number=${currentPage}&page-size=${pageSize}`,
           {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              Accept: "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
           }
         );
 
+        if (response.status === 401) {
+          await handleTokenExpiration(fetchThreadsAndUsers);
+          return;
+        }
+
         if (!response.ok) {
-          throw new Error("Failed to fetch threads");
+          const errorData = await response.text();
+          throw new Error(errorData || "Không thể lấy danh sách bài viết");
         }
 
         const data: ApiResponse = await response.json();
         setThreads(data.pagedList);
         setTotalPages(data.totalPages);
         setTotalCount(data.totalCount);
+
+        // Fetch user data for unique createdBy IDs
+        const uniqueUserIds = [
+          ...new Set(data.pagedList.map((thread) => thread.createdBy)),
+        ];
+        const newUserCache: { [key: number]: User } = { ...userCache };
+        for (const id of uniqueUserIds) {
+          if (!newUserCache[id]) {
+            const userData = await fetchUserData(id);
+            if (userData) {
+              newUserCache[id] = userData;
+            }
+          }
+        }
+        setUserCache(newUserCache);
       } catch (error) {
-        console.error("Error fetching threads:", error);
+        console.error("Lỗi lấy danh sách bài viết:", error);
         toast.error("Không thể tải danh sách bài viết.", {
           style: {
             background: "#FFEBEE",
@@ -344,7 +510,7 @@ function BlogHistory() {
       }
     };
 
-    fetchThreads();
+    fetchThreadsAndUsers();
   }, [userId, currentPage, userRole]);
 
   const handlePageChange = (page: number) => {
@@ -426,36 +592,68 @@ function BlogHistory() {
     setIsDeleting(true);
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/threads/${threadIdToDelete}`,
+        `${API_BASE_URL}/api/threads/${threadIdToDelete}`,
         {
           method: "DELETE",
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );
 
-      if (response.ok) {
-        try {
-          const fetchResponse = await fetch(
-            `https://backend-production-ac5e.up.railway.app/api/threads/user/${userId}?page-number=${currentPage}&page-size=${pageSize}`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-              },
-            }
-          );
-          if (!fetchResponse.ok) {
-            throw new Error("Failed to fetch threads after deletion");
+      if (response.status === 401) {
+        await handleTokenExpiration(confirmDelete);
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể xóa bài viết");
+      }
+
+      try {
+        const fetchResponse = await fetch(
+          `${API_BASE_URL}/api/threads/user/${userId}?page-number=${currentPage}&page-size=${pageSize}`,
+          {
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
           }
-          const data: ApiResponse = await fetchResponse.json();
-          setThreads(data.pagedList);
-          setTotalPages(data.totalPages);
-          setTotalCount(data.totalCount);
-          if (data.pagedList.length === 0 && currentPage > 1) {
-            setCurrentPage(currentPage - 1);
-          }
-          toast.success("Xóa bài viết thành công!", {
+        );
+
+        if (fetchResponse.status === 401) {
+          await handleTokenExpiration(confirmDelete);
+          return;
+        }
+
+        if (!fetchResponse.ok) {
+          throw new Error("Không thể lấy danh sách bài viết sau khi xóa");
+        }
+
+        const data: ApiResponse = await fetchResponse.json();
+        setThreads(data.pagedList);
+        setTotalPages(data.totalPages);
+        setTotalCount(data.totalCount);
+        if (data.pagedList.length === 0 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+        }
+
+        toast.success("Xóa bài viết thành công!", {
+          style: {
+            background: "#E6F4EA",
+            color: "#2E7D32",
+            fontWeight: "500",
+            borderRadius: "8px",
+            padding: "12px",
+          },
+        });
+      } catch (error) {
+        console.error("Lỗi làm mới danh sách bài viết:", error);
+        toast.success(
+          "Xóa bài viết thành công nhưng không thể làm mới danh sách.",
+          {
             style: {
               background: "#E6F4EA",
               color: "#2E7D32",
@@ -463,42 +661,18 @@ function BlogHistory() {
               borderRadius: "8px",
               padding: "12px",
             },
-          });
-        } catch (error) {
-          console.error("Error refetching threads:", error);
-          toast.error(
-            "Xóa bài viết thành công nhưng không thể làm mới danh sách.",
-            {
-              style: {
-                background: "#FFEBEE",
-                color: "#D32F2F",
-                fontWeight: "500",
-                borderRadius: "8px",
-                padding: "12px",
-              },
-            }
-          );
-          setThreads((prevThreads) =>
-            prevThreads.filter((thread) => thread.threadId !== threadIdToDelete)
-          );
-          setTotalCount((prev) => prev - 1);
-          if (threads.length === 1 && currentPage > 1) {
-            setCurrentPage(currentPage - 1);
           }
+        );
+        setThreads((prevThreads) =>
+          prevThreads.filter((thread) => thread.threadId !== threadIdToDelete)
+        );
+        setTotalCount((prev) => prev - 1);
+        if (threads.length === 1 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
         }
-      } else {
-        toast.error("Không thể xóa bài viết.", {
-          style: {
-            background: "#FFEBEE",
-            color: "#D32F2F",
-            fontWeight: "500",
-            borderRadius: "8px",
-            padding: "12px",
-          },
-        });
       }
     } catch (error) {
-      console.error("Error deleting thread:", error);
+      console.error("Lỗi xóa bài viết:", error);
       toast.error("Đã xảy ra lỗi khi xóa bài viết.", {
         style: {
           background: "#FFEBEE",
@@ -521,37 +695,68 @@ function BlogHistory() {
     setIsHiding(true);
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/threads/hide/${threadIdToHide}`,
+        `${API_BASE_URL}/api/threads/hide/${threadIdToHide}`,
         {
           method: "PUT",
           headers: {
-            accept: "*/*",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );
 
-      if (response.ok) {
-        try {
-          const fetchResponse = await fetch(
-            `https://backend-production-ac5e.up.railway.app/api/threads/user/${userId}?page-number=${currentPage}&page-size=${pageSize}`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-              },
-            }
-          );
-          if (!fetchResponse.ok) {
-            throw new Error("Failed to fetch threads after hiding");
+      if (response.status === 401) {
+        await handleTokenExpiration(confirmHide);
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể ẩn bài viết");
+      }
+
+      try {
+        const fetchResponse = await fetch(
+          `${API_BASE_URL}/api/threads/user/${userId}?page-number=${currentPage}&page-size=${pageSize}`,
+          {
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
           }
-          const data: ApiResponse = await fetchResponse.json();
-          setThreads(data.pagedList);
-          setTotalPages(data.totalPages);
-          setTotalCount(data.totalCount);
-          if (data.pagedList.length === 0 && currentPage > 1) {
-            setCurrentPage(currentPage - 1);
-          }
-          toast.success("Ẩn bài viết thành công!", {
+        );
+
+        if (fetchResponse.status === 401) {
+          await handleTokenExpiration(confirmHide);
+          return;
+        }
+
+        if (!fetchResponse.ok) {
+          throw new Error("Không thể lấy danh sách bài viết sau khi ẩn");
+        }
+
+        const data: ApiResponse = await fetchResponse.json();
+        setThreads(data.pagedList);
+        setTotalPages(data.totalPages);
+        setTotalCount(data.totalCount);
+        if (data.pagedList.length === 0 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+        }
+
+        toast.success("Ẩn bài viết thành công!", {
+          style: {
+            background: "#E6F4EA",
+            color: "#2E7D32",
+            fontWeight: "500",
+            borderRadius: "8px",
+            padding: "12px",
+          },
+        });
+      } catch (error) {
+        console.error("Lỗi làm mới danh sách bài viết:", error);
+        toast.success(
+          "Ẩn bài viết thành công nhưng không thể làm mới danh sách.",
+          {
             style: {
               background: "#E6F4EA",
               color: "#2E7D32",
@@ -559,43 +764,18 @@ function BlogHistory() {
               borderRadius: "8px",
               padding: "12px",
             },
-          });
-        } catch (error) {
-          console.error("Error refetching threads:", error);
-          toast.success(
-            "Ẩn bài viết thành công nhưng không thể làm mới danh sách.",
-            {
-              style: {
-                background: "#E6F4EA",
-                color: "#2E7D32",
-                fontWeight: "500",
-                borderRadius: "8px",
-                padding: "12px",
-              },
-            }
-          );
-          setThreads((prevThreads) =>
-            prevThreads.map((thread) =>
-              thread.threadId === threadIdToHide
-                ? { ...thread, status: "hidden" }
-                : thread
-            )
-          );
-        }
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.message || "Không thể ẩn bài viết.", {
-          style: {
-            background: "#FFEBEE",
-            color: "#D32F2F",
-            fontWeight: "500",
-            borderRadius: "8px",
-            padding: "12px",
-          },
-        });
+          }
+        );
+        setThreads((prevThreads) =>
+          prevThreads.map((thread) =>
+            thread.threadId === threadIdToHide
+              ? { ...thread, status: "hidden" }
+              : thread
+          )
+        );
       }
     } catch (error) {
-      console.error("Error hiding thread:", error);
+      console.error("Lỗi ẩn bài viết:", error);
       toast.error("Đã xảy ra lỗi khi ẩn bài viết.", {
         style: {
           background: "#FFEBEE",
@@ -618,37 +798,68 @@ function BlogHistory() {
     setIsShowing(true);
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/threads/show/${threadIdToShow}`,
+        `${API_BASE_URL}/api/threads/show/${threadIdToShow}`,
         {
           method: "PUT",
           headers: {
-            accept: "*/*",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );
 
-      if (response.ok) {
-        try {
-          const fetchResponse = await fetch(
-            `https://backend-production-ac5e.up.railway.app/api/threads/user/${userId}?page-number=${currentPage}&page-size=${pageSize}`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-              },
-            }
-          );
-          if (!fetchResponse.ok) {
-            throw new Error("Failed to fetch threads after showing");
+      if (response.status === 401) {
+        await handleTokenExpiration(confirmShow);
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể hiển thị bài viết");
+      }
+
+      try {
+        const fetchResponse = await fetch(
+          `${API_BASE_URL}/api/threads/user/${userId}?page-number=${currentPage}&page-size=${pageSize}`,
+          {
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
           }
-          const data: ApiResponse = await fetchResponse.json();
-          setThreads(data.pagedList);
-          setTotalPages(data.totalPages);
-          setTotalCount(data.totalCount);
-          if (data.pagedList.length === 0 && currentPage > 1) {
-            setCurrentPage(currentPage - 1);
-          }
-          toast.success("Hiển thị bài viết thành công!", {
+        );
+
+        if (fetchResponse.status === 401) {
+          await handleTokenExpiration(confirmShow);
+          return;
+        }
+
+        if (!fetchResponse.ok) {
+          throw new Error("Không thể lấy danh sách bài viết sau khi hiển thị");
+        }
+
+        const data: ApiResponse = await fetchResponse.json();
+        setThreads(data.pagedList);
+        setTotalPages(data.totalPages);
+        setTotalCount(data.totalCount);
+        if (data.pagedList.length === 0 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+        }
+
+        toast.success("Hiển thị bài viết thành công!", {
+          style: {
+            background: "#E6F4EA",
+            color: "#2E7D32",
+            fontWeight: "500",
+            borderRadius: "8px",
+            padding: "12px",
+          },
+        });
+      } catch (error) {
+        console.error("Lỗi làm mới danh sách bài viết:", error);
+        toast.success(
+          "Hiển thị bài viết thành công nhưng không thể làm mới danh sách.",
+          {
             style: {
               background: "#E6F4EA",
               color: "#2E7D32",
@@ -656,43 +867,18 @@ function BlogHistory() {
               borderRadius: "8px",
               padding: "12px",
             },
-          });
-        } catch (error) {
-          console.error("Error refetching threads:", error);
-          toast.success(
-            "Hiển thị bài viết thành công nhưng không thể làm mới danh sách.",
-            {
-              style: {
-                background: "#E6F4EA",
-                color: "#2E7D32",
-                fontWeight: "500",
-                borderRadius: "8px",
-                padding: "12px",
-              },
-            }
-          );
-          setThreads((prevThreads) =>
-            prevThreads.map((thread) =>
-              thread.threadId === threadIdToShow
-                ? { ...thread, status: "published" }
-                : thread
-            )
-          );
-        }
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.message || "Không thể hiển thị bài viết.", {
-          style: {
-            background: "#FFEBEE",
-            color: "#D32F2F",
-            fontWeight: "500",
-            borderRadius: "8px",
-            padding: "12px",
-          },
-        });
+          }
+        );
+        setThreads((prevThreads) =>
+          prevThreads.map((thread) =>
+            thread.threadId === threadIdToShow
+              ? { ...thread, status: "published" }
+              : thread
+          )
+        );
       }
     } catch (error) {
-      console.error("Error showing thread:", error);
+      console.error("Lỗi hiển thị bài viết:", error);
       toast.error("Đã xảy ra lỗi khi hiển thị bài viết.", {
         style: {
           background: "#FFEBEE",
@@ -718,16 +904,25 @@ function BlogHistory() {
 
     try {
       if (isLiked && likeId) {
-        await fetch(
-          `https://backend-production-ac5e.up.railway.app/api/likes/${likeId}`,
-          {
-            method: "DELETE",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
+        const response = await fetch(`${API_BASE_URL}/api/likes/${likeId}`, {
+          method: "DELETE",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        });
+
+        if (response.status === 401) {
+          await handleTokenExpiration(() =>
+            handleLike(threadId, isLiked, likeId)
+          );
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error("Không thể bỏ thích bài viết");
+        }
+
         setThreads((prevThreads) =>
           prevThreads.map((thread) => {
             if (thread.threadId === threadId) {
@@ -741,41 +936,46 @@ function BlogHistory() {
           })
         );
       } else {
-        const response = await fetch(
-          "https://backend-production-ac5e.up.railway.app/api/likes",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-            body: JSON.stringify({
-              userId: currentUser.userId,
-              threadId: threadId,
-            }),
-          }
-        );
+        const response = await fetch(`${API_BASE_URL}/api/likes`, {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+          body: JSON.stringify({
+            userId: currentUser.userId,
+            threadId: threadId,
+          }),
+        });
 
-        if (response.ok) {
-          const data = await response.json();
-          setThreads((prevThreads) =>
-            prevThreads.map((thread) => {
-              if (thread.threadId === threadId) {
-                return {
-                  ...thread,
-                  likesCount: thread.likesCount + 1,
-                  likes: [...thread.likes, data],
-                };
-              }
-              return thread;
-            })
+        if (response.status === 401) {
+          await handleTokenExpiration(() =>
+            handleLike(threadId, isLiked, likeId)
           );
-        } else {
-          throw new Error("Failed to like thread");
+          return;
         }
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          throw new Error(errorData || "Không thể thích bài viết");
+        }
+
+        const data = await response.json();
+        setThreads((prevThreads) =>
+          prevThreads.map((thread) => {
+            if (thread.threadId === threadId) {
+              return {
+                ...thread,
+                likesCount: thread.likesCount + 1,
+                likes: [...thread.likes, data],
+              };
+            }
+            return thread;
+          })
+        );
       }
     } catch (error) {
-      console.error("Error toggling like:", error);
+      console.error("Lỗi thực hiện hành động thích:", error);
       toast.error("Không thể thực hiện hành động thích bài viết.", {
         style: {
           background: "#FFEBEE",
@@ -963,6 +1163,7 @@ function BlogHistory() {
                       (like) => like.userId === currentUser.userId
                     )?.id;
 
+                    const user = userCache[thread.createdBy];
                     const truncatedContent = truncateContent(
                       thread.content,
                       400
@@ -1038,7 +1239,7 @@ function BlogHistory() {
                                 aria-label="View comments"
                               >
                                 <ChatBubbleOvalLeftIcon className="h-4 w-4" />
-                                {thread.comments.length}
+                                {thread.commentsCount}
                               </Button>
                             </div>
                           </div>
@@ -1108,11 +1309,8 @@ function BlogHistory() {
                             <div className="flex items-center">
                               <div className="relative w-8 h-8 mr-2">
                                 <Image
-                                  src={
-                                    thread.createdByNavigation.avatarUrl ||
-                                    "/default-avatar.png"
-                                  }
-                                  alt={thread.createdByNavigation.username}
+                                  src={user?.avatarUrl || "/default-avatar.png"}
+                                  alt={user?.username || "Unknown User"}
                                   fill
                                   className="rounded-full object-cover"
                                 />
@@ -1122,7 +1320,7 @@ function BlogHistory() {
                                 color="gray"
                                 className="font-medium"
                               >
-                                {thread.createdByNavigation.username}
+                                {user?.username || "Unknown User"}
                               </Typography>
                             </div>
                             <div className="flex space-x-2">

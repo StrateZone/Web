@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect, useCallback } from "react";
 import { Button, Badge } from "@material-tailwind/react";
 import Navbar from "@/components/navbar";
@@ -132,7 +133,7 @@ const AppointmentRequestsPage = () => {
   const [processingAcceptId, setProcessingAcceptId] = useState<number | null>(
     null
   );
-  const [openTermsDialog, setOpenTermsDialog] = useState(false); // State for TermsDialog
+  const [openTermsDialog, setOpenTermsDialog] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -144,6 +145,82 @@ const AppointmentRequestsPage = () => {
   const { balance, loading: walletLoading } = useSelector(
     (state: RootState) => state.wallet
   );
+  const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
+
+  let isRefreshing = false;
+  let refreshPromise: Promise<void> | null = null;
+
+  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
+    if (isRefreshing) {
+      await refreshPromise;
+      await retryCallback();
+      return;
+    }
+
+    isRefreshing = true;
+    refreshPromise = new Promise(async (resolve, reject) => {
+      try {
+        const refreshToken = localStorage.getItem("refreshToken");
+        if (!refreshToken) {
+          throw new Error("Không có refresh token, vui lòng đăng nhập lại");
+        }
+
+        console.log("Sending refreshToken:", refreshToken);
+        const response = await fetch(
+          `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(
+            refreshToken
+          )}`,
+          {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error("Lỗi refresh token:", errorData);
+          throw new Error(errorData || "Không thể làm mới token");
+        }
+
+        const data = await response.json();
+        if (!data.data?.newToken) {
+          throw new Error("Không có token mới trong phản hồi");
+        }
+
+        localStorage.setItem("accessToken", data.data.newToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem("refreshToken", data.data.refreshToken);
+        }
+
+        console.log("Refresh token thành công:", {
+          newToken: data.data.newToken,
+          newRefreshToken: data.data.refreshToken,
+        });
+
+        await retryCallback();
+        resolve();
+      } catch (error) {
+        console.error("Refresh token thất bại:", error);
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        window.location.href = `/${localActive}/login`;
+        reject(error);
+      } finally {
+        isRefreshing = false;
+        refreshPromise = null;
+      }
+    });
+
+    await refreshPromise;
+  };
 
   const getUserId = () => {
     const authDataString = localStorage.getItem("authData");
@@ -166,6 +243,7 @@ const AppointmentRequestsPage = () => {
     async (page: number = 1) => {
       try {
         setIsLoading(true);
+        setError(null);
         const userId = getUserId();
         if (!userId) {
           router.push(`/${locale}/login`);
@@ -173,7 +251,7 @@ const AppointmentRequestsPage = () => {
         }
 
         const apiUrl = new URL(
-          `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/to/${userId}`
+          `${API_BASE_URL}/api/appointmentrequests/to/${userId}`
         );
         apiUrl.searchParams.append("page-number", page.toString());
         apiUrl.searchParams.append("page-size", pageSize.toString());
@@ -182,12 +260,19 @@ const AppointmentRequestsPage = () => {
         const response = await fetch(apiUrl.toString(), {
           method: "GET",
           headers: {
-            accept: "*/*",
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
 
+        if (response.status === 401) {
+          await handleTokenExpiration(() => fetchAppointmentRequests(page));
+          return;
+        }
+
         if (!response.ok) {
-          throw new Error("Failed to fetch appointment requests");
+          const errorData = await response.text();
+          throw new Error(errorData || "Không thể tải danh sách lời mời");
         }
 
         const data = await response.json();
@@ -198,7 +283,12 @@ const AppointmentRequestsPage = () => {
         setHasPrevious(data.hasPrevious);
         setHasNext(data.hasNext);
       } catch (error) {
-        console.error("Error fetching appointment requests:", error);
+        console.error("Lỗi khi tải danh sách lời mời:", error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Đã xảy ra lỗi khi tải danh sách lời mời"
+        );
       } finally {
         setIsLoading(false);
       }
@@ -218,22 +308,30 @@ const AppointmentRequestsPage = () => {
     setProcessingRequestId(requestId);
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/reject/${requestId}`,
+        `${API_BASE_URL}/api/appointmentrequests/reject/${requestId}`,
         {
           method: "PUT",
           headers: {
-            accept: "*/*",
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );
 
+      if (response.status === 401) {
+        await handleTokenExpiration(() => rejectAppointment(requestId));
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error("Failed to reject appointment");
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể từ chối lời mời");
       }
 
       await fetchAppointmentRequests(currentPage);
     } catch (err) {
-      console.error("Error rejecting appointment:", err);
+      console.error("Lỗi khi từ chối lời mời:", err);
+      setError(err instanceof Error ? err.message : "Lỗi khi từ chối lời mời");
     } finally {
       setProcessingRequestId(null);
     }
@@ -244,13 +342,12 @@ const AppointmentRequestsPage = () => {
     try {
       const request = requests.find((req) => req.id === requestId);
       if (!request || !request.appointmentId) {
-        throw new Error("Request not found or invalid appointment ID");
+        throw new Error("Không tìm thấy lời mời hoặc ID cuộc hẹn không hợp lệ");
       }
 
       if (balance < (request.totalPrice || 0)) {
         const isRedirect = await InsufficientBalancePopup({
-          finalPrice:
-            requests.find((req) => req.id === requestId)?.totalPrice || 0,
+          finalPrice: request.totalPrice || 0,
         });
         if (isRedirect) {
           router.push(`/${localActive}/wallet`);
@@ -285,24 +382,30 @@ const AppointmentRequestsPage = () => {
       });
 
       if (!isConfirmed) {
-        setIsProcessingPayment(false);
         return;
       }
+
       const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/payments/booking-request-payment",
+        `${API_BASE_URL}/api/payments/booking-request-payment`,
         {
           method: "POST",
           headers: {
+            Accept: "application/json",
             "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
           body: JSON.stringify({
             fromUser: request.fromUser,
             toUser: request.toUser,
-            // tableId: request.tableId,
             tableAppointmentId: request.tablesAppointmentId,
           }),
         }
       );
+
+      if (response.status === 401) {
+        await handleTokenExpiration(() => handleProcessPayment(requestId));
+        return;
+      }
 
       const result = await response.json();
 
@@ -317,13 +420,12 @@ const AppointmentRequestsPage = () => {
           return;
         }
 
-        throw new Error(result.message || "Payment processing failed");
+        throw new Error(result.message || "Xử lý thanh toán thất bại");
       }
 
       dispatch(fetchWallet(userId));
       await fetchAppointmentRequests(currentPage);
 
-      // Call the SuccessPaymentPopup utility function
       await SuccessPaymentPopup(request.totalPrice || 0);
     } catch (error: any) {
       const errorMessage =
@@ -344,11 +446,11 @@ const AppointmentRequestsPage = () => {
             tableId: request.tableId,
             startTime: request.startTime,
             endTime: request.endTime,
-            onConfirm: () => fetchAppointmentRequests(currentPage), // Truyền callback
+            onConfirm: () => fetchAppointmentRequests(currentPage),
           });
         }
       } else {
-        console.error("Unexpected payment error:", error);
+        console.error("Lỗi thanh toán không mong muốn:", error);
         await MySwal.fire({
           title: "Lỗi",
           text:
@@ -517,14 +619,29 @@ const AppointmentRequestsPage = () => {
   const checkCancelCondition = async (tablesAppointmentId: number) => {
     try {
       setIsLoading(true);
+      setError(null);
       const currentTime = toLocalISOString(new Date());
 
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`
+        `${API_BASE_URL}/api/tables-appointment/cancel-check/${tablesAppointmentId}/users/${userId}?CancelTime=${currentTime}`,
+        {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
       );
 
+      if (response.status === 401) {
+        await handleTokenExpiration(() =>
+          checkCancelCondition(tablesAppointmentId)
+        );
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error("Không thể kiểm tra điều kiện hủy");
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể kiểm tra điều kiện hủy");
       }
 
       const data = await response.json();
@@ -549,31 +666,34 @@ const AppointmentRequestsPage = () => {
   };
 
   const confirmCancelAppointment = async () => {
-    const authData = JSON.parse(localStorage.getItem("authData") || "{}");
-    const userId = authData.userId;
-
     if (!currentCancellingId || !userId) {
-      console.error("Missing currentCancellingId or userId");
+      console.error("Thiếu currentCancellingId hoặc userId");
       setShowCancelConfirm(false);
       return;
     }
 
     try {
-      setIsCancelling(true); // Set isCancelling to true to show loading state in modal
-      setIsLoading(true); // Maintain global loading state
+      setIsCancelling(true);
+      setIsLoading(true);
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/tables-appointment/cancel/${currentCancellingId}/users/${userId}`,
+        `${API_BASE_URL}/api/tables-appointment/cancel/${currentCancellingId}/users/${userId}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
         }
       );
 
-      const responseData = await response.json();
+      if (response.status === 401) {
+        await handleTokenExpiration(confirmCancelAppointment);
+        return;
+      }
 
+      const responseData = await response.json();
       if (!response.ok) {
-        setShowCancelConfirm(false);
-        throw new Error("Hủy đơn đặt không thành công");
+        throw new Error(responseData.message || "Hủy đơn đặt không thành công");
       }
 
       await dispatch(fetchWallet(userId));
@@ -592,11 +712,10 @@ const AppointmentRequestsPage = () => {
         router.push(`/${localActive}/chess_appointment/chess_category`);
       }
     } catch (err) {
-      setShowCancelConfirm(false);
       setError(err instanceof Error ? err.message : "Lỗi không xác định");
     } finally {
-      setIsCancelling(false); // Reset isCancelling after operation
-      setIsLoading(false); // Reset global loading state
+      setIsCancelling(false);
+      setIsLoading(false);
     }
   };
 
@@ -646,6 +765,14 @@ const AppointmentRequestsPage = () => {
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          ) : error ? (
+            <div
+              className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+              role="alert"
+            >
+              <strong className="font-bold">Lỗi! </strong>
+              <span className="block sm:inline">{error}</span>
             </div>
           ) : selectedRequest ? (
             <div className="bg-white rounded-lg shadow-md p-6">
@@ -756,7 +883,8 @@ const AppointmentRequestsPage = () => {
                           </span>
                         )}
                         {isTopContributor(
-                          selectedRequest.fromUserNavigation.userLabel
+                          selectedRequest.fromUserNavigation.userLabel |
+                            undefined
                         ) && (
                           <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
                             TOP CONTRIBUTOR
@@ -767,7 +895,9 @@ const AppointmentRequestsPage = () => {
                         <strong>Giới Tính:</strong>{" "}
                         {selectedRequest.toUserNavigation?.gender === 0
                           ? "Nam"
-                          : "Nữ"}
+                          : selectedRequest.toUserNavigation?.gender === 1
+                            ? "Nữ"
+                            : "Không xác định"}
                       </p>
                     </div>
                   </div>
@@ -810,7 +940,7 @@ const AppointmentRequestsPage = () => {
                           : selectedRequest.table?.gameTypeId === 3
                             ? "Cờ Vây"
                             : selectedRequest.table?.gameType?.typeName ||
-                              "Unknown"}
+                              "Không xác định"}
                     </p>
                     <p>
                       <span className="font-medium">
@@ -822,7 +952,8 @@ const AppointmentRequestsPage = () => {
                           ? "Phòng Cao Cấp"
                           : selectedRequest.table?.roomType === "openspaced"
                             ? "Không Gian Mở"
-                            : "Unknown"}
+                            : selectedRequest.table?.roomType ||
+                              "Không xác định"}
                     </p>
                     <p>
                       <span className="font-medium">
@@ -1010,7 +1141,9 @@ const AppointmentRequestsPage = () => {
                               <strong>Giới Tính:</strong>{" "}
                               {request.toUserNavigation?.gender === 0
                                 ? "Nam"
-                                : "Nữ"}
+                                : request.toUserNavigation?.gender === 1
+                                  ? "Nữ"
+                                  : "Không xác định"}
                             </p>
                           </div>
                         </div>
@@ -1024,14 +1157,14 @@ const AppointmentRequestsPage = () => {
                             {formatDateTimeWithoutHour(request.startTime)}
                           </p>
                           <p className="text-gray-600 text-sm">
-                            <strong>Giờ Bắt Đầu Và Kết Thúc</strong>{" "}
+                            <strong>Giờ Bắt Đầu Và Kết Thúc:</strong>{" "}
                             {formatTimeRange(
                               request.startTime,
                               request.endTime
                             )}
                           </p>
                           <p className="text-gray-600 text-sm">
-                            <strong>Số Tiền Cần Trả</strong>{" "}
+                            <strong>Số Tiền Cần Trả:</strong>{" "}
                             {request.totalPrice?.toLocaleString()} VND
                           </p>
                           <p className="text-gray-600 text-sm">
@@ -1159,7 +1292,7 @@ const AppointmentRequestsPage = () => {
                 })}
               </div>
 
-              {requests.length > 0 && (
+              {totalPages > 1 && (
                 <div className="flex justify-center mt-8 mb-8">
                   <DefaultPagination
                     currentPage={currentPage}

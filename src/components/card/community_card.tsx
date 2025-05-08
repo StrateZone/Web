@@ -284,10 +284,6 @@ export default function CommunityCard({
                   <Button
                     variant="outlined"
                     className="flex items-center gap-1 py-1 px-2 border-2 border-gray-300 rounded text-sm"
-                    // onClick={(e) => {
-                    //   e.stopPropagation();
-                    //   handleCardClick();
-                    // }}
                   >
                     <ChatBubbleOvalLeftIcon className="h-4 w-4 text-gray-600" />
                     <span className="text-gray-600">{commentsCount}</span>

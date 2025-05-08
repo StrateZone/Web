@@ -24,11 +24,12 @@ const NotificationDropdown = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedNotifications, setExpandedNotifications] = useState<number[]>(
-    [],
+    []
   );
   const [unreadCount, setUnreadCount] = useState(0);
   const router = useRouter();
   const { locale } = useParams();
+  const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
 
   const getUserId = () => {
     const authDataString = localStorage.getItem("authData");
@@ -36,7 +37,61 @@ const NotificationDropdown = () => {
     const authData = JSON.parse(authDataString);
     return authData.userId;
   };
+  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
+    try {
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (!refreshToken) {
+        throw new Error("Không có refresh token, vui lòng đăng nhập lại");
+      }
 
+      console.log("Sending refreshToken:", refreshToken); // Debug
+      const response = await fetch(
+        `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(refreshToken)}`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "*/*",
+            // Remove Content-Type since we're not sending a JSON body
+            // Authorization header may still be needed if the API requires it
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Refresh token error:", errorData); // Debug
+        throw new Error(errorData.message || "Không thể làm mới token");
+      }
+
+      // Since the API returns 204, there may be no response body
+      // Check if the API sets the new token in headers or elsewhere
+      const newToken = response.headers.get("x-access-token"); // Adjust based on API behavior
+      if (newToken) {
+        localStorage.setItem("accessToken", newToken);
+      } else {
+        // If the API returns a JSON body (based on your original code), parse it
+        const data = await response.json();
+        localStorage.setItem("accessToken", data.data.newToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem("refreshToken", data.data.refreshToken);
+        }
+      }
+
+      await retryCallback();
+    } catch (error) {
+      console.error("Token refresh failed:", error);
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("authData");
+      // Chỉ chuyển hướng nếu cần
+      document.cookie =
+        "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      document.cookie =
+        "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      window.location.href = "/login";
+    }
+  };
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
@@ -55,9 +110,11 @@ const NotificationDropdown = () => {
               Accept: "application/json",
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
-          },
+          }
         );
-
+        if (response.status === 401) {
+          await handleTokenExpiration(fetchNotifications);
+        }
         if (!response.ok) {
           return; // Không throw error nếu response không ok
         }
@@ -77,7 +134,7 @@ const NotificationDropdown = () => {
 
         setNotifications(latestNotifications);
         const unread = latestNotifications.filter(
-          (n: Notification) => n.status === 1,
+          (n: Notification) => n.status === 1
         ).length;
         setUnreadCount(unread);
       } catch (error) {
@@ -101,7 +158,7 @@ const NotificationDropdown = () => {
   const toggleExpand = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     setExpandedNotifications((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
   };
 
@@ -109,7 +166,7 @@ const NotificationDropdown = () => {
     if (notification.status === 1) {
       await markAsRead(notification.id);
       setNotifications((prev) =>
-        prev.map((n) => (n.id === notification.id ? { ...n, status: 0 } : n)),
+        prev.map((n) => (n.id === notification.id ? { ...n, status: 0 } : n))
       );
       setUnreadCount((prev) => prev - 1);
     }
@@ -162,7 +219,7 @@ const NotificationDropdown = () => {
             Accept: "application/json",
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
-        },
+        }
       );
 
       if (!response.ok) {
@@ -186,9 +243,12 @@ const NotificationDropdown = () => {
             Accept: "application/json",
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
-        },
+        }
       );
 
+      if (response.status === 401) {
+        await handleTokenExpiration(markAllAsRead);
+      }
       if (response.ok) {
         setNotifications((prev) => prev.map((n) => ({ ...n, status: 0 })));
         setUnreadCount(0);

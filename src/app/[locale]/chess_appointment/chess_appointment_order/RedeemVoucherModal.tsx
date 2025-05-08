@@ -33,7 +33,63 @@ const RedeemVoucherModal = ({
   const [isLoading, setIsLoading] = useState(false);
   const [userPoints, setUserPoints] = useState<number | null>(null);
   const [userLabel, setUserLabel] = useState<string | null>(null);
+  const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
 
+  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
+    try {
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (!refreshToken) {
+        throw new Error("Không có refresh token, vui lòng đăng nhập lại");
+      }
+
+      console.log("Sending refreshToken:", refreshToken); // Debug
+      const response = await fetch(
+        `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(refreshToken)}`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "*/*",
+            // Remove Content-Type since we're not sending a JSON body
+            // Authorization header may still be needed if the API requires it
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Refresh token error:", errorData); // Debug
+        throw new Error(errorData.message || "Không thể làm mới token");
+      }
+
+      // Since the API returns 204, there may be no response body
+      // Check if the API sets the new token in headers or elsewhere
+      const newToken = response.headers.get("x-access-token"); // Adjust based on API behavior
+      if (newToken) {
+        localStorage.setItem("accessToken", newToken);
+      } else {
+        // If the API returns a JSON body (based on your original code), parse it
+        const data = await response.json();
+        localStorage.setItem("accessToken", data.data.newToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem("refreshToken", data.data.refreshToken);
+        }
+      }
+
+      await retryCallback();
+    } catch (error) {
+      console.error("Token refresh failed:", error);
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("authData");
+      // Chỉ chuyển hướng nếu cần
+      document.cookie =
+        "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      document.cookie =
+        "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      window.location.href = "/login";
+    }
+  };
   const fetchUserData = async () => {
     try {
       const authDataString = localStorage.getItem("authData");
@@ -50,10 +106,15 @@ const RedeemVoucherModal = ({
           method: "GET",
           headers: {
             accept: "*/*",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );
 
+      if (pointsResponse.status === 401) {
+        await handleTokenExpiration(() => fetchUserData());
+        return;
+      }
       if (!pointsResponse.ok) {
         throw new Error("Không thể lấy thông tin điểm");
       }
@@ -68,10 +129,15 @@ const RedeemVoucherModal = ({
           method: "GET",
           headers: {
             accept: "*/*",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );
 
+      if (userResponse.status === 401) {
+        await handleTokenExpiration(() => fetchUserData());
+        return;
+      }
       if (!userResponse.ok) {
         throw new Error("Không thể lấy thông tin người dùng");
       }
@@ -109,6 +175,7 @@ const RedeemVoucherModal = ({
           headers: {
             accept: "*/*",
             "Content-Type": "application/json-patch+json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
           body: JSON.stringify({
             sampleVoucherId,
@@ -116,7 +183,10 @@ const RedeemVoucherModal = ({
           }),
         }
       );
-
+      if (response.status === 401) {
+        await handleTokenExpiration(() => fetchUserData());
+        return;
+      }
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Không thể đổi voucher");

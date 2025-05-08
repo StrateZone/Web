@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect, useCallback } from "react";
 import { Button, Badge } from "@material-tailwind/react";
 import Navbar from "@/components/navbar";
@@ -23,8 +24,8 @@ import { RootState, AppDispatch } from "@/app/store";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import Banner from "@/components/banner/banner";
-import { CheckBadgeIcon, StarIcon } from "@heroicons/react/24/solid";
-import TermsDialog from "../chess_category/TermsDialog"; // Import TermsDialog
+import { CheckBadgeIcon } from "@heroicons/react/24/solid";
+import TermsDialog from "../chess_category/TermsDialog";
 
 interface UserNavigation {
   userId: number;
@@ -108,11 +109,9 @@ const AppointmentSendRequestsPage = () => {
   const localActive = useLocale();
   const { locale } = useParams();
   const [requests, setRequests] = useState<AppointmentRequest[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAccepting, setIsAccepting] = useState(false);
-  const [isRejecting, setIsRejecting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [selectedRequest, setSelectedRequest] =
     useState<AppointmentRequest | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -120,7 +119,10 @@ const AppointmentSendRequestsPage = () => {
   const [currentCancellingId, setCurrentCancellingId] = useState<number | null>(
     null
   );
-  const [openTermsDialog, setOpenTermsDialog] = useState(false); // State for TermsDialog
+  const [processingCancelId, setProcessingCancelId] = useState<number | null>(
+    null
+  );
+  const [openTermsDialog, setOpenTermsDialog] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
@@ -131,6 +133,82 @@ const AppointmentSendRequestsPage = () => {
   const { balance, loading: walletLoading } = useSelector(
     (state: RootState) => state.wallet
   );
+  const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
+
+  let isRefreshing = false;
+  let refreshPromise: Promise<void> | null = null;
+
+  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
+    if (isRefreshing) {
+      await refreshPromise;
+      await retryCallback();
+      return;
+    }
+
+    isRefreshing = true;
+    refreshPromise = new Promise(async (resolve, reject) => {
+      try {
+        const refreshToken = localStorage.getItem("refreshToken");
+        if (!refreshToken) {
+          throw new Error("Không có refresh token, vui lòng đăng nhập lại");
+        }
+
+        console.log("Sending refreshToken:", refreshToken);
+        const response = await fetch(
+          `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(
+            refreshToken
+          )}`,
+          {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error("Lỗi refresh token:", errorData);
+          throw new Error(errorData || "Không thể làm mới token");
+        }
+
+        const data = await response.json();
+        if (!data.data?.newToken) {
+          throw new Error("Không có token mới trong phản hồi");
+        }
+
+        localStorage.setItem("accessToken", data.data.newToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem("refreshToken", data.data.refreshToken);
+        }
+
+        console.log("Refresh token thành công:", {
+          newToken: data.data.newToken,
+          newRefreshToken: data.data.refreshToken,
+        });
+
+        await retryCallback();
+        resolve();
+      } catch (error) {
+        console.error("Refresh token thất bại:", error);
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        window.location.href = `/${localActive}/login`;
+        reject(error);
+      } finally {
+        isRefreshing = false;
+        refreshPromise = null;
+      }
+    });
+
+    await refreshPromise;
+  };
 
   const getUserId = () => {
     const authDataString = localStorage.getItem("authData");
@@ -153,6 +231,7 @@ const AppointmentSendRequestsPage = () => {
     async (page: number = 1) => {
       try {
         setIsLoading(true);
+        setError(null);
         const userId = getUserId();
         if (!userId) {
           router.push(`/${locale}/login`);
@@ -160,7 +239,7 @@ const AppointmentSendRequestsPage = () => {
         }
 
         const apiUrl = new URL(
-          `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/from/${userId}`
+          `${API_BASE_URL}/api/appointmentrequests/from/${userId}`
         );
         apiUrl.searchParams.append("page-number", page.toString());
         apiUrl.searchParams.append("page-size", pageSize.toString());
@@ -169,12 +248,19 @@ const AppointmentSendRequestsPage = () => {
         const response = await fetch(apiUrl.toString(), {
           method: "GET",
           headers: {
-            accept: "*/*",
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
 
+        if (response.status === 401) {
+          await handleTokenExpiration(() => fetchAppointmentRequests(page));
+          return;
+        }
+
         if (!response.ok) {
-          throw new Error("Failed to fetch appointment requests");
+          const errorData = await response.text();
+          throw new Error(errorData || "Không thể tải danh sách lời mời");
         }
 
         const data = await response.json();
@@ -185,7 +271,12 @@ const AppointmentSendRequestsPage = () => {
         setHasPrevious(data.hasPrevious);
         setHasNext(data.hasNext);
       } catch (error) {
-        console.error("Error fetching appointment requests:", error);
+        console.error("Lỗi khi tải danh sách lời mời:", error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Đã xảy ra lỗi khi tải danh sách lời mời"
+        );
       } finally {
         setIsLoading(false);
       }
@@ -200,6 +291,123 @@ const AppointmentSendRequestsPage = () => {
   useEffect(() => {
     fetchAppointmentRequests(currentPage);
   }, [fetchAppointmentRequests]);
+
+  const checkCancelCondition = async (requestId: number) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const currentTime = new Date().toISOString().slice(0, -1);
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/appointmentrequests/cancel-check/${requestId}/users/${userId}?CancelTime=${currentTime}`,
+        {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+
+      if (response.status === 401) {
+        await handleTokenExpiration(() => checkCancelCondition(requestId));
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể kiểm tra điều kiện hủy");
+      }
+
+      const data = await response.json();
+      setRefundInfo({
+        message: data.message,
+        refundAmount: data.refundAmount,
+        cancellationTime: data.cancellationTime,
+        cancellation_Block_TimeGate: data.cancellation_Block_TimeGate,
+        numerOfTablesCancelledThisWeek: data.numerOfTablesCancelledThisWeek,
+        cancellation_PartialRefund_TimeGate:
+          data.cancellation_PartialRefund_TimeGate,
+      });
+      setCurrentCancellingId(requestId);
+      setShowCancelConfirm(true);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Lỗi khi kiểm tra điều kiện hủy"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const confirmCancelRequest = async () => {
+    if (!currentCancellingId) return;
+
+    setIsCancelling(true);
+    setProcessingCancelId(currentCancellingId);
+    const previousRequests = [...requests];
+    const previousSelectedRequest = selectedRequest
+      ? { ...selectedRequest }
+      : null;
+
+    setRequests((prev) =>
+      prev.map((req) =>
+        req.id === currentCancellingId ? { ...req, status: "cancelled" } : req
+      )
+    );
+
+    if (selectedRequest?.id === currentCancellingId) {
+      setSelectedRequest((prev) =>
+        prev ? { ...prev, status: "cancelled" } : null
+      );
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/appointmentrequests/cancel/${currentCancellingId}`,
+        {
+          method: "PUT",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+
+      if (response.status === 401) {
+        await handleTokenExpiration(confirmCancelRequest);
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Hủy lời mời không thành công");
+      }
+
+      setShowCancelConfirm(false);
+      setCurrentCancellingId(null);
+      setSelectedRequest(null);
+
+      const isConfirmed = await SuccessCancelPopup(
+        refundInfo?.refundAmount || 0
+      );
+
+      if (isConfirmed) {
+        router.push(`/${localActive}/appointment_history`);
+      } else {
+        router.push(`/${localActive}/chess_appointment/chess_category`);
+      }
+    } catch (err) {
+      setRequests(previousRequests);
+      if (previousSelectedRequest) {
+        setSelectedRequest(previousSelectedRequest);
+      }
+      console.error("Lỗi khi hủy lời mời:", err);
+      setError(err instanceof Error ? err.message : "Lỗi khi hủy lời mời");
+    } finally {
+      setIsCancelling(false);
+      setProcessingCancelId(null);
+    }
+  };
 
   const calculateTimeRemaining = (expireAt: string) => {
     const now = new Date();
@@ -346,66 +554,6 @@ const AppointmentSendRequestsPage = () => {
     setSelectedRequest(null);
   };
 
-  const confirmCancelRequest = async () => {
-    if (!currentCancellingId) return;
-
-    setIsCancelling(true);
-    const previousRequests = [...requests];
-    const previousSelectedRequest = selectedRequest
-      ? { ...selectedRequest }
-      : null;
-
-    setRequests((prev) =>
-      prev.map((req) =>
-        req.id === currentCancellingId ? { ...req, status: "cancelled" } : req
-      )
-    );
-
-    if (selectedRequest?.id === currentCancellingId) {
-      setSelectedRequest((prev) =>
-        prev ? { ...prev, status: "cancelled" } : null
-      );
-    }
-
-    try {
-      const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/appointmentrequests/cancel/${currentCancellingId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to cancel request");
-      }
-
-      setShowCancelConfirm(false);
-      setCurrentCancellingId(null);
-      setSelectedRequest(null);
-
-      const isConfirmed = await SuccessCancelPopup(
-        refundInfo?.refundAmount || 0
-      );
-
-      if (isConfirmed) {
-        router.push(`/${localActive}/appointment_history`);
-      } else {
-        router.push(`/${localActive}/chess_appointment/chess_category`);
-      }
-    } catch (err) {
-      setRequests(previousRequests);
-      if (previousSelectedRequest) {
-        setSelectedRequest(previousSelectedRequest);
-      }
-      console.error("Error canceling request:", err);
-    } finally {
-      setIsCancelling(false);
-    }
-  };
-
   const getRankLevelText = (level: number): string => {
     switch (level) {
       case 0:
@@ -419,7 +567,7 @@ const AppointmentSendRequestsPage = () => {
       case 4:
         return "Expert";
       default:
-        return "Unknown";
+        return "Không xác định";
     }
   };
 
@@ -468,6 +616,14 @@ const AppointmentSendRequestsPage = () => {
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          ) : error ? (
+            <div
+              className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+              role="alert"
+            >
+              <strong className="font-bold">Lỗi! </strong>
+              <span className="block sm:inline">{error}</span>
             </div>
           ) : selectedRequest ? (
             <div className="bg-white rounded-lg shadow-md p-6">
@@ -580,6 +736,7 @@ const AppointmentSendRequestsPage = () => {
                           }`}
                         >
                           {selectedRequest.toUserNavigation?.username ||
+                            selectedRequest.toUserNavigation?.fullName ||
                             "Người dùng ẩn danh"}
                         </h4>
                         {selectedRequest.toUserNavigation &&
@@ -603,7 +760,9 @@ const AppointmentSendRequestsPage = () => {
                         <strong>Giới Tính:</strong>{" "}
                         {selectedRequest.toUserNavigation?.gender === 0
                           ? "Nam"
-                          : "Nữ"}
+                          : selectedRequest.toUserNavigation?.gender === 1
+                            ? "Nữ"
+                            : "Không xác định"}
                       </p>
                     </div>
                   </div>
@@ -627,6 +786,24 @@ const AppointmentSendRequestsPage = () => {
                       </span>{" "}
                       {selectedRequest.toUserNavigation?.bio || "Không đề cập"}
                     </p>
+                    <p>
+                      <span className="font-medium">
+                        <strong>Xếp Hạng:</strong>
+                      </span>{" "}
+                      {selectedRequest.toUserNavigation?.ranking
+                        ? `#${selectedRequest.toUserNavigation.ranking}`
+                        : "N/A"}
+                    </p>
+                    <p>
+                      <span className="font-medium">
+                        <strong>Cấp Độ:</strong>
+                      </span>{" "}
+                      {selectedRequest.toUserNavigation?.skillLevel != null
+                        ? getRankLevelText(
+                            selectedRequest.toUserNavigation.skillLevel
+                          )
+                        : "Không xác định"}
+                    </p>
                   </div>
                 </div>
 
@@ -646,7 +823,7 @@ const AppointmentSendRequestsPage = () => {
                           : selectedRequest.table?.gameTypeId === 3
                             ? "Cờ Vây"
                             : selectedRequest.table?.gameType?.typeName ||
-                              "Unknown"}
+                              "Không xác định"}
                     </p>
                     <p>
                       <span className="font-medium">
@@ -658,7 +835,8 @@ const AppointmentSendRequestsPage = () => {
                           ? "Phòng Cao Cấp"
                           : selectedRequest.table?.roomType === "openspaced"
                             ? "Không Gian Mở"
-                            : "Unknown"}
+                            : selectedRequest.table?.roomType ||
+                              "Không xác định"}
                     </p>
                     <p>
                       <span className="font-medium">
@@ -726,7 +904,27 @@ const AppointmentSendRequestsPage = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3"></div>
+              <div className="flex justify-end space-x-3">
+                {selectedRequest.status === "pending" &&
+                  !isExpired(selectedRequest.expireAt) && (
+                    <Button
+                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[80px]"
+                      onClick={() => checkCancelCondition(selectedRequest.id)}
+                      disabled={
+                        isCancelling || isExpired(selectedRequest.expireAt)
+                      }
+                    >
+                      {processingCancelId === selectedRequest.id ? (
+                        <>
+                          <Loader2 className="animate-spin mr-1 h-3 w-3" />
+                          Đang Xử Lý
+                        </>
+                      ) : (
+                        "Hủy"
+                      )}
+                    </Button>
+                  )}
+              </div>
             </div>
           ) : requests.length === 0 ? (
             <div className="text-center py-8">
@@ -743,194 +941,223 @@ const AppointmentSendRequestsPage = () => {
           ) : (
             <>
               <div className="grid gap-4">
-                {requests.map((request) => (
-                  <div
-                    key={request.id}
-                    className="bg-gray-200 rounded-md shadow-sm p-4"
-                  >
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                      <div className="flex items-center space-x-3">
-                        <Badge
-                          overlap="circular"
-                          placement="bottom-end"
-                          className={`border-2 border-white ${
-                            request.toUserNavigation &&
-                            isMember(request.toUserNavigation.userRole)
-                              ? "bg-gradient-to-r from-purple-500 to-pink-500 !h-5 !w-5 animate-pulse"
-                              : request.toUserNavigation &&
-                                  isTopContributor(
-                                    request.toUserNavigation.userLabel
-                                  )
-                                ? "bg-gradient-to-r from-yellow-500 to-orange-500 !h-5 !w-5"
-                                : "bg-blue-gray-100"
-                          }`}
-                          content={
-                            request.toUserNavigation &&
-                            (isMember(request.toUserNavigation.userRole) ||
-                              isTopContributor(
-                                request.toUserNavigation.userLabel
-                              )) ? (
-                              <div className="relative group flex gap-1">
-                                {isMember(
-                                  request.toUserNavigation.userRole
-                                ) && (
-                                  <div className="relative">
-                                    <CheckBadgeIcon className="h-4 w-4 text-white" />
-                                    <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-white text-black text-sm p-2 rounded shadow-lg">
-                                      Thành viên câu lạc bộ
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            ) : null
-                          }
-                        >
-                          <div
-                            className={`w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden ${
+                {requests.map((request) => {
+                  const isProcessing = processingCancelId === request.id;
+                  return (
+                    <div
+                      key={request.id}
+                      className="bg-gray-200 rounded-md shadow-sm p-4"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                        <div className="flex items-center space-x-3">
+                          <Badge
+                            overlap="circular"
+                            placement="bottom-end"
+                            className={`border-2 border-white ${
                               request.toUserNavigation &&
                               isMember(request.toUserNavigation.userRole)
-                                ? "border-2 border-purple-500 shadow-lg shadow-purple-500/20"
+                                ? "bg-gradient-to-r from-purple-500 to-pink-500 !h-5 !w-5 animate-pulse"
                                 : request.toUserNavigation &&
                                     isTopContributor(
                                       request.toUserNavigation.userLabel
                                     )
-                                  ? "border-2 border-yellow-500 shadow-lg shadow-yellow-500/20"
-                                  : ""
+                                  ? "bg-gradient-to-r from-yellow-500 to-orange-500 !h-5 !w-5"
+                                  : "bg-blue-gray-100"
                             }`}
+                            content={
+                              request.toUserNavigation &&
+                              (isMember(request.toUserNavigation.userRole) ||
+                                isTopContributor(
+                                  request.toUserNavigation.userLabel
+                                )) ? (
+                                <div className="relative group flex gap-1">
+                                  {isMember(
+                                    request.toUserNavigation.userRole
+                                  ) && (
+                                    <div className="relative">
+                                      <CheckBadgeIcon className="h-4 w-4 text-white" />
+                                      <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-white text-black text-sm p-2 rounded shadow-lg">
+                                        Thành viên câu lạc bộ
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : null
+                            }
                           >
-                            {request.toUserNavigation?.avatarUrl ? (
-                              <img
-                                src={request.toUserNavigation.avatarUrl}
-                                alt="Avatar"
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <User className="w-5 h-5 text-gray-500" />
-                            )}
-                          </div>
-                        </Badge>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3
-                              className={`font-bold text-base ${
+                            <div
+                              className={`w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden ${
                                 request.toUserNavigation &&
                                 isMember(request.toUserNavigation.userRole)
-                                  ? "text-purple-600"
+                                  ? "border-2 border-purple-500 shadow-lg shadow-purple-500/20"
                                   : request.toUserNavigation &&
                                       isTopContributor(
                                         request.toUserNavigation.userLabel
                                       )
-                                    ? "text-yellow-600"
+                                    ? "border-2 border-yellow-500 shadow-lg shadow-yellow-500/20"
                                     : ""
                               }`}
                             >
-                              Người Nhận: @
-                              {request.toUserNavigation?.username ||
-                                "Người dùng ẩn danh"}
-                            </h3>
-                            {request.toUserNavigation &&
-                              isMember(request.toUserNavigation.userRole) && (
-                                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-                                  MEMBER
-                                </span>
+                              {request.toUserNavigation?.avatarUrl ? (
+                                <img
+                                  src={request.toUserNavigation.avatarUrl}
+                                  alt="Avatar"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <User className="w-5 h-5 text-gray-500" />
                               )}
-                            {request.toUserNavigation &&
-                              isTopContributor(
-                                request.toUserNavigation.userLabel
-                              ) && (
-                                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
-                                  TOP CONTRIBUTOR
-                                </span>
-                              )}
+                            </div>
+                          </Badge>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3
+                                className={`font-bold text-base ${
+                                  request.toUserNavigation &&
+                                  isMember(request.toUserNavigation.userRole)
+                                    ? "text-purple-600"
+                                    : request.toUserNavigation &&
+                                        isTopContributor(
+                                          request.toUserNavigation.userLabel
+                                        )
+                                      ? "text-yellow-600"
+                                      : ""
+                                }`}
+                              >
+                                Người Nhận: @
+                                {request.toUserNavigation?.username ||
+                                  request.toUserNavigation?.fullName ||
+                                  "Người dùng ẩn danh"}
+                              </h3>
+                              {request.toUserNavigation &&
+                                isMember(request.toUserNavigation.userRole) && (
+                                  <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                                    MEMBER
+                                  </span>
+                                )}
+                              {request.toUserNavigation &&
+                                isTopContributor(
+                                  request.toUserNavigation.userLabel
+                                ) && (
+                                  <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                                    TOP CONTRIBUTOR
+                                  </span>
+                                )}
+                            </div>
+                            <p className="text-gray-600 text-sm">
+                              <strong>Giới Tính:</strong>{" "}
+                              {request.toUserNavigation?.gender === 0
+                                ? "Nam"
+                                : request.toUserNavigation?.gender === 1
+                                  ? "Nữ"
+                                  : "Không xác định"}
+                            </p>
                           </div>
+                        </div>
+
+                        <div className="text-center md:text-right">
+                          <p className="font-medium text-sm">
+                            <strong>Mã Bàn:</strong> {request.tableId}
+                          </p>
                           <p className="text-gray-600 text-sm">
-                            <strong>Giới Tính:</strong>{" "}
-                            {request.toUserNavigation?.gender === 0
-                              ? "Nam"
-                              : "Nữ"}
+                            <strong>Ngày Chơi Cờ:</strong>{" "}
+                            {formatDateTimeWithoutHour(request.startTime)}
+                          </p>
+                          <p className="text-gray-600 text-sm">
+                            <strong>Giờ Bắt Đầu Và Kết Thúc:</strong>{" "}
+                            {formatTimeRange(
+                              request.startTime,
+                              request.endTime
+                            )}
+                          </p>
+                          <p className="text-gray-600 text-sm">
+                            <strong>Số Tiền Cần Trả:</strong>{" "}
+                            {request.totalPrice?.toLocaleString()} VND
+                          </p>
+                          <p className="text-gray-600 text-sm">
+                            <strong>Lời mời hết hạn sau:</strong>{" "}
+                            {calculateTimeRemaining(request.expireAt)}
                           </p>
                         </div>
                       </div>
 
-                      <div className="text-center md:text-right">
-                        <p className="font-medium text-sm">
-                          <strong>Số Bàn:</strong> {request.tableId}
-                        </p>
-                        <p className="text-gray-600 text-sm">
-                          <strong>Ngày Chơi Cờ:</strong>{" "}
-                          {formatDateTimeWithoutHour(request.startTime)}
-                        </p>
-                        <p className="text-gray-600 text-sm">
-                          <strong>Giờ Bắt Đầu Và Kết Thúc</strong>{" "}
-                          {formatTimeRange(request.startTime, request.endTime)}
-                        </p>
-                        <p className="text-gray-600 text-sm">
-                          <strong>Số Tiền Cần Trả</strong>{" "}
-                          {request.totalPrice?.toLocaleString()} VND
-                        </p>
-                        <p className="text-gray-600 text-sm">
-                          <strong>Lời mời hết hạn sau:</strong>{" "}
-                          {calculateTimeRemaining(request.expireAt)}
-                        </p>
+                      <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row justify-between items-center gap-3">
+                        <div className="flex items-center">
+                          {request.status === "pending" ? (
+                            <span className="text-yellow-700 flex items-center text-sm">
+                              <Clock className="w-4 h-4 mr-1" />
+                              <strong>Chờ Phản Hồi</strong>
+                            </span>
+                          ) : request.status === "accepted" ? (
+                            <span className="text-green-700 flex items-center text-sm">
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              <strong>Đã Chấp Nhận Lời Mời</strong>
+                            </span>
+                          ) : request.status === "accepted_by_others" ? (
+                            <span className="text-pink-700 flex items-center text-sm">
+                              <UserCheck className="w-4 h-4 mr-1" />
+                              <strong>
+                                Lời Mời Đã Được Người Khác Chấp Nhận
+                              </strong>
+                            </span>
+                          ) : request.status === "rejected" ? (
+                            <span className="text-red-700 flex items-center text-sm">
+                              <XCircle className="w-4 h-4 mr-1" />
+                              <strong>Đã Từ Chối Lời Mời</strong>
+                            </span>
+                          ) : request.status === "expired" ? (
+                            <span className="text-orange-600 flex items-center text-sm">
+                              <Clock className="w-4 h-4 mr-1" />
+                              <strong>Lời Mời Đã Hết Hạn</strong>
+                            </span>
+                          ) : request.status === "cancelled" ? (
+                            <span className="text-gray-600 flex items-center text-sm">
+                              <XCircle className="w-4 h-4 mr-1" />
+                              <strong>Lời Mời Đã Bị Hủy</strong>
+                            </span>
+                          ) : request.status === "table_cancelled" ? (
+                            <span className="text-orange-500 flex items-center text-sm">
+                              <XCircle className="w-4 h-4 mr-1" />
+                              <strong>Bàn Đã Bị Hủy</strong>
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <div className="flex space-x-2">
+                          {request.status === "pending" &&
+                            !isExpired(request.expireAt) && (
+                              <Button
+                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[80px]"
+                                onClick={() => checkCancelCondition(request.id)}
+                                disabled={
+                                  isProcessing || isExpired(request.expireAt)
+                                }
+                              >
+                                {processingCancelId === request.id ? (
+                                  <>
+                                    <Loader2 className="animate-spin mr-1 h-3 w-3" />
+                                    Đang Xử Lý
+                                  </>
+                                ) : (
+                                  "Hủy"
+                                )}
+                              </Button>
+                            )}
+                          <Button
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-sm"
+                            onClick={() => handleViewDetails(request)}
+                            disabled={isProcessing}
+                          >
+                            Xem Chi Tiết
+                          </Button>
+                        </div>
                       </div>
                     </div>
-
-                    <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row justify-between items-center gap-3">
-                      <div className="flex items-center">
-                        {request.status === "pending" ? (
-                          <span className="text-yellow-700 flex items-center text-sm">
-                            <Clock className="w-4 h-4 mr-1" />
-                            <strong>Chờ Phản Hồi</strong>
-                          </span>
-                        ) : request.status === "accepted" ? (
-                          <span className="text-green-700 flex items-center text-sm">
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            <strong>Đã Chấp Nhận Lời Mời</strong>
-                          </span>
-                        ) : request.status === "accepted_by_others" ? (
-                          <span className="text-pink-700 flex items-center text-sm">
-                            <UserCheck className="w-4 h-4 mr-1" />
-                            <strong>
-                              Lời Mời Đã Được Người Khác Chấp Nhận
-                            </strong>
-                          </span>
-                        ) : request.status === "rejected" ? (
-                          <span className="text-red-700 flex items-center text-sm">
-                            <XCircle className="w-4 h-4 mr-1" />
-                            <strong>Đã Từ Chối Lời Mời</strong>
-                          </span>
-                        ) : request.status === "expired" ? (
-                          <span className="text-orange-600 flex items-center text-sm">
-                            <Clock className="w-4 h-4 mr-1" />
-                            <strong>Lời Mời Đã Hết Hạn</strong>
-                          </span>
-                        ) : request.status === "cancelled" ? (
-                          <span className="text-gray-600 flex items-center text-sm">
-                            <XCircle className="w-4 h-4 mr-1" />
-                            <strong>Lời Mời Đã Bị Hủy</strong>
-                          </span>
-                        ) : request.status === "table_cancelled" ? (
-                          <span className="text-orange-500 flex items-center text-sm">
-                            <XCircle className="w-4 h-4 mr-1" />
-                            <strong>Bàn Đã Bị Hủy</strong>
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <div className="flex space-x-2">
-                        <Button
-                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-sm"
-                          onClick={() => handleViewDetails(request)}
-                        >
-                          Xem Chi Tiết
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
-              {requests.length > 0 && (
+              {totalPages > 1 && (
                 <div className="flex justify-center mt-8 mb-8">
                   <DefaultPagination
                     currentPage={currentPage}
