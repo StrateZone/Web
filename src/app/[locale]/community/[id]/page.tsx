@@ -16,7 +16,7 @@ import Swal from "sweetalert2";
 import "react-toastify/dist/ReactToastify.css";
 import { InsufficientBalancePopup } from "../../chess_appointment/chess_appointment_order/InsufficientBalancePopup";
 import DOMPurify from "dompurify";
-import { MembershipUpgradeDialog } from "../MembershipUpgradeDialog";
+import { MembershipUpgradeDialog } from "../MembershipUpgradeDialog ";
 
 interface Thread {
   threadId: number;
