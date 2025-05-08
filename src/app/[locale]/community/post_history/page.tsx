@@ -347,9 +347,13 @@ function BlogHistory() {
       setMembershipPrice(response.data);
     } catch (error) {
       console.error("Lỗi lấy giá thành viên:", error);
-      setError(error.response?.data?.message || "Không thể tải giá thành viên");
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else {
+        setError("Không thể tải giá thành viên");
+      }
       toast.error(
-        error.response?.data?.message ||
+        (axios.isAxiosError(error) && error.response?.data?.message) ||
           "Không thể tải giá thành viên. Vui lòng thử lại."
       );
     }
@@ -412,8 +416,15 @@ function BlogHistory() {
       }
     } catch (error) {
       console.error("Lỗi thanh toán:", error);
-      setError(error.response?.data?.message || "Thanh toán thất bại");
-      if (error.message && error.message.includes("Balance is not enough")) {
+      if (axios.isAxiosError(error)) {
+        setError(error.response?.data?.message || "Thanh toán thất bại");
+      } else {
+        setError("Thanh toán thất bại");
+      }
+      if (
+        error instanceof Error &&
+        error.message.includes("Balance is not enough")
+      ) {
         try {
           const shouldNavigate = await InsufficientBalancePopup({
             finalPrice: membershipPrice?.price1,
@@ -428,7 +439,10 @@ function BlogHistory() {
       } else {
         Swal.fire({
           title: "Lỗi",
-          text: error.response?.data?.message || "Đã xảy ra lỗi khi thanh toán",
+          text:
+            axios.isAxiosError(error) && error.response?.data?.message
+              ? error.response.data.message
+              : "Đã xảy ra lỗi khi thanh toán",
           icon: "error",
           confirmButtonText: "Đóng",
         });
@@ -487,10 +501,11 @@ function BlogHistory() {
       } catch (error) {
         console.error("Lỗi lấy danh sách bài viết:", error);
         setError(
-          error.response?.data?.message || "Không thể tải danh sách bài viết"
+          (axios.isAxiosError(error) && error.response?.data?.message) ||
+            "Không thể tải danh sách bài viết"
         );
         toast.error(
-          error.response?.data?.message ||
+          (axios.isAxiosError(error) && error.response?.data?.message) ||
             "Không thể tải danh sách bài viết. Vui lòng thử lại.",
           {
             style: {
@@ -664,10 +679,11 @@ function BlogHistory() {
     } catch (error) {
       console.error("Lỗi xóa bài viết:", error);
       setError(
-        error.response?.data?.message || "Đã xảy ra lỗi khi xóa bài viết"
+        (axios.isAxiosError(error) && error.response?.data?.message) ||
+          "Đã xảy ra lỗi khi xóa bài viết"
       );
       toast.error(
-        error.response?.data?.message ||
+        (axios.isAxiosError(error) && error.response?.data?.message) ||
           "Đã xảy ra lỗi khi xóa bài viết. Vui lòng thử lại.",
         {
           style: {
@@ -768,10 +784,11 @@ function BlogHistory() {
     } catch (error) {
       console.error("Lỗi ẩn bài viết:", error);
       setError(
-        error.response?.data?.message || "Đã xảy ra lỗi khi ẩn bài viết"
+        (axios.isAxiosError(error) && error.response?.data?.message) ||
+          "Đã xảy ra lỗi khi ẩn bài viết"
       );
       toast.error(
-        error.response?.data?.message ||
+        (axios.isAxiosError(error) && error.response?.data?.message) ||
           "Đã xảy ra lỗi khi ẩn bài viết. Vui lòng thử lại.",
         {
           style: {
@@ -872,10 +889,11 @@ function BlogHistory() {
     } catch (error) {
       console.error("Lỗi hiển thị bài viết:", error);
       setError(
-        error.response?.data?.message || "Đã xảy ra lỗi khi hiển thị bài viết"
+        (axios.isAxiosError(error) && error.response?.data?.message) ||
+          "Đã xảy ra lỗi khi hiển thị bài viết"
       );
       toast.error(
-        error.response?.data?.message ||
+        (axios.isAxiosError(error) && error.response?.data?.message) ||
           "Đã xảy ra lỗi khi hiển thị bài viết. Vui lòng thử lại.",
         {
           style: {
@@ -974,11 +992,11 @@ function BlogHistory() {
     } catch (error) {
       console.error("Lỗi thực hiện hành động thích:", error);
       setError(
-        error.response?.data?.message ||
+        (axios.isAxiosError(error) && error.response?.data?.message) ||
           "Không thể thực hiện hành động thích bài viết"
       );
       toast.error(
-        error.response?.data?.message ||
+        (axios.isAxiosError(error) && error.response?.data?.message) ||
           "Không thể thực hiện hành động thích bài viết. Vui lòng thử lại.",
         {
           style: {
