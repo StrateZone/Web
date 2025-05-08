@@ -80,6 +80,7 @@ export default function CommunityPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedTags, setSelectedTags] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [error, setError] = useState<string>("");
   const router = useRouter();
   const { locale } = useParams();
   const [orderBy, setOrderBy] = useState<
@@ -98,61 +99,81 @@ export default function CommunityPage() {
   const inactiveButtonClass = "text-gray-700 hover:bg-gray-100";
   const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
 
+  let isRefreshing = false;
+  let refreshPromise: Promise<void> | null = null;
+
   const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
-    try {
-      const refreshToken = localStorage.getItem("refreshToken");
-      if (!refreshToken) {
-        throw new Error("Không có refresh token, vui lòng đăng nhập lại");
-      }
+    if (isRefreshing) {
+      await refreshPromise;
+      await retryCallback();
+      return;
+    }
 
-      console.log("Sending refreshToken:", refreshToken); // Debug
-      const response = await fetch(
-        `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(refreshToken)}`,
-        {
-          method: "POST",
-          headers: {
-            Accept: "*/*",
-            // Remove Content-Type since we're not sending a JSON body
-            // Authorization header may still be needed if the API requires it
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
+    isRefreshing = true;
+    refreshPromise = new Promise(async (resolve, reject) => {
+      try {
+        const refreshToken = localStorage.getItem("refreshToken");
+        if (!refreshToken) {
+          throw new Error("Không có refresh token, vui lòng đăng nhập lại");
         }
-      );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Refresh token error:", errorData); // Debug
-        throw new Error(errorData.message || "Không thể làm mới token");
-      }
+        console.log("Sending refreshToken:", refreshToken);
+        const response = await fetch(
+          `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(
+            refreshToken
+          )}`,
+          {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
+        );
 
-      // Since the API returns 204, there may be no response body
-      // Check if the API sets the new token in headers or elsewhere
-      const newToken = response.headers.get("x-access-token"); // Adjust based on API behavior
-      if (newToken) {
-        localStorage.setItem("accessToken", newToken);
-      } else {
-        // If the API returns a JSON body (based on your original code), parse it
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error("Lỗi refresh token:", errorData);
+          throw new Error(errorData || "Không thể làm mới token");
+        }
+
         const data = await response.json();
+        if (!data.data?.newToken) {
+          throw new Error("Không có token mới trong phản hồi");
+        }
+
         localStorage.setItem("accessToken", data.data.newToken);
         if (data.data.refreshToken) {
           localStorage.setItem("refreshToken", data.data.refreshToken);
         }
-      }
 
-      await retryCallback();
-    } catch (error) {
-      console.error("Token refresh failed:", error);
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("authData");
-      // Chỉ chuyển hướng nếu cần
-      document.cookie =
-        "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-      document.cookie =
-        "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-      window.location.href = "/vn/login";
-    }
+        console.log("Refresh token thành công:", {
+          newToken: data.data.newToken,
+          newRefreshToken: data.data.refreshToken,
+        });
+
+        await retryCallback();
+        resolve();
+      } catch (error) {
+        console.error("Refresh token thất bại:", error);
+        // localStorage.removeItem("accessToken");
+        // localStorage.removeItem("refreshToken");
+        // localStorage.removeItem("authData");
+        // document.cookie =
+        //   "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        // document.cookie =
+        //   "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        // router.push(`/${locale}/login`);
+        reject(error);
+      } finally {
+        isRefreshing = false;
+        refreshPromise = null;
+      }
+    });
+
+    await refreshPromise;
   };
+
   useEffect(() => {
     const checkUserMembership = () => {
       const authDataString = localStorage.getItem("authData");
@@ -175,6 +196,7 @@ export default function CommunityPage() {
       } catch (error) {
         console.error("Error parsing auth data:", error);
         setIsLoggedIn(false);
+        setError("Dữ liệu xác thực không hợp lệ. Vui lòng đăng nhập lại.");
         toast.error("Dữ liệu xác thực không hợp lệ. Vui lòng đăng nhập lại.");
       } finally {
         setInitialLoading(false);
@@ -203,7 +225,8 @@ export default function CommunityPage() {
   const fetchThreads = async () => {
     try {
       setLoading(true);
-      let url = `https://backend-production-ac5e.up.railway.app/api/threads/filter/statuses-and-tags?statuses=published&page-number=${currentPage}&page-size=${pageSize}`;
+      setError("");
+      let url = `${API_BASE_URL}/api/threads/filter/statuses-and-tags?statuses=published&page-number=${currentPage}&page-size=${pageSize}`;
 
       if (orderBy === "friends" && userId) {
         url += `&order-by=${orderBy}&userId=${userId}`;
@@ -221,17 +244,37 @@ export default function CommunityPage() {
         url += `&search=${encodeURIComponent(searchQuery.trim())}`;
       }
 
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Failed to fetch threads");
-      const data: PaginatedResponse = await response.json();
+      const response = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
 
-      // Không ghi đè commentsCount, sử dụng giá trị từ API
+      if (response.status === 401) {
+        await handleTokenExpiration(fetchThreads);
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể tải bài viết");
+      }
+
+      const data: PaginatedResponse = await response.json();
       setThreads(data.pagedList);
       setTotalPages(data.totalPages);
     } catch (error) {
       console.error("Error fetching threads:", error);
+      setError(
+        error instanceof Error ? error.message : "Không thể tải bài viết"
+      );
       setThreads([]);
-      toast.error("Không thể tải bài viết. Vui lòng thử lại.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải bài viết. Vui lòng thử lại."
+      );
     } finally {
       setLoading(false);
     }
@@ -240,25 +283,37 @@ export default function CommunityPage() {
   const fetchTags = async () => {
     try {
       setTagLoading(true);
-      const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/tags",
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        }
-      );
+      setError("");
+      const response = await fetch(`${API_BASE_URL}/api/tags`, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
+
       if (response.status === 401) {
-        await handleTokenExpiration(() => fetchThreads());
+        await handleTokenExpiration(fetchTags);
         return;
       }
-      if (!response.ok) throw new Error("Failed to fetch tags");
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể tải danh sách tag");
+      }
+
       const data: Tag[] = await response.json();
       setTags(data);
     } catch (error) {
       console.error("Error fetching tags:", error);
+      setError(
+        error instanceof Error ? error.message : "Không thể tải danh sách tag"
+      );
       setTags([]);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải danh sách tag. Vui lòng thử lại."
+      );
     } finally {
       setTagLoading(false);
     }
@@ -266,24 +321,36 @@ export default function CommunityPage() {
 
   const fetchMembershipPrice = async () => {
     try {
-      const response = await fetch(
-        "https://backend-production-ac5e.up.railway.app/api/prices/membership",
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        }
-      );
+      setError("");
+      const response = await fetch(`${API_BASE_URL}/api/prices/membership`, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
+
       if (response.status === 401) {
-        await handleTokenExpiration(() => fetchMembershipPrice());
+        await handleTokenExpiration(fetchMembershipPrice);
         return;
       }
-      if (!response.ok) throw new Error("Failed to fetch membership price");
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể tải giá thành viên");
+      }
+
       const data: MembershipPrice = await response.json();
       setMembershipPrice(data);
     } catch (error) {
       console.error("Error fetching membership price:", error);
+      setError(
+        error instanceof Error ? error.message : "Không thể tải giá thành viên"
+      );
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải giá thành viên. Vui lòng thử lại."
+      );
     }
   };
 
@@ -316,63 +383,90 @@ export default function CommunityPage() {
     setPaymentProcessing(true);
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/payments/membership-payment/${userId}`,
+        `${API_BASE_URL}/api/payments/membership-payment/${userId}`,
         {
           method: "POST",
           headers: {
+            Accept: "application/json",
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );
+
       if (response.status === 401) {
-        await handleTokenExpiration(() => handleMembershipPayment());
+        await handleTokenExpiration(handleMembershipPayment);
         return;
       }
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Thanh toán thất bại");
+      }
+
       const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Payment failed");
+      if (!result.success) {
+        throw new Error(result.message || "Thanh toán thất bại");
       }
 
-      if (result.success) {
-        const userData = localStorage.getItem("authData");
-        if (userData) {
-          const user = JSON.parse(userData);
-          const updatedUser = {
-            ...user,
-            userRole: "Member",
-            ...(user.userInfo && {
-              userInfo: {
-                ...user.userInfo,
-                userRole: "Member",
-              },
-            }),
-          };
+      const userData = localStorage.getItem("authData");
+      if (userData) {
+        const user = JSON.parse(userData);
+        const updatedUser = {
+          ...user,
+          userRole: "Member",
+          ...(user.userInfo && {
+            userInfo: {
+              ...user.userInfo,
+              userRole: "Member",
+            },
+          }),
+        };
 
-          localStorage.setItem("authData", JSON.stringify(updatedUser));
-          // Dispatch a custom event to notify other components
-          window.dispatchEvent(new Event("authDataUpdated"));
+        localStorage.setItem("authData", JSON.stringify(updatedUser));
+        window.dispatchEvent(new Event("authDataUpdated"));
 
-          setUserRole("Member");
-          setShowMembershipDialog(false);
+        setUserRole("Member");
+        setShowMembershipDialog(false);
 
-          toast.success(
-            <div>
-              <h3 className="font-bold">Nâng cấp thành công!</h3>
-              <p>Bạn đã có thể truy cập toàn bộ cộng đồng</p>
-            </div>,
-            {
-              autoClose: 3000,
-              closeButton: true,
-            }
-          );
+        toast.success(
+          <div>
+            <h3 className="font-bold">Nâng cấp thành công!</h3>
+            <p>Bạn đã có thể truy cập toàn bộ cộng đồng</p>
+          </div>,
+          {
+            autoClose: 3000,
+            closeButton: true,
+          }
+        );
 
-          fetchThreads();
-        }
+        fetchThreads();
       }
-    } catch (error: any) {
-      // ... (error handling remains unchanged)
+    } catch (error) {
+      console.error("Error during membership payment:", error);
+      setError(error instanceof Error ? error.message : "Thanh toán thất bại");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Thanh toán thất bại. Vui lòng thử lại."
+      );
+      if (
+        error instanceof Error &&
+        error.message.includes("Insufficient balance")
+      ) {
+        Swal.fire({
+          icon: "error",
+          title: "Số dư không đủ",
+          text: "Số dư tài khoản của bạn không đủ để thực hiện thanh toán. Vui lòng nạp thêm tiền vào tài khoản.",
+          confirmButtonText: "Nạp tiền",
+          showCancelButton: true,
+          cancelButtonText: "Hủy",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            router.push(`/${locale}/wallet`);
+          }
+        });
+      }
     } finally {
       setPaymentProcessing(false);
     }
@@ -478,6 +572,16 @@ export default function CommunityPage() {
         membershipPrice={membershipPrice || undefined}
         paymentProcessing={paymentProcessing}
       />
+
+      {error && (
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6 container mx-auto"
+          role="alert"
+        >
+          <strong className="font-bold">Lỗi! </strong>
+          <span className="block sm:inline">{error}</span>
+        </div>
+      )}
 
       {userRole === "Member" ? (
         <main className="container mx-auto px-4 py-8 flex-grow">

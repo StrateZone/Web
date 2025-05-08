@@ -176,15 +176,6 @@ export default function EditPost() {
       await retryCallback();
     } catch (error) {
       console.error("Token refresh failed:", error);
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("authData");
-      // Chỉ chuyển hướng nếu cần
-      document.cookie =
-        "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-      document.cookie =
-        "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-      window.location.href = "/login";
     }
   };
   // Sync content with Quill editor
@@ -269,6 +260,10 @@ export default function EditPost() {
       const response = await axios.get(
         "https://backend-production-ac5e.up.railway.app/api/prices/membership"
       );
+      if (response.status === 401) {
+        await handleTokenExpiration(fetchMembershipPrice);
+        return;
+      }
       if (!response.status) throw new Error("Failed to fetch membership price");
       const data: MembershipPrice = response.data;
       setMembershipPrice(data);
@@ -376,7 +371,7 @@ export default function EditPost() {
           `https://backend-production-ac5e.up.railway.app/api/threads/${threadId}`,
           {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
           }
         );
@@ -572,7 +567,7 @@ export default function EditPost() {
         newStatus = "edit_pending";
       }
 
-      await axios.put(
+      const response = await axios.put(
         `https://backend-production-ac5e.up.railway.app/api/threads/edit/${threadId}`,
         {
           title: title,
@@ -582,11 +577,14 @@ export default function EditPost() {
         {
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );
-
+      if (response.status === 401) {
+        await handleTokenExpiration(() => handleSubmit(e));
+        return;
+      }
       if (thumbnail) {
         const formData = new FormData();
         formData.append("Type", "thread");
@@ -605,7 +603,7 @@ export default function EditPost() {
           {
             headers: {
               "Content-Type": "multipart/form-data",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
           }
         );
@@ -671,7 +669,7 @@ export default function EditPost() {
         {
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );
@@ -692,7 +690,7 @@ export default function EditPost() {
           {
             headers: {
               "Content-Type": "multipart/form-data",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
           }
         );

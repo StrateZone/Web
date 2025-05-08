@@ -192,14 +192,14 @@ const AppointmentSendRequestsPage = () => {
         resolve();
       } catch (error) {
         console.error("Refresh token thất bại:", error);
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("authData");
-        document.cookie =
-          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-        document.cookie =
-          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-        window.location.href = `/${localActive}/login`;
+        // localStorage.removeItem("accessToken");
+        // localStorage.removeItem("refreshToken");
+        // localStorage.removeItem("authData");
+        // document.cookie =
+        //   "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        // document.cookie =
+        //   "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        // window.location.href = `/${localActive}/login`;
         reject(error);
       } finally {
         isRefreshing = false;
