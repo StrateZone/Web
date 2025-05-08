@@ -238,7 +238,6 @@ function WalletPage() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization,
           },
           body: JSON.stringify({
             userId: userId,
