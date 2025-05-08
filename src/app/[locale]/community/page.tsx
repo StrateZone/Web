@@ -450,7 +450,10 @@ export default function CommunityPage() {
           ? error.message
           : "Thanh toán thất bại. Vui lòng thử lại."
       );
-      if (error.message.includes("Insufficient balance")) {
+      if (
+        error instanceof Error &&
+        error.message.includes("Insufficient balance")
+      ) {
         Swal.fire({
           icon: "error",
           title: "Số dư không đủ",
