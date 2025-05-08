@@ -191,7 +191,6 @@ export default function CreatePost() {
   const authDataString = localStorage.getItem("authData");
   const parsedAuthData = authDataString ? JSON.parse(authDataString) : {};
   const userInfo = parsedAuthData.userInfo || {};
-  const token = parsedAuthData.token;
   const currentUser = {
     userId: userInfo.userId,
     username: userInfo.username,
@@ -375,7 +374,7 @@ export default function CreatePost() {
     };
 
     fetchTags();
-  }, [userRole, token]);
+  }, [userRole]);
 
   useEffect(() => {
     const fetchDraftData = async () => {
@@ -386,7 +385,7 @@ export default function CreatePost() {
           `https://backend-production-ac5e.up.railway.app/api/threads/${draftId}`,
           {
             headers: {
-              Authorization: `Bearer ${token}`,
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
               "Content-Type": "application/json; charset=utf-8",
             },
           }
@@ -439,7 +438,7 @@ export default function CreatePost() {
     };
 
     fetchDraftData();
-  }, [draftId, userId, router, locale, token]);
+  }, [draftId, userId, router, locale]);
 
   const getTagColor = (tagName: string): string => {
     const colorMap: Record<string, string> = {
@@ -556,7 +555,7 @@ export default function CreatePost() {
           {
             headers: {
               "Content-Type": "application/json; charset=utf-8",
-              Authorization: `Bearer ${token}`,
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
           }
         );
@@ -568,7 +567,7 @@ export default function CreatePost() {
           {
             headers: {
               "Content-Type": "application/json; charset=utf-8",
-              Authorization: `Bearer ${token}`,
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
           }
         );
@@ -590,7 +589,7 @@ export default function CreatePost() {
         {
           headers: {
             "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );
@@ -652,7 +651,7 @@ export default function CreatePost() {
           {
             headers: {
               "Content-Type": "application/json; charset=utf-8",
-              Authorization: `Bearer ${token}`,
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
           }
         );
@@ -667,7 +666,7 @@ export default function CreatePost() {
           {
             headers: {
               "Content-Type": "application/json; charset=utf-8",
-              Authorization: `Bearer ${token}`,
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
           }
         );
@@ -688,7 +687,7 @@ export default function CreatePost() {
           {
             headers: {
               "Content-Type": "multipart/form-data",
-              Authorization: `Bearer ${token}`,
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
           }
         );
