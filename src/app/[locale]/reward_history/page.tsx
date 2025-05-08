@@ -161,7 +161,11 @@ const RewardHistoryPage = () => {
       setPointsData(data);
     } catch (error) {
       console.error("Lỗi tải điểm thưởng:", error);
-      setErrorPoints(`Không thể tải thông tin điểm: ${error.message}`);
+      if (error instanceof Error) {
+        setErrorPoints(`Không thể tải thông tin điểm: ${error.message}`);
+      } else {
+        setErrorPoints("Không thể tải thông tin điểm: Lỗi không xác định");
+      }
     } finally {
       setLoadingPoints(false);
     }
