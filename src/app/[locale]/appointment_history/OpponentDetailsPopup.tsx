@@ -225,10 +225,6 @@ function OpponentDetailsPopup({
       );
 
       if (response.status === 401) {
-        await handleTokenExpiration(async () => {
-          await handleInviteSuccess(opponents);
-        });
-        return;
       }
       if (!response.ok) {
         throw new Error("Failed to send invitations");
