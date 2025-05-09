@@ -143,7 +143,9 @@ export function Navbar() {
       clearTimeout(timeoutId);
 
       if (response.status === 401) {
-        await handleTokenExpiration(() => checkUserRole(userId));
+        await handleTokenExpiration(async () => {
+          await checkUserRole(userId);
+        });
         return null;
       }
 
