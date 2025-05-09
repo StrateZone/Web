@@ -104,7 +104,7 @@ interface ApiResponse {
   hasNext: boolean;
 }
 
-interface Membership_HW4ED4Price {
+interface MembershipPrice {
   id: number;
   price1: number;
   unit: string;
