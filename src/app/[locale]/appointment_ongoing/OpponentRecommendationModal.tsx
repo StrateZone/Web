@@ -538,7 +538,7 @@ const OpponentRecommendationModalWithNewInvite = ({
     );
   }
 
-  const tabsData = isMember(userRole)
+  const tabsData = isMember(userRole ?? undefined)
     ? [
         {
           label: (
@@ -835,7 +835,7 @@ const OpponentRecommendationModalWithNewInvite = ({
               ))}
             </TabsHeader>
             <TabsBody>
-              {isMember(userRole) && !hasSearched && (
+              {isMember(userRole ?? undefined) && !hasSearched && (
                 <TabPanel value="friends" className="p-0 mt-4">
                   {loading ? (
                     <div className="flex justify-center py-8">
