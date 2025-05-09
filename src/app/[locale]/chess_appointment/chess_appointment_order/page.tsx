@@ -426,7 +426,11 @@ const TableBookingPage = () => {
     };
 
     const updatedBookings = chessBookings.map((booking) => {
-      if (booking.tableId === tableId) {
+      if (
+        booking.tableId === tableId &&
+        booking.startDate === selectedStartDate && // Kiểm tra startDate
+        booking.endDate === selectedEndDate
+      ) {
         const existingInvites = booking.invitedUsers || [];
         const isAlreadyInvited = existingInvites.some(
           (u) => u.userId === opponent.userId

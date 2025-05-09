@@ -175,29 +175,70 @@ export default function CommunityPage() {
   };
 
   useEffect(() => {
-    const checkUserMembership = () => {
-      const authDataString = localStorage.getItem("authData");
-      if (!authDataString) {
-        setIsLoggedIn(false);
-        setInitialLoading(false);
-        return;
-      }
-
+    const checkUserMembership = async () => {
       try {
-        setIsLoggedIn(true);
-        const user = JSON.parse(authDataString);
-        setUserId(user.userId);
-        setUserRole(user.userRole);
+        setInitialLoading(true);
+        setError("");
 
-        if (user.userRole === "RegisteredUser") {
+        // Retrieve authData from localStorage
+        const authDataString = localStorage.getItem("authData");
+        if (!authDataString) {
+          setIsLoggedIn(false);
+          setInitialLoading(false);
+          return;
+        }
+
+        // Parse authData to get userId
+        const authData = JSON.parse(authDataString);
+        const userId = authData.userId;
+        if (!userId) {
+          throw new Error("Không tìm thấy userId trong dữ liệu xác thực");
+        }
+
+        // Fetch user role using the /api/users/{id}/role endpoint
+        const response = await fetch(
+          `${API_BASE_URL}/api/users/${userId}/role`,
+          {
+            method: "GET",
+            headers: {
+              Accept: "text/plain",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
+        );
+
+        if (response.status === 401) {
+          await handleTokenExpiration(checkUserMembership);
+          return;
+        }
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          throw new Error(errorData || "Không thể lấy vai trò người dùng");
+        }
+
+        const userRole = await response.text(); // Response is plain text (e.g., "Member")
+        setIsLoggedIn(true);
+        setUserId(userId);
+        setUserRole(userRole);
+
+        if (userRole === "RegisteredUser") {
           fetchMembershipPrice();
           setShowMembershipDialog(true);
         }
       } catch (error) {
-        console.error("Error parsing auth data:", error);
+        console.error("Error fetching user role:", error);
         setIsLoggedIn(false);
-        setError("Dữ liệu xác thực không hợp lệ. Vui lòng đăng nhập lại.");
-        toast.error("Dữ liệu xác thực không hợp lệ. Vui lòng đăng nhập lại.");
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Dữ liệu xác thực không hợp lệ. Vui lòng đăng nhập lại."
+        );
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Dữ liệu xác thực không hợp lệ. Vui lòng đăng nhập lại."
+        );
       } finally {
         setInitialLoading(false);
       }

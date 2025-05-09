@@ -50,49 +50,170 @@ export function Navbar() {
   const t = useTranslations("NavBar");
   const router = useRouter();
   const localActive = useLocale();
-  const pathname = usePathname(); // Get the current URL path
+  const pathname = usePathname();
   const { locale } = useParams();
-
-  const [showBalance, setShowBalance] = useState<boolean>(true);
-  const [open, setOpen] = useState(false);
-  const [isScrolling, setIsScrolling] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState<string | number | null>(null); // Store user role
-
   const dispatch = useDispatch<AppDispatch>();
   const { balance, loading: walletLoading } = useSelector(
     (state: RootState) => state.wallet
   );
 
-  const toggleShowBalance = () => {
-    setShowBalance((prev) => {
-      const newValue = !prev;
-      localStorage.setItem("showBalance", JSON.stringify(newValue));
-      return newValue;
+  const [showBalance, setShowBalance] = useState<boolean>(true);
+  const [open, setOpen] = useState(false);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
+
+  const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
+  let isRefreshing = false;
+  let refreshPromise: Promise<void> | null = null;
+
+  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
+    if (isRefreshing) {
+      await refreshPromise;
+      await retryCallback();
+      return;
+    }
+
+    isRefreshing = true;
+    refreshPromise = new Promise(async (resolve, reject) => {
+      try {
+        const refreshToken = localStorage.getItem("refreshToken");
+        if (!refreshToken) {
+          throw new Error("No refresh token available, please log in again");
+        }
+
+        const response = await fetch(
+          `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(
+            refreshToken
+          )}`,
+          {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Unable to refresh token");
+        }
+
+        const data = await response.json();
+        if (!data.data?.newToken) {
+          throw new Error("No new token in response");
+        }
+
+        localStorage.setItem("accessToken", data.data.newToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem("refreshToken", data.data.refreshToken);
+        }
+
+        await retryCallback();
+        resolve();
+      } catch (error) {
+        console.error("Refresh token failed:", error);
+        setIsLoggedIn(false);
+        setUserRole(null);
+        setUserId(null);
+        router.push(`/${locale}/login`);
+        reject(error);
+      } finally {
+        isRefreshing = false;
+        refreshPromise = null;
+      }
     });
+
+    await refreshPromise;
   };
+
+  const checkUserRole = async (userId: number): Promise<string | null> => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // Timeout 5 giây
+      const response = await fetch(`${API_BASE_URL}/api/users/${userId}/role`, {
+        method: "GET",
+        headers: {
+          Accept: "text/plain",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (response.status === 401) {
+        await handleTokenExpiration(async () => {
+          await checkUserRole(userId);
+        });
+        return null;
+      }
+
+      if (!response.ok) {
+        throw new Error("Unable to fetch user role");
+      }
+
+      return await response.text();
+    } catch (error) {
+      console.error("Error fetching user role:", error);
+      throw error;
+    }
+  };
+
+  const fetchUserData = async (userId: number) => {
+    try {
+      // Gọi đồng thời API role và wallet
+      const [roleResult] = await Promise.all([
+        checkUserRole(userId),
+        dispatch(fetchWallet(userId)).unwrap(), // Giả định fetchWallet trả về Promise
+      ]);
+
+      if (roleResult) {
+        setUserRole(roleResult);
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      setIsLoggedIn(false);
+      setUserRole(null);
+      setUserId(null);
+      router.push(`/${locale}/login`);
+    }
+  };
+
   useEffect(() => {
-    const checkAuth = () => {
+    const checkAuth = async () => {
       try {
         const token = localStorage.getItem("accessToken");
         const storedAuthData = localStorage.getItem("authData");
-        const isAuthenticated = !!token && !!storedAuthData;
-        setIsLoggedIn(isAuthenticated);
-
-        if (isAuthenticated && storedAuthData) {
-          const parsedData = JSON.parse(storedAuthData);
-          const userId = parsedData.userId || 11;
-          const role = parsedData.userRole;
-          setUserRole(role); // Update userRole
-          dispatch(fetchWallet(userId));
+        if (!token || !storedAuthData) {
+          setIsLoggedIn(false);
+          return;
         }
+
+        let parsedData;
+        try {
+          parsedData = JSON.parse(storedAuthData);
+        } catch (e) {
+          console.error("Invalid authData format:", e);
+          setIsLoggedIn(false);
+          return;
+        }
+
+        const userId = parsedData.userId;
+        if (!userId) {
+          console.error("No userId found in authData");
+          setIsLoggedIn(false);
+          return;
+        }
+
+        setIsLoggedIn(true);
+        setUserId(userId);
+        await fetchUserData(userId); // Gọi đồng thời API
       } catch (error) {
         console.error("Error checking auth:", error);
         setIsLoggedIn(false);
         setUserRole(null);
-      } finally {
-        setAuthChecked(true);
+        setUserId(null);
       }
     };
 
@@ -101,18 +222,28 @@ export function Navbar() {
     };
 
     const handleAuthDataUpdate = () => {
-      checkAuth(); // Re-check auth when custom event is triggered
+      checkAuth();
     };
 
     window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("authDataUpdated", handleAuthDataUpdate); // Listen for custom event
+    window.addEventListener("authDataUpdated", handleAuthDataUpdate);
     checkAuth();
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("authDataUpdated", handleAuthDataUpdate);
     };
-  }, [dispatch]);
+  }, [dispatch, locale, router]);
+
+  useEffect(() => {
+    if (pathname.includes("/friend_list") && userRole !== null) {
+      const canAccessFriendList = userRole === "Member";
+      if (!canAccessFriendList) {
+        router.replace(`/${locale}`);
+      }
+    }
+  }, [userRole, pathname, router, locale]);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("showBalance");
@@ -120,51 +251,13 @@ export function Navbar() {
     }
   }, []);
 
-  useEffect(() => {
-    const checkAuth = () => {
-      try {
-        const token = localStorage.getItem("accessToken");
-        const storedAuthData = localStorage.getItem("authData");
-        const isAuthenticated = !!token && !!storedAuthData;
-        setIsLoggedIn(isAuthenticated);
-
-        if (isAuthenticated && storedAuthData) {
-          const parsedData = JSON.parse(storedAuthData);
-          const userId = parsedData.userId || 11;
-          const role = parsedData.userRole; // Assuming role is stored in authData
-          setUserRole(role); // Set the user role
-          dispatch(fetchWallet(userId));
-        }
-      } catch (error) {
-        console.error("Error checking auth:", error);
-        setIsLoggedIn(false);
-        setUserRole(null);
-      } finally {
-        setAuthChecked(true);
-      }
-    };
-
-    const handleStorageChange = () => {
-      checkAuth();
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    checkAuth();
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-    };
-  }, [dispatch]);
-
-  // Redirect to homepage if user is not a Member and tries to access /friend_list
-  useEffect(() => {
-    if (authChecked && pathname.includes("/friend_list")) {
-      const canAccessFriendList = userRole === "Member" || userRole === 1;
-      if (!canAccessFriendList) {
-        router.replace(`/${locale}`); // Redirect to homepage
-      }
-    }
-  }, [authChecked, userRole, pathname, router, locale]);
+  const toggleShowBalance = () => {
+    setShowBalance((prev) => {
+      const newValue = !prev;
+      localStorage.setItem("showBalance", JSON.stringify(newValue));
+      return newValue;
+    });
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -187,13 +280,8 @@ export function Navbar() {
 
   useEffect(() => {
     function handleScroll() {
-      if (window.scrollY > 0) {
-        setIsScrolling(true);
-      } else {
-        setIsScrolling(false);
-      }
+      setIsScrolling(window.scrollY > 0);
     }
-
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -216,35 +304,16 @@ export function Navbar() {
     },
   ];
 
-  // Check if user has the required role (Member or role ID 1)
-  const canAccessFriendList = userRole === "Member" || userRole === 1;
-
-  if (!authChecked) {
-    return (
-      <MTNavbar
-        shadow={false}
-        fullWidth
-        blurred={false}
-        color="white"
-        className="fixed top-0 z-50 border-0"
-      >
-        <div className="container mx-auto flex items-center justify-between h-16">
-          <Typography color="blue-gray" className="text-lg font-bold">
-            {t("siteTitle")}
-          </Typography>
-          <div className="animate-pulse h-8 w-8 rounded-full bg-gray-200"></div>
-        </div>
-      </MTNavbar>
-    );
-  }
+  const canAccessFriendList = userRole === "Member";
 
   return (
     <MTNavbar
       shadow={false}
       fullWidth
       blurred={false}
-      color={isScrolling ? "white" : "transparent"}
-      className="fixed top-0 z-50 border-0"
+      className={`fixed top-0 z-50 border-0 ${
+        isScrolling ? "bg-white" : "bg-transparent"
+      }`}
     >
       <div className="container mx-auto flex items-center justify-between">
         <Typography

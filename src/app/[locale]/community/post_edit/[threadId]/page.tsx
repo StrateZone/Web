@@ -215,36 +215,76 @@ export default function EditPost() {
   };
 
   // Kiểm tra quyền truy cập và vai trò người dùng
+  // Trong EditPost
   useEffect(() => {
-    const checkUserMembership = () => {
-      const authDataString = localStorage.getItem("authData");
-      if (!authDataString) {
-        router.push(`/${locale}/login`);
-        return;
-      }
-
+    const checkUserMembership = async () => {
       try {
-        const authData = JSON.parse(authDataString);
-        if (authData && authData.userId) {
-          setUserId(authData.userId);
-          setUserRole(authData.userRole);
-          setCurrentUser({
-            userId: authData.userId,
-            username: authData.userInfo?.username || "",
-            fullName: authData.userInfo?.fullName || "",
-            avatarUrl: authData.userInfo?.avatarUrl || "/default-avatar.jpg",
-          });
+        setInitialLoading(true);
+        setError("");
 
-          if (authData.userRole === "RegisteredUser") {
-            fetchMembershipPrice();
-            setShowMembershipDialog(true);
+        // Lấy authData từ localStorage
+        const authDataString = localStorage.getItem("authData");
+        if (!authDataString) {
+          router.push(`/${locale}/login`);
+          return;
+        }
+
+        // Phân tích authData để lấy userId và thông tin người dùng
+        const authData = JSON.parse(authDataString);
+        const userId = authData.userId;
+        if (!userId) {
+          throw new Error("Không tìm thấy userId trong dữ liệu xác thực");
+        }
+
+        // Gọi API để lấy vai trò người dùng
+        const response = await fetch(
+          `${API_BASE_URL}/api/users/${userId}/role`,
+          {
+            method: "GET",
+            headers: {
+              Accept: "text/plain",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
           }
-        } else {
-          throw new Error("Invalid auth data");
+        );
+
+        if (response.status === 401) {
+          await handleTokenExpiration(checkUserMembership);
+          return;
+        }
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          throw new Error(errorData || "Không thể lấy vai trò người dùng");
+        }
+
+        const userRole = await response.text(); // Vai trò trả về dưới dạng text (e.g., "Member", "RegisteredUser")
+        setUserId(userId);
+        setUserRole(userRole);
+        setCurrentUser({
+          userId: userId,
+          username: authData.userInfo?.username || "",
+          fullName: authData.userInfo?.fullName || "",
+          avatarUrl: authData.userInfo?.avatarUrl || "/default-avatar.jpg",
+        });
+
+        // Nếu người dùng là RegisteredUser, hiển thị dialog nâng cấp
+        if (userRole === "RegisteredUser") {
+          fetchMembershipPrice();
+          setShowMembershipDialog(true);
         }
       } catch (error) {
-        console.error("Error parsing auth data:", error);
-        toast.error("Dữ liệu xác thực không hợp lệ. Vui lòng đăng nhập lại.");
+        console.error("Error fetching user role:", error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Dữ liệu xác thực không hợp lệ. Vui lòng đăng nhập lại."
+        );
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Dữ liệu xác thực không hợp lệ. Vui lòng đăng nhập lại."
+        );
         router.push(`/${locale}/login`);
       } finally {
         setInitialLoading(false);
@@ -258,7 +298,14 @@ export default function EditPost() {
   const fetchMembershipPrice = async () => {
     try {
       const response = await axios.get(
-        "https://backend-production-ac5e.up.railway.app/api/prices/membership"
+        "https://backend-production-ac5e.up.railway.app/api/prices/membership",
+        {
+          method: "GET",
+          headers: {
+            Accept: "text/plain",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
       );
       if (response.status === 401) {
         await handleTokenExpiration(fetchMembershipPrice);

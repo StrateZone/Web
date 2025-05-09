@@ -60,6 +60,8 @@ interface ApiResponse {
   friends: Opponent[];
 }
 
+const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
+
 const OpponentRecommendationModalWithNewInvite = ({
   startDate,
   endDate,
@@ -78,16 +80,105 @@ const OpponentRecommendationModalWithNewInvite = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("opponents");
   const [hasSearched, setHasSearched] = useState(false);
-  const [maxInvitations, setMaxInvitations] = useState<number>(6); // Default to 6 as fallback
+  const [maxInvitations, setMaxInvitations] = useState<number>(6);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [loadingUserRole, setLoadingUserRole] = useState(true);
+  const [errorUserRole, setErrorUserRole] = useState<string | null>(null);
   const hasFetchedInitialData = useRef(false);
 
-  // Retrieve user role from localStorage
-  const authDataString = localStorage.getItem("authData");
-  const authData = authDataString ? JSON.parse(authDataString) : {};
-  const currentUserRole = authData.userRole;
+  // Hàm xử lý token hết hạn
+  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
+    try {
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (!refreshToken) {
+        throw new Error("Không có refresh token, vui lòng đăng nhập lại");
+      }
 
-  const isMember = (userRole: string | number | undefined) =>
-    userRole === "Member" || userRole === 1;
+      const response = await fetch(
+        `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(
+          refreshToken
+        )}`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "*/*",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Không thể làm mới token");
+      }
+
+      const newToken = response.headers.get("x-access-token");
+      if (newToken) {
+        localStorage.setItem("accessToken", newToken);
+      } else {
+        const data = await response.json();
+        localStorage.setItem("accessToken", data.data.newToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem("refreshToken", data.data.refreshToken);
+        }
+      }
+
+      await retryCallback();
+    } catch (error) {
+      console.error("Token refresh failed:", error);
+      setErrorUserRole("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+      toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+    }
+  };
+
+  // Hàm lấy vai trò người dùng từ API
+  const fetchUserRole = async () => {
+    try {
+      setLoadingUserRole(true);
+      setErrorUserRole(null);
+
+      const authDataString = localStorage.getItem("authData");
+      if (!authDataString) {
+        throw new Error("Không tìm thấy dữ liệu xác thực");
+      }
+
+      const authData = JSON.parse(authDataString);
+      const userId = authData.userId;
+      if (!userId) {
+        throw new Error("Không tìm thấy userId trong dữ liệu xác thực");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/users/${userId}/role`, {
+        method: "GET",
+        headers: {
+          Accept: "text/plain",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
+
+      if (response.status === 401) {
+        await handleTokenExpiration(() => fetchUserRole());
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể lấy vai trò người dùng");
+      }
+
+      const role = await response.text();
+      setUserRole(role);
+    } catch (error) {
+      console.error("Error fetching user role:", error);
+      setErrorUserRole(
+        error instanceof Error
+          ? error.message
+          : "Không thể lấy vai trò người dùng"
+      );
+    } finally {
+      setLoadingUserRole(false);
+    }
+  };
 
   const getChessBookingsInvite = () => {
     const savedBookings = localStorage.getItem("chessBookingsInvite");
@@ -98,11 +189,11 @@ const OpponentRecommendationModalWithNewInvite = ({
     localStorage.setItem("chessBookingsInvite", JSON.stringify(bookings));
   };
 
-  // Fetch max invitations from API
+  // Hàm lấy số lượng mời tối đa
   const fetchMaxInvitations = async () => {
     try {
       const response = await fetch(
-        `https://backend-production-ac5e.up.railway.app/api/system/1/appointment-requests/max-invitations-to-table`,
+        `${API_BASE_URL}/api/system/1/appointment-requests/max-invitations-to-table`,
         {
           headers: {
             accept: "*/*",
@@ -111,26 +202,33 @@ const OpponentRecommendationModalWithNewInvite = ({
       );
 
       if (!response.ok) {
-        throw new Error("Failed to fetch max invitations");
+        throw new Error("Không thể lấy số lượng mời tối đa");
       }
 
       const maxInvites = await response.json();
-      setMaxInvitations(maxInvites || 6); // Fallback to 6 if API returns invalid value
+      setMaxInvitations(maxInvites || 6);
     } catch (err) {
       console.error("Error fetching max invitations:", err);
-      setMaxInvitations(6); // Fallback to 6 on error
+      setMaxInvitations(6);
       toast.error(
         "Không thể lấy số lượng mời tối đa, sử dụng giá trị mặc định (6)"
       );
     }
   };
 
+  // Hàm lấy danh sách đối thủ
   const fetchOpponents = async () => {
     try {
       setLoading(true);
       setError(null);
 
+      const authDataString = localStorage.getItem("authData");
+      const authData = authDataString ? JSON.parse(authDataString) : {};
       const userId = authData.userId;
+
+      if (!userId) {
+        throw new Error("Không tìm thấy userId trong dữ liệu xác thực");
+      }
 
       const bookings = getChessBookingsInvite();
       let alreadyInvitedIds: number[] = [];
@@ -152,9 +250,7 @@ const OpponentRecommendationModalWithNewInvite = ({
         );
       }
 
-      const url = new URL(
-        `https://backend-production-ac5e.up.railway.app/api/users/opponents/${userId}`
-      );
+      const url = new URL(`${API_BASE_URL}/api/users/opponents/${userId}`);
 
       if (searchTerm) {
         url.searchParams.append("SearchTerm", searchTerm);
@@ -167,8 +263,14 @@ const OpponentRecommendationModalWithNewInvite = ({
       const response = await fetch(url.toString(), {
         headers: {
           accept: "*/*",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
       });
+
+      if (response.status === 401) {
+        await handleTokenExpiration(() => fetchOpponents());
+        return;
+      }
 
       if (!response.ok) {
         throw new Error("Không tìm thấy đối thủ phù hợp");
@@ -218,33 +320,42 @@ const OpponentRecommendationModalWithNewInvite = ({
       setInvitedOpponents(alreadyInvitedIds);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "An unknown error occurred"
+        err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định"
       );
     } finally {
       setLoading(false);
     }
   };
 
+  // Gọi API khi modal được mở
   useEffect(() => {
     if (open && !hasFetchedInitialData.current) {
       hasFetchedInitialData.current = true;
+      fetchUserRole(); // Gọi API để lấy userRole
+      fetchMaxInvitations(); // Gọi API để lấy max invitations
+    }
+  }, [open]);
+
+  // Cập nhật tab và gọi fetchOpponents sau khi có userRole
+  useEffect(() => {
+    if (userRole && open) {
       setHasSearched(false);
       setSearchTerm("");
-      setActiveTab(isMember(currentUserRole) ? "friends" : "opponents");
-      fetchMaxInvitations(); // Fetch max invitations when modal opens
+      setActiveTab(userRole === "Member" ? "friends" : "opponents");
       fetchOpponents();
     }
-  }, [open, currentUserRole]);
+  }, [userRole, open]);
 
+  // Làm mới danh sách đối thủ
   useEffect(() => {
     if (refreshTrigger && open) {
       setHasSearched(false);
       setSearchTerm("");
-      setActiveTab(isMember(currentUserRole) ? "friends" : "opponents");
-      fetchMaxInvitations(); // Fetch max invitations on refresh
+      setActiveTab(userRole === "Member" ? "friends" : "opponents");
+      fetchMaxInvitations();
       fetchOpponents();
     }
-  }, [refreshTrigger, currentUserRole]);
+  }, [refreshTrigger, userRole, open]);
 
   const handleRefresh = () => {
     setRefreshTrigger((prev) => !prev);
@@ -262,7 +373,6 @@ const OpponentRecommendationModalWithNewInvite = ({
     const currentInvitedCount = currentBooking?.invitedUsers?.length || 0;
     const totalCount = currentInvitedCount + 1;
 
-    // Use maxInvitations instead of hardcoded 6
     if (totalCount > maxInvitations) {
       toast.error(`Mỗi bàn chỉ có thể thêm tối đa ${maxInvitations} người`);
       return;
@@ -370,8 +480,6 @@ const OpponentRecommendationModalWithNewInvite = ({
         ]);
         setSelectedOpponents([]);
 
-        setSelectedOpponents([]);
-
         const bookings = getChessBookingsInvite();
         const bookingIndex = bookings.findIndex(
           (b: ChessBooking) =>
@@ -395,12 +503,42 @@ const OpponentRecommendationModalWithNewInvite = ({
     }
   };
 
+  const isMember = (role: string | number | undefined) =>
+    role === "Member" || role === 1;
+
   const isTopContributor = (userLabel: string | undefined) =>
     userLabel === "top_contributor";
 
   if (!open) return null;
 
-  const tabsData = isMember(currentUserRole)
+  // Hiển thị khi đang tải userRole
+  if (loadingUserRole) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl p-6">
+          <Spinner className="h-12 w-12" />
+        </div>
+      </div>
+    );
+  }
+
+  // Hiển thị lỗi khi không lấy được userRole
+  if (errorUserRole) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl p-6 text-center">
+          <Typography variant="h6" className="text-red-500 mb-4">
+            {errorUserRole}
+          </Typography>
+          <Button onClick={onClose} color="blue">
+            Đóng
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const tabsData = isMember(userRole ?? undefined)
     ? [
         {
           label: (
@@ -697,7 +835,7 @@ const OpponentRecommendationModalWithNewInvite = ({
               ))}
             </TabsHeader>
             <TabsBody>
-              {isMember(currentUserRole) && !hasSearched && (
+              {isMember(userRole ?? undefined) && !hasSearched && (
                 <TabPanel value="friends" className="p-0 mt-4">
                   {loading ? (
                     <div className="flex justify-center py-8">
