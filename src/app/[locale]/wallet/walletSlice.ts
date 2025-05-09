@@ -29,10 +29,10 @@ export const fetchWallet = createAsyncThunk(
       return await walletService.getWalletByUserId(userId);
     } catch (error: any) {
       return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch wallet",
+        error.response?.data?.message || "Failed to fetch wallet"
       );
     }
-  },
+  }
 );
 export const createZaloPayment = createAsyncThunk(
   "wallet/zaloPay",
@@ -43,7 +43,7 @@ export const createZaloPayment = createAsyncThunk(
       description?: string;
       returnUrl?: string;
     },
-    { rejectWithValue },
+    { rejectWithValue }
   ) => {
     try {
       const response = await paymentService.createZaloPayment({
@@ -55,7 +55,7 @@ export const createZaloPayment = createAsyncThunk(
     } catch (error: any) {
       return rejectWithValue(error.response?.data || "Payment failed");
     }
-  },
+  }
 );
 const walletSlice = createSlice({
   name: "wallet",

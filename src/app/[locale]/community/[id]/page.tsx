@@ -166,11 +166,8 @@ function PostDetailPage() {
           throw new Error("Không có refresh token, vui lòng đăng nhập lại");
         }
 
-        console.log("Sending refreshToken:", refreshToken);
         const response = await fetch(
-          `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(
-            refreshToken
-          )}`,
+          `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(refreshToken)}`,
           {
             method: "POST",
             headers: {
@@ -182,7 +179,6 @@ function PostDetailPage() {
 
         if (!response.ok) {
           const errorData = await response.text();
-          console.error("Lỗi refresh token:", errorData);
           throw new Error(errorData || "Không thể làm mới token");
         }
 
@@ -196,23 +192,10 @@ function PostDetailPage() {
           localStorage.setItem("refreshToken", data.data.refreshToken);
         }
 
-        console.log("Refresh token thành công:", {
-          newToken: data.data.newToken,
-          newRefreshToken: data.data.refreshToken,
-        });
-
         await retryCallback();
         resolve();
       } catch (error) {
         console.error("Refresh token thất bại:", error);
-        // localStorage.removeItem("accessToken");
-        // localStorage.removeItem("refreshToken");
-        // localStorage.removeItem("authData");
-        // document.cookie =
-        //   "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-        // document.cookie =
-        //   "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-        // window.location.href = `/${locale}/login`;
         reject(error);
       } finally {
         isRefreshing = false;
@@ -223,8 +206,37 @@ function PostDetailPage() {
     await refreshPromise;
   };
 
+  const fetchUserRole = async (userId: number) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/users/${userId}/role`, {
+        headers: {
+          Accept: "*/*",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
+
+      if (response.status === 401) {
+        await handleTokenExpiration(async () => {
+          await fetchUserRole(userId);
+        });
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || "Không thể lấy vai trò người dùng");
+      }
+
+      const role = await response.text();
+      return role;
+    } catch (error) {
+      console.error("Lỗi khi lấy vai trò người dùng:", error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
-    const checkUserMembership = () => {
+    const checkUserMembership = async () => {
       const authDataString = localStorage.getItem("authData");
       if (!authDataString) {
         setIsLoggedIn(false);
@@ -236,16 +248,19 @@ function PostDetailPage() {
         setIsLoggedIn(true);
         const user = JSON.parse(authDataString);
         setUserId(user.userId);
-        setUserRole(user.userRole);
 
-        if (user.userRole === "RegisteredUser") {
+        // Fetch user role from API
+        const role = await fetchUserRole(user.userId);
+        setUserRole(role);
+
+        if (role === "RegisteredUser") {
           fetchMembershipPrice();
           setShowMembershipDialog(true);
         }
       } catch (error) {
-        console.error("Error parsing auth data:", error);
+        console.error("Error fetching user role or auth data:", error);
         setIsLoggedIn(false);
-        toast.error("Dữ liệu xác thực không hợp lệ. Vui lòng đăng nhập lại.");
+        toast.error("Không thể xác thực người dùng. Vui lòng đăng nhập lại.");
       } finally {
         setInitialLoading(false);
       }

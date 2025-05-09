@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react"; // Added useMemo
+import React, { useState, useMemo, useCallback } from "react";
 import {
   Typography,
   Button,
@@ -7,16 +7,12 @@ import {
   MenuList,
   MenuItem,
   Avatar,
-  Badge,
-  Tooltip,
 } from "@material-tailwind/react";
 import {
   UserCircleIcon,
   ChevronDownIcon,
   PowerIcon,
   ClockIcon,
-  CheckBadgeIcon,
-  GifIcon,
 } from "@heroicons/react/24/solid";
 import { useRouter } from "next/navigation";
 import {
@@ -28,7 +24,6 @@ import {
   Newspaper,
   FileText,
   PlayCircleIcon,
-  Coins,
   CoinsIcon,
 } from "lucide-react";
 import { useLocale } from "next-intl";
@@ -128,7 +123,7 @@ const useProfileMenu = () => {
           onClick: () => router.push(`/${localActive}/${subItem.path}`),
         })),
       })),
-    [localActive, router, handleLogout] // Dependencies for memoization
+    [localActive, router, handleLogout]
   );
 
   return { getMenuConfig };
@@ -224,9 +219,8 @@ export default function ProfileMenu() {
   const { getMenuConfig } = useProfileMenu();
   const menuConfig = getMenuConfig;
 
-  // Get authData and check if user is a member
+  // Get authData
   const authData = JSON.parse(localStorage.getItem("authData") || "{}");
-  const isMember = authData?.userRole === "Member";
   const avatarUrl =
     authData?.userInfo?.avatarUrl ||
     "https://i.pinimg.com/736x/0f/68/94/0f6894e539589a50809e45833c8bb6c4.jpg";
@@ -239,34 +233,13 @@ export default function ProfileMenu() {
           color="blue-gray"
           className="flex items-center gap-1 rounded-full py-0.5 pr-2 pl-0.5 lg:ml-auto"
         >
-          {isMember ? (
-            <Badge
-              overlap="circular"
-              placement="bottom-end"
-              className="border-1 border-white bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse !h-5 !w-5"
-              content={
-                <Tooltip content="Thành viên câu lạc bộ">
-                  <CheckBadgeIcon className="h-4 w-4 text-white" />
-                </Tooltip>
-              }
-            >
-              <Avatar
-                variant="circular"
-                size="sm"
-                alt="user avatar"
-                className="p-0.5 border-2 border-purple-500 shadow-lg shadow-purple-500/30"
-                src={avatarUrl}
-              />
-            </Badge>
-          ) : (
-            <Avatar
-              variant="circular"
-              size="sm"
-              alt="user avatar"
-              className="p-0.5 border border-gray-900"
-              src={avatarUrl}
-            />
-          )}
+          <Avatar
+            variant="circular"
+            size="sm"
+            alt="user avatar"
+            className="p-0.5 border border-gray-900"
+            src={avatarUrl}
+          />
           <ChevronDownIcon
             strokeWidth={2.5}
             className={`h-3 w-3 transition-transform ${isMenuOpen ? "rotate-180" : ""}`}
