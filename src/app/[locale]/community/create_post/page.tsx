@@ -245,12 +245,12 @@ export default function CreatePost() {
         setUserRole(userRole);
 
         // Cập nhật thông tin người dùng
-        setCurrentUser({
-          userId: userId,
-          username: authData.userInfo?.username || "",
-          fullName: authData.userInfo?.fullName || "",
-          avatarUrl: authData.userInfo?.avatarUrl || "/default-avatar.jpg",
-        });
+        // Remove or replace this block as `setCurrentUser` is not defined
+        currentUser.userId = userId;
+        currentUser.username = authData.userInfo?.username || "";
+        currentUser.fullName = authData.userInfo?.fullName || "";
+        currentUser.avatarUrl =
+          authData.userInfo?.avatarUrl || "/default-avatar.jpg";
 
         // Nếu người dùng là RegisteredUser, hiển thị dialog nâng cấp
         if (userRole === "RegisteredUser") {
