@@ -251,7 +251,7 @@ function PostDetailPage() {
 
         // Fetch user role from API
         const role = await fetchUserRole(user.userId);
-        setUserRole(role);
+        setUserRole(role ?? null);
 
         if (role === "RegisteredUser") {
           fetchMembershipPrice();
