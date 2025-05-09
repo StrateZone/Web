@@ -114,10 +114,6 @@ export function Navbar() {
         resolve();
       } catch (error) {
         console.error("Refresh token failed:", error);
-        setIsLoggedIn(false);
-        setUserRole(null);
-        setUserId(null);
-        router.push(`/${locale}/login`);
         reject(error);
       } finally {
         isRefreshing = false;

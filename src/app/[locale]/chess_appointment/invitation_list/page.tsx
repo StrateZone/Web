@@ -891,14 +891,14 @@ const AppointmentRequestsPage = () => {
                           </span>
                         )}
                       </div>
-                      <p className="text-gray-600 text-sm">
+                      {/* <p className="text-gray-600 text-sm">
                         <strong>Giới Tính:</strong>{" "}
                         {selectedRequest.toUserNavigation?.gender === 0
                           ? "Nam"
                           : selectedRequest.toUserNavigation?.gender === 1
                             ? "Nữ"
                             : "Không xác định"}
-                      </p>
+                      </p> */}
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -1137,14 +1137,14 @@ const AppointmentRequestsPage = () => {
                                 </span>
                               )}
                             </div>
-                            <p className="text-gray-600 text-sm">
+                            {/* <p className="text-gray-600 text-sm">
                               <strong>Giới Tính:</strong>{" "}
                               {request.toUserNavigation?.gender === 0
                                 ? "Nam"
                                 : request.toUserNavigation?.gender === 1
                                   ? "Nữ"
                                   : "Không xác định"}
-                            </p>
+                            </p> */}
                           </div>
                         </div>
 
