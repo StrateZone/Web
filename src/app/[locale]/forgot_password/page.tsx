@@ -41,7 +41,13 @@ export default function ForgotPasswordPage() {
       setLoading(true);
       try {
         const response = await axios.post(
-          `https://backend-production-ac5e.up.railway.app/api/auth/recover-password?email=${encodeURIComponent(email)}`
+          `https://backend-production-ac5e.up.railway.app/api/auth/recover-password?email=${encodeURIComponent(email)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+              "Content-Type": "application/json",
+            },
+          }
         );
 
         if (
