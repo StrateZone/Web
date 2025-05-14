@@ -26,7 +26,6 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
   isLoading,
 }) => {
   if (!show || !refundInfo) {
-    console.log("Modal not rendered due to:", { show, refundInfo });
     return null;
   }
 

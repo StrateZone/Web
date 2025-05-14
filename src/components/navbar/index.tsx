@@ -25,6 +25,8 @@ import { fetchWallet } from "@/app/[locale]/wallet/walletSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/app/store";
 import NotificationDropdown from "./notification_dropdown";
+import { toast, ToastContainer } from "react-toastify"; // Import react-toastify
+import "react-toastify/dist/ReactToastify.css"; // Import toastify styles
 
 interface NavItemProps {
   children: React.ReactNode;
@@ -65,69 +67,11 @@ export function Navbar() {
   const [userId, setUserId] = useState<number | null>(null);
 
   const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
-  let isRefreshing = false;
-  let refreshPromise: Promise<void> | null = null;
-
-  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
-    if (isRefreshing) {
-      await refreshPromise;
-      await retryCallback();
-      return;
-    }
-
-    isRefreshing = true;
-    refreshPromise = new Promise(async (resolve, reject) => {
-      try {
-        const refreshToken = localStorage.getItem("refreshToken");
-        if (!refreshToken) {
-          throw new Error("No refresh token available, please log in again");
-        }
-
-        const response = await fetch(
-          `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(
-            refreshToken
-          )}`,
-          {
-            method: "POST",
-            headers: {
-              Accept: "application/json",
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Unable to refresh token");
-        }
-
-        const data = await response.json();
-        if (!data.data?.newToken) {
-          throw new Error("No new token in response");
-        }
-
-        localStorage.setItem("accessToken", data.data.newToken);
-        if (data.data.refreshToken) {
-          localStorage.setItem("refreshToken", data.data.refreshToken);
-        }
-
-        await retryCallback();
-        resolve();
-      } catch (error) {
-        console.error("Refresh token failed:", error);
-        reject(error);
-      } finally {
-        isRefreshing = false;
-        refreshPromise = null;
-      }
-    });
-
-    await refreshPromise;
-  };
 
   const checkUserRole = async (userId: number): Promise<string | null> => {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // Timeout 5 giây
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // Timeout 5 seconds
       const response = await fetch(`${API_BASE_URL}/api/users/${userId}/role`, {
         method: "GET",
         headers: {
@@ -139,9 +83,30 @@ export function Navbar() {
       clearTimeout(timeoutId);
 
       if (response.status === 401) {
-        await handleTokenExpiration(async () => {
-          await checkUserRole(userId);
+        // Show toast notification for token expiration
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
         });
+
+        // Clear authentication data
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+        // Redirect to login page after a short delay to allow toast to be visible
+        setTimeout(() => {
+          window.location.href = `/${localActive}/login`;
+        }, 2000);
+
         return null;
       }
 
@@ -158,10 +123,9 @@ export function Navbar() {
 
   const fetchUserData = async (userId: number) => {
     try {
-      // Gọi đồng thời API role và wallet
       const [roleResult] = await Promise.all([
         checkUserRole(userId),
-        dispatch(fetchWallet(userId)).unwrap(), // Giả định fetchWallet trả về Promise
+        dispatch(fetchWallet(userId)).unwrap(),
       ]);
 
       if (roleResult) {
@@ -204,7 +168,7 @@ export function Navbar() {
 
         setIsLoggedIn(true);
         setUserId(userId);
-        await fetchUserData(userId); // Gọi đồng thời API
+        await fetchUserData(userId);
       } catch (error) {
         console.error("Error checking auth:", error);
         setIsLoggedIn(false);
@@ -303,156 +267,159 @@ export function Navbar() {
   const canAccessFriendList = userRole === "Member";
 
   return (
-    <MTNavbar
-      shadow={false}
-      fullWidth
-      blurred={false}
-      className={`fixed top-0 z-50 border-0 ${
-        isScrolling ? "bg-white" : "bg-transparent"
-      }`}
-    >
-      <div className="container mx-auto flex items-center justify-between">
-        <Typography
-          color={isScrolling ? "blue-gray" : "white"}
-          className="text-lg font-bold"
-        >
-          {t("siteTitle")}
-        </Typography>
-        <ul
-          className={`ml-40 hidden items-center gap-14 lg:flex ${
-            isScrolling ? "text-gray-900" : "text-white"
-          }`}
-        >
-          {NAV_MENU.map(({ name, icon: Icon, href }) => (
-            <NavItem key={name} href={href}>
-              <Icon className="h-5 w-5" />
-              <span>{name}</span>
-            </NavItem>
-          ))}
-        </ul>
-        {isLoggedIn ? (
-          <div className="hidden items-center gap-8 lg:flex">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center bg-gray-100 px-3 py-1 rounded-md">
-                <FaWallet
-                  onClick={() => router.push(`/${locale}/wallet`)}
-                  className="text-blue-500 mr-2 cursor-pointer"
-                  size={16}
-                />
-                {walletLoading ? (
-                  <div className="animate-pulse h-4 w-20 bg-gray-300 rounded"></div>
-                ) : (
-                  <span className="text-gray-800 font-semibold">
-                    {showBalance ? formatCurrency(balance) : "******"}
-                  </span>
-                )}
-                <button
-                  onClick={toggleShowBalance}
-                  className="ml-2 text-gray-600 hover:text-gray-800"
-                  disabled={walletLoading}
-                >
-                  {showBalance ? (
-                    <AiFillEyeInvisible size={18} />
+    <>
+      <MTNavbar
+        shadow={false}
+        fullWidth
+        blurred={false}
+        className={`fixed top-0 z-50 border-0 ${
+          isScrolling ? "bg-white" : "bg-transparent"
+        }`}
+      >
+        <div className="container mx-auto flex items-center justify-between">
+          <Typography
+            color={isScrolling ? "blue-gray" : "white"}
+            className="text-lg font-bold"
+          >
+            {t("siteTitle")}
+          </Typography>
+          <ul
+            className={`ml-40 hidden items-center gap-14 lg:flex ${
+              isScrolling ? "text-gray-900" : "text-white"
+            }`}
+          >
+            {NAV_MENU.map(({ name, icon: Icon, href }) => (
+              <NavItem key={name} href={href}>
+                <Icon className="h-5 w-5" />
+                <span>{name}</span>
+              </NavItem>
+            ))}
+          </ul>
+          {isLoggedIn ? (
+            <div className="hidden items-center gap-8 lg:flex">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center bg-gray-100 px-3 py-1 rounded-md">
+                  <FaWallet
+                    onClick={() => router.push(`/${locale}/wallet`)}
+                    className="text-blue-500 mr-2 cursor-pointer"
+                    size={16}
+                  />
+                  {walletLoading ? (
+                    <div className="animate-pulse h-4 w-20 bg-gray-300 rounded"></div>
                   ) : (
-                    <AiFillEye size={18} />
+                    <span className="text-gray-800 font-semibold">
+                      {showBalance ? formatCurrency(balance) : "******"}
+                    </span>
                   )}
-                </button>
+                  <button
+                    onClick={toggleShowBalance}
+                    className="ml-2 text-gray-600 hover:text-gray-800"
+                    disabled={walletLoading}
+                  >
+                    {showBalance ? (
+                      <AiFillEyeInvisible size={18} />
+                    ) : (
+                      <AiFillEye size={18} />
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
-            {canAccessFriendList && (
+              {canAccessFriendList && (
+                <div className="hover:bg-gray-200 focus:outline-none relative p-2 rounded-full">
+                  <FaUserFriends
+                    className="h-6 w-6 text-blue-700 cursor-pointer"
+                    onClick={() => router.push(`/${locale}/friend_list`)}
+                  />
+                </div>
+              )}
+              <NotificationDropdown />
               <div className="hover:bg-gray-200 focus:outline-none relative p-2 rounded-full">
-                <FaUserFriends
-                  className="h-6 w-6 text-blue-700 cursor-pointer"
-                  onClick={() => router.push(`/${locale}/friend_list`)}
+                <FaChess
+                  onClick={() =>
+                    router.push(
+                      `/${locale}/chess_appointment/chess_appointment_order`
+                    )
+                  }
+                  className="h-6 w-6 text-yellow-700 cursor-pointer"
                 />
               </div>
-            )}
-            <NotificationDropdown />
-            <div className="hover:bg-gray-200 focus:outline-none relative p-2 rounded-full">
+              <ProfileMenu />
+            </div>
+          ) : (
+            <div className="flex items-center gap-x-2">
               <FaChess
                 onClick={() =>
                   router.push(
                     `/${locale}/chess_appointment/chess_appointment_order`
                   )
                 }
-                className="h-6 w-6 text-yellow-700 cursor-pointer"
+                className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
               />
+              <Button
+                onClick={() => router.push(`/${localActive}/login`)}
+                color={isScrolling ? "gray" : "white"}
+                variant="text"
+              >
+                Đăng nhập
+              </Button>
+              <Button
+                onClick={() => router.push(`/${localActive}/register`)}
+                color={isScrolling ? "gray" : "white"}
+                variant="text"
+              >
+                Đăng kí
+              </Button>
             </div>
-            <ProfileMenu />
-          </div>
-        ) : (
-          <div className="flex items-center gap-x-2">
-            <FaChess
-              onClick={() =>
-                router.push(
-                  `/${locale}/chess_appointment/chess_appointment_order`
-                )
-              }
-              className="h-6 w-6 text-yellow-700 cursor-pointer hover:text-yellow-200 mr-2"
-            />
-            <Button
-              onClick={() => router.push(`/${localActive}/login`)}
-              color={isScrolling ? "gray" : "white"}
-              variant="text"
-            >
-              Đăng nhập
-            </Button>
-            <Button
-              onClick={() => router.push(`/${localActive}/register`)}
-              color={isScrolling ? "gray" : "white"}
-              variant="text"
-            >
-              Đăng kí
-            </Button>
-          </div>
-        )}
-
-        <IconButton
-          variant="text"
-          color={isScrolling ? "gray" : "white"}
-          onClick={handleOpen}
-          className="ml-auto inline-block lg:hidden"
-        >
-          {open ? (
-            <XMarkIcon strokeWidth={2} className="h-6 w-6" />
-          ) : (
-            <Bars3Icon strokeWidth={2} className="h-6 w-6" />
           )}
-        </IconButton>
-      </div>
-      <Collapse open={open}>
-        <div className="container mx-auto mt-4 rounded-lg bg-white px-6 py-5">
-          <ul className="flex flex-col gap-4 text-gray-900">
-            {NAV_MENU.map(({ name, icon: Icon, href }) => (
-              <NavItem key={name} href={href}>
-                <Icon className="h-5 w-5" />
-                {name}
-              </NavItem>
-            ))}
-          </ul>
-          <div className="mt-6 flex items-center gap-4">
-            {isLoggedIn ? (
-              <ProfileMenu />
+
+          <IconButton
+            variant="text"
+            color={isScrolling ? "gray" : "white"}
+            onClick={handleOpen}
+            className="ml-auto inline-block lg:hidden"
+          >
+            {open ? (
+              <XMarkIcon strokeWidth={2} className="h-6 w-6" />
             ) : (
-              <>
-                <Button
-                  onClick={() => router.push(`/${localActive}/login`)}
-                  variant="text"
-                >
-                  {t("login")}
-                </Button>
-                <Button
-                  onClick={() => router.push(`/${localActive}/register`)}
-                  variant="text"
-                >
-                  {t("register")}
-                </Button>
-              </>
+              <Bars3Icon strokeWidth={2} className="h-6 w-6" />
             )}
-          </div>
+          </IconButton>
         </div>
-      </Collapse>
-    </MTNavbar>
+        <Collapse open={open}>
+          <div className="container mx-auto mt-4 rounded-lg bg-white px-6 py-5">
+            <ul className="flex flex-col gap-4 text-gray-900">
+              {NAV_MENU.map(({ name, icon: Icon, href }) => (
+                <NavItem key={name} href={href}>
+                  <Icon className="h-5 w-5" />
+                  {name}
+                </NavItem>
+              ))}
+            </ul>
+            <div className="mt-6 flex items-center gap-4">
+              {isLoggedIn ? (
+                <ProfileMenu />
+              ) : (
+                <>
+                  <Button
+                    onClick={() => router.push(`/${localActive}/login`)}
+                    variant="text"
+                  >
+                    {t("login")}
+                  </Button>
+                  <Button
+                    onClick={() => router.push(`/${localActive}/-register`)}
+                    variant="text"
+                  >
+                    {t("register")}
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </Collapse>
+      </MTNavbar>
+      <ToastContainer /> {/* Add ToastContainer to render toasts */}
+    </>
   );
 }
 

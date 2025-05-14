@@ -530,18 +530,63 @@ function Page() {
     setCurrentPage(1);
   };
 
+  const [currentScheduleTime, setCurrentScheduleTime] = useState<string | null>(
+    null
+  );
+
   const handleShowOpponentDetails = (
     requests: AppointmentRequest[],
-    tableId: number
+    tableId: number,
+    scheduleTime: string
   ) => {
-    setCurrentOpponentRequests(requests);
+    console.log("handleShowOpponentDetails input:", {
+      tableId,
+      scheduleTime,
+      requests,
+      tablesAppointments: selectedAppointment?.tablesAppointments,
+    });
+
+    const targetTableAppointment = selectedAppointment?.tablesAppointments.find(
+      (ta) => ta.table.tableId === tableId && ta.scheduleTime === scheduleTime
+    );
+
+    if (!targetTableAppointment) {
+      console.error("No table appointment found for:", {
+        tableId,
+        scheduleTime,
+      });
+      setCurrentOpponentRequests([]);
+      setCurrentTableId(tableId);
+      setCurrentScheduleTime(null);
+      setShowOpponentDetails(true);
+      return;
+    }
+
+    const filteredRequests = requests.filter(
+      (req) =>
+        req.tableId === tableId &&
+        req.startTime === scheduleTime &&
+        req.endTime === targetTableAppointment.endTime
+    );
+
+    console.log("Data passed to OpponentDetailsPopup:", {
+      filteredRequests,
+      tableId,
+      tableAppointmentStatus: targetTableAppointment.status,
+      appointmentId: selectedAppointment?.appointmentId,
+      startTime: targetTableAppointment.scheduleTime,
+      endTime: targetTableAppointment.endTime,
+    });
+
+    setCurrentOpponentRequests(filteredRequests);
     setCurrentTableId(tableId);
+    setCurrentScheduleTime(scheduleTime);
     setShowOpponentDetails(true);
   };
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Navbar />
+      {/* <Navbar /> */}
       <div className="flex-grow text-black">
         {/* Background Banner */}
         <Banner
@@ -710,12 +755,21 @@ function Page() {
                                 req.tableId === tableAppointment.table.tableId
                             ) && (
                               <button
-                                onClick={() =>
+                                onClick={() => {
+                                  console.log(
+                                    "Button clicked for tableAppointment:",
+                                    {
+                                      tableId: tableAppointment.table.tableId,
+                                      scheduleTime:
+                                        tableAppointment.scheduleTime,
+                                    }
+                                  );
                                   handleShowOpponentDetails(
                                     selectedAppointment.appointmentrequests,
-                                    tableAppointment.table.tableId
-                                  )
-                                }
+                                    tableAppointment.table.tableId,
+                                    tableAppointment.scheduleTime
+                                  );
+                                }}
                                 className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm"
                               >
                                 Xem đối thủ
@@ -850,18 +904,24 @@ function Page() {
             tableId={currentTableId || 0}
             tableAppointmentStatus={
               selectedAppointment?.tablesAppointments.find(
-                (ta) => ta.table.tableId === currentTableId
+                (ta) =>
+                  ta.table.tableId === currentTableId &&
+                  ta.scheduleTime === currentScheduleTime
               )?.status
             }
             appointmentId={selectedAppointment?.appointmentId}
             startTime={
               selectedAppointment?.tablesAppointments.find(
-                (ta) => ta.table.tableId === currentTableId
+                (ta) =>
+                  ta.table.tableId === currentTableId &&
+                  ta.scheduleTime === currentScheduleTime
               )?.scheduleTime
             }
             endTime={
               selectedAppointment?.tablesAppointments.find(
-                (ta) => ta.table.tableId === currentTableId
+                (ta) =>
+                  ta.table.tableId === currentTableId &&
+                  ta.scheduleTime === currentScheduleTime
               )?.endTime
             }
           />
