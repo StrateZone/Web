@@ -133,15 +133,31 @@ const TableBookingPage = () => {
           }
         );
         if (sampleResponse.status === 401) {
+          // Show toast notification for token expiration
+          toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
+
+          // Clear authentication data
           localStorage.removeItem("accessToken");
           localStorage.removeItem("refreshToken");
           localStorage.removeItem("authData");
-          // Chỉ chuyển hướng nếu cần
           document.cookie =
             "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
           document.cookie =
             "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-          window.location.href = "/login";
+
+          // Redirect to login page after a short delay to allow toast to be visible
+          setTimeout(() => {
+            window.location.href = `/${localActive}/login`;
+          }, 2000);
+
+          return null;
         }
         if (sampleResponse.ok) {
           const sampleData = await sampleResponse.json();
@@ -161,8 +177,31 @@ const TableBookingPage = () => {
             }
           );
           if (userResponse.status === 401) {
-            await handleTokenExpiration(fetchVouchers);
-            return;
+            // Show toast notification for token expiration
+            toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+              position: "top-right",
+              autoClose: 3000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+            });
+
+            // Clear authentication data
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("authData");
+            document.cookie =
+              "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+            document.cookie =
+              "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+            // Redirect to login page after a short delay to allow toast to be visible
+            setTimeout(() => {
+              window.location.href = `/${localActive}/login`;
+            }, 2000);
+
+            return null;
           }
           if (userResponse.ok) {
             const userData = await userResponse.json();
@@ -609,8 +648,31 @@ const TableBookingPage = () => {
         }
       );
       if (response.status === 401) {
-        await handleTokenExpiration(() => handleConfirmBooking());
-        return;
+        // Show toast notification for token expiration
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Clear authentication data
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+        // Redirect to login page after a short delay to allow toast to be visible
+        setTimeout(() => {
+          window.location.href = `/${localActive}/login`;
+        }, 2000);
+
+        return null;
       }
       const responseText = await response.text();
       if (!response.ok) {
