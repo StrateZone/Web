@@ -19,6 +19,7 @@ import Image from "next/image";
 import { FiSearch, FiUsers } from "react-icons/fi";
 import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 import { toast } from "react-toastify";
+import { useLocale } from "next-intl";
 
 interface Opponent {
   userId: number;
@@ -85,51 +86,7 @@ const OpponentRecommendationModal = ({
   const [loadingUserRole, setLoadingUserRole] = useState(true);
   const [errorUserRole, setErrorUserRole] = useState<string | null>(null);
   const hasFetchedInitialData = useRef(false);
-
-  // Hàm xử lý token hết hạn
-  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
-    try {
-      const refreshToken = localStorage.getItem("refreshToken");
-      if (!refreshToken) {
-        throw new Error("Không có refresh token, vui lòng đăng nhập lại");
-      }
-
-      const response = await fetch(
-        `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(
-          refreshToken
-        )}`,
-        {
-          method: "POST",
-          headers: {
-            Accept: "*/*",
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Không thể làm mới token");
-      }
-
-      const newToken = response.headers.get("x-access-token");
-      if (newToken) {
-        localStorage.setItem("accessToken", newToken);
-      } else {
-        const data = await response.json();
-        localStorage.setItem("accessToken", data.data.newToken);
-        if (data.data.refreshToken) {
-          localStorage.setItem("refreshToken", data.data.refreshToken);
-        }
-      }
-
-      await retryCallback();
-    } catch (error) {
-      console.error("Token refresh failed:", error);
-      setErrorUserRole("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
-      toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
-    }
-  };
+  const localActive = useLocale();
 
   // Hàm lấy vai trò người dùng từ API
   const fetchUserRole = async () => {
@@ -157,8 +114,31 @@ const OpponentRecommendationModal = ({
       });
 
       if (response.status === 401) {
-        await handleTokenExpiration(() => fetchUserRole());
-        return;
+        // Show toast notification for token expiration
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Clear authentication data
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+        // Redirect to login page after a short delay to allow toast to be visible
+        setTimeout(() => {
+          window.location.href = `/${localActive}/login`;
+        }, 2000);
+
+        return null;
       }
 
       if (!response.ok) {
@@ -257,8 +237,31 @@ const OpponentRecommendationModal = ({
       });
 
       if (response.status === 401) {
-        await handleTokenExpiration(() => fetchOpponents());
-        return;
+        // Show toast notification for token expiration
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Clear authentication data
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+        // Redirect to login page after a short delay to allow toast to be visible
+        setTimeout(() => {
+          window.location.href = `/${localActive}/login`;
+        }, 2000);
+
+        return null;
       }
 
       if (!response.ok) {

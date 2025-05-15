@@ -418,7 +418,6 @@ export function Navbar() {
           </div>
         </Collapse>
       </MTNavbar>
-      <ToastContainer /> {/* Add ToastContainer to render toasts */}
     </>
   );
 }
