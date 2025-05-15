@@ -62,6 +62,7 @@ export interface ChessBooking {
   originalPrice?: number;
   invitedUsers?: InvitedUser[];
   appliedVoucher?: Voucher | null;
+  payFullPrice?: boolean; // Thêm thuộc tính mới
 }
 
 interface BackendUnavailableTable {
@@ -133,7 +134,6 @@ const TableBookingPage = () => {
           }
         );
         if (sampleResponse.status === 401) {
-          // Show toast notification for token expiration
           toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
             position: "top-right",
             autoClose: 3000,
@@ -143,7 +143,6 @@ const TableBookingPage = () => {
             draggable: true,
           });
 
-          // Clear authentication data
           localStorage.removeItem("accessToken");
           localStorage.removeItem("refreshToken");
           localStorage.removeItem("authData");
@@ -152,7 +151,6 @@ const TableBookingPage = () => {
           document.cookie =
             "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
 
-          // Redirect to login page after a short delay to allow toast to be visible
           setTimeout(() => {
             window.location.href = `/${localActive}/login`;
           }, 2000);
@@ -177,7 +175,6 @@ const TableBookingPage = () => {
             }
           );
           if (userResponse.status === 401) {
-            // Show toast notification for token expiration
             toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
               position: "top-right",
               autoClose: 3000,
@@ -187,7 +184,6 @@ const TableBookingPage = () => {
               draggable: true,
             });
 
-            // Clear authentication data
             localStorage.removeItem("accessToken");
             localStorage.removeItem("refreshToken");
             localStorage.removeItem("authData");
@@ -196,7 +192,6 @@ const TableBookingPage = () => {
             document.cookie =
               "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
 
-            // Redirect to login page after a short delay to allow toast to be visible
             setTimeout(() => {
               window.location.href = `/${localActive}/login`;
             }, 2000);
@@ -270,7 +265,7 @@ const TableBookingPage = () => {
           (booking.roomTypePrice + booking.gameTypePrice) *
           booking.durationInHours;
         let newTotalPrice = basePrice;
-        if (booking.hasInvitations) {
+        if (booking.hasInvitations && !booking.payFullPrice) {
           newTotalPrice *= 0.5;
         }
         return {
@@ -313,7 +308,7 @@ const TableBookingPage = () => {
           console.log(`Removing voucher from table ${tableId}`);
         }
 
-        if (booking.hasInvitations) {
+        if (booking.hasInvitations && !booking.payFullPrice) {
           newTotalPrice *= 0.5;
         }
 
@@ -321,6 +316,7 @@ const TableBookingPage = () => {
           basePrice,
           voucherDiscount,
           hasInvitations: booking.hasInvitations,
+          payFullPrice: booking.payFullPrice,
           newTotalPrice,
         });
 
@@ -341,6 +337,7 @@ const TableBookingPage = () => {
         tableId: b.tableId,
         totalPrice: b.totalPrice,
         appliedVoucher: b.appliedVoucher ? b.appliedVoucher.voucherId : null,
+        payFullPrice: b.payFullPrice,
       }))
     );
 
@@ -389,6 +386,7 @@ const TableBookingPage = () => {
             invitedUsers: [],
             totalPrice: newTotalPrice,
             originalPrice: basePrice,
+            payFullPrice: false, // Reset payFullPrice khi hủy lời mời
           };
         }
         return booking;
@@ -419,7 +417,7 @@ const TableBookingPage = () => {
     const updatedBookings = chessBookings.map((booking) => {
       if (
         booking.tableId === tableId &&
-        booking.startDate === selectedStartDate && // Kiểm tra startDate
+        booking.startDate === selectedStartDate &&
         booking.endDate === selectedEndDate
       ) {
         const existingInvites = booking.invitedUsers || [];
@@ -444,7 +442,7 @@ const TableBookingPage = () => {
           newTotalPrice -= booking.appliedVoucher.value;
         }
 
-        if (hasInvitations) {
+        if (hasInvitations && !booking.payFullPrice) {
           newTotalPrice *= 0.5;
         }
 
@@ -456,6 +454,7 @@ const TableBookingPage = () => {
           originalPrice:
             (booking.roomTypePrice + booking.gameTypePrice) *
             booking.durationInHours,
+          payFullPrice: booking.payFullPrice ?? false,
         };
       }
       return booking;
@@ -631,6 +630,7 @@ const TableBookingPage = () => {
           endTime: booking.endDate,
           invitedUsers: booking.invitedUsers?.map((user) => user.userId) || [],
           voucherId: booking.appliedVoucher?.voucherId || null,
+          paidForOpponent: booking.payFullPrice || false,
         })),
         totalPrice: finalPrice,
       };
@@ -648,7 +648,6 @@ const TableBookingPage = () => {
         }
       );
       if (response.status === 401) {
-        // Show toast notification for token expiration
         toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
           position: "top-right",
           autoClose: 3000,
@@ -658,7 +657,6 @@ const TableBookingPage = () => {
           draggable: true,
         });
 
-        // Clear authentication data
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("authData");
@@ -667,7 +665,6 @@ const TableBookingPage = () => {
         document.cookie =
           "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
 
-        // Redirect to login page after a short delay to allow toast to be visible
         setTimeout(() => {
           window.location.href = `/${localActive}/login`;
         }, 2000);
@@ -943,6 +940,55 @@ const TableBookingPage = () => {
                             </span>
                             {formatDuration(booking.durationInHours)}
                           </p>
+                          {booking.hasInvitations && (
+                            <div className="mt-6">
+                              <Select
+                                label="Phương thức thanh toán"
+                                value={booking.payFullPrice ? "full" : "half"}
+                                onChange={(value) => {
+                                  const updatedBookings = chessBookings.map(
+                                    (b) => {
+                                      if (
+                                        b.tableId === booking.tableId &&
+                                        b.startDate === booking.startDate &&
+                                        b.endDate === booking.endDate
+                                      ) {
+                                        const payFullPrice = value === "full";
+                                        let newTotalPrice =
+                                          (b.roomTypePrice + b.gameTypePrice) *
+                                          b.durationInHours;
+                                        if (
+                                          b.appliedVoucher &&
+                                          newTotalPrice >=
+                                            b.appliedVoucher.minPriceCondition
+                                        ) {
+                                          newTotalPrice -=
+                                            b.appliedVoucher.value;
+                                        }
+                                        if (b.hasInvitations && !payFullPrice) {
+                                          newTotalPrice *= 0.5;
+                                        }
+                                        return {
+                                          ...b,
+                                          payFullPrice,
+                                          totalPrice: newTotalPrice,
+                                        };
+                                      }
+                                      return b;
+                                    }
+                                  );
+                                  setChessBookings(updatedBookings);
+                                  localStorage.setItem(
+                                    "chessBookings",
+                                    JSON.stringify(updatedBookings)
+                                  );
+                                }}
+                              >
+                                <Option value="half">Chia đôi (50%)</Option>
+                                <Option value="full">Trả hết (100%)</Option>
+                              </Select>
+                            </div>
+                          )}
                         </div>
                         <div className="text-right">
                           <p>
@@ -977,7 +1023,9 @@ const TableBookingPage = () => {
                             {booking.totalPrice?.toLocaleString()}đ
                             {booking.hasInvitations && (
                               <span className="text-green-600 ml-2">
-                                (Thanh Toán Trước 50%)
+                                {booking.payFullPrice
+                                  ? "(Thanh Toán Toàn Bộ 100%)"
+                                  : "(Thanh Toán Trước 50%)"}
                               </span>
                             )}
                             {booking.appliedVoucher && (

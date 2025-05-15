@@ -13,8 +13,8 @@ import { useLocale } from "next-intl";
 import Banner from "@/components/banner/banner";
 import OpponentDetailsPopup from "./OpponentDetailsPopup";
 import { Button } from "@material-tailwind/react";
-import { RefreshCw } from "lucide-react";
 import TermsDialog from "../chess_appointment/chess_category/TermsDialog";
+import { toast } from "react-toastify";
 
 // Interfaces remain unchanged
 interface GameType {
@@ -158,81 +158,6 @@ function Page() {
   );
   const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
 
-  let isRefreshing = false;
-  let refreshPromise: Promise<void> | null = null;
-
-  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
-    if (isRefreshing) {
-      await refreshPromise;
-      await retryCallback();
-      return;
-    }
-
-    isRefreshing = true;
-    refreshPromise = new Promise(async (resolve, reject) => {
-      try {
-        const refreshToken = localStorage.getItem("refreshToken");
-        if (!refreshToken) {
-          throw new Error("Không có refresh token, vui lòng đăng nhập lại");
-        }
-
-        console.log("Sending refreshToken:", refreshToken);
-        const response = await fetch(
-          `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(
-            refreshToken
-          )}`,
-          {
-            method: "POST",
-            headers: {
-              Accept: "application/json",
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          const errorData = await response.text();
-          console.error("Lỗi refresh token:", errorData);
-          throw new Error(errorData || "Không thể làm mới token");
-        }
-
-        const data = await response.json();
-        if (!data.data?.newToken) {
-          throw new Error("Không có token mới trong phản hồi");
-        }
-
-        localStorage.setItem("accessToken", data.data.newToken);
-        if (data.data.refreshToken) {
-          localStorage.setItem("refreshToken", data.data.refreshToken);
-        }
-
-        console.log("Refresh token thành công:", {
-          newToken: data.data.newToken,
-          newRefreshToken: data.data.refreshToken,
-        });
-
-        await retryCallback();
-        resolve();
-      } catch (error) {
-        console.error("Refresh token thất bại:", error);
-        // localStorage.removeItem("accessToken");
-        // localStorage.removeItem("refreshToken");
-        // localStorage.removeItem("authData");
-        // document.cookie =
-        //   "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-        // document.cookie =
-        //   "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-
-        reject(error);
-      } finally {
-        isRefreshing = false;
-        refreshPromise = null;
-      }
-    });
-
-    await refreshPromise;
-  };
-
   // Fetch paginated list of appointments
   const fetchData = async () => {
     setIsLoading(true);
@@ -254,8 +179,31 @@ function Page() {
       });
 
       if (response.status === 401) {
-        await handleTokenExpiration(fetchData);
-        return;
+        // Show toast notification for token expiration
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Clear authentication data
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+        // Redirect to login page after a short delay to allow toast to be visible
+        setTimeout(() => {
+          window.location.href = `/${localActive}/login`;
+        }, 2000);
+
+        return null;
       }
 
       if (!response.ok) {
@@ -279,7 +227,6 @@ function Page() {
       setIsLoading(false);
     }
   };
-
   // Fetch appointment details by ID
   const handleAppointmentClick = async (appointment: Appointment) => {
     setIsLoading(true);
@@ -296,8 +243,31 @@ function Page() {
       );
 
       if (response.status === 401) {
-        await handleTokenExpiration(() => handleAppointmentClick(appointment));
-        return;
+        // Show toast notification for token expiration
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Clear authentication data
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+        // Redirect to login page after a short delay to allow toast to be visible
+        setTimeout(() => {
+          window.location.href = `/${localActive}/login`;
+        }, 2000);
+
+        return null;
       }
 
       if (!response.ok) {
@@ -377,10 +347,31 @@ function Page() {
       );
 
       if (response.status === 401) {
-        await handleTokenExpiration(() =>
-          checkCancelCondition(tablesAppointmentId)
-        );
-        return;
+        // Show toast notification for token expiration
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Clear authentication data
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+        // Redirect to login page after a short delay to allow toast to be visible
+        setTimeout(() => {
+          window.location.href = `/${localActive}/login`;
+        }, 2000);
+
+        return null;
       }
 
       if (!response.ok) {
@@ -430,8 +421,31 @@ function Page() {
       );
 
       if (response.status === 401) {
-        await handleTokenExpiration(confirmCancelAppointment);
-        return;
+        // Show toast notification for token expiration
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Clear authentication data
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+        // Redirect to login page after a short delay to allow toast to be visible
+        setTimeout(() => {
+          window.location.href = `/${localActive}/login`;
+        }, 2000);
+
+        return null;
       }
 
       if (!response.ok) {
