@@ -51,6 +51,7 @@ interface TablesAppointment {
   price: number;
   createdAt: string;
   table: Table;
+  paidForOpponent: boolean;
 }
 
 interface User {
@@ -706,6 +707,9 @@ function Page() {
                       </th>
                       <th className="py-2 px-4 border">Ngày</th>
                       <th className="py-2 px-4 border">Tổng Giá</th>
+                      <th className="py-2 px-4 border">
+                        Thanh Toán Cho Đối Thủ
+                      </th>
                       <th className="py-2 px-4 border">Trạng thái</th>
                       <th className="py-2 px-4 border">Đối Thủ</th>
                       <th className="py-2 px-4 border">Hành động</th>
@@ -755,6 +759,19 @@ function Page() {
                           </td>
                           <td className="py-2 px-4 border text-center">
                             {formatCurrency(tableAppointment.price)}
+                          </td>
+                          <td className="py-2 px-4 border text-center">
+                            <span
+                              className={`px-2 py-1 rounded ${
+                                tableAppointment.paidForOpponent
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-gray-100 text-gray-800"
+                              }`}
+                            >
+                              {tableAppointment.paidForOpponent
+                                ? "Có"
+                                : "Không"}
+                            </span>
                           </td>
                           <td className="py-2 px-4 border text-center">
                             <span
