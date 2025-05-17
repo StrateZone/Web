@@ -191,7 +191,7 @@ function OpponentDetailsPopup({
           window.location.href = `/${localActive}/login`;
         }, 2000);
 
-        return null;
+        return false;
       }
       if (!response.ok) {
         throw new Error("Failed to send invitations");
