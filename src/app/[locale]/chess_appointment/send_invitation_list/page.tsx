@@ -97,6 +97,7 @@ interface AppointmentRequest {
   expireAt: string;
   createdAt: string;
   totalPrice: number | null;
+  isPaid: boolean; // Thêm trường isPaid
   fromUserNavigation: UserNavigation | null;
   toUserNavigation: UserNavigation | null;
   table: Table;
@@ -177,7 +178,6 @@ const AppointmentSendRequestsPage = () => {
         });
 
         if (response.status === 401) {
-          // Show toast notification for token expiration
           toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
             position: "top-right",
             autoClose: 3000,
@@ -187,7 +187,6 @@ const AppointmentSendRequestsPage = () => {
             draggable: true,
           });
 
-          // Clear authentication data
           localStorage.removeItem("accessToken");
           localStorage.removeItem("refreshToken");
           localStorage.removeItem("authData");
@@ -196,7 +195,6 @@ const AppointmentSendRequestsPage = () => {
           document.cookie =
             "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
 
-          // Redirect to login page after a short delay to allow toast to be visible
           setTimeout(() => {
             window.location.href = `/${localActive}/login`;
           }, 2000);
@@ -255,7 +253,6 @@ const AppointmentSendRequestsPage = () => {
       );
 
       if (response.status === 401) {
-        // Show toast notification for token expiration
         toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
           position: "top-right",
           autoClose: 3000,
@@ -265,7 +262,6 @@ const AppointmentSendRequestsPage = () => {
           draggable: true,
         });
 
-        // Clear authentication data
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("authData");
@@ -274,7 +270,6 @@ const AppointmentSendRequestsPage = () => {
         document.cookie =
           "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
 
-        // Redirect to login page after a short delay to allow toast to be visible
         setTimeout(() => {
           window.location.href = `/${localActive}/login`;
         }, 2000);
@@ -343,7 +338,6 @@ const AppointmentSendRequestsPage = () => {
       );
 
       if (response.status === 401) {
-        // Show toast notification for token expiration
         toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
           position: "top-right",
           autoClose: 3000,
@@ -353,7 +347,6 @@ const AppointmentSendRequestsPage = () => {
           draggable: true,
         });
 
-        // Clear authentication data
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("authData");
@@ -362,7 +355,6 @@ const AppointmentSendRequestsPage = () => {
         document.cookie =
           "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
 
-        // Redirect to login page after a short delay to allow toast to be visible
         setTimeout(() => {
           window.location.href = `/${localActive}/login`;
         }, 2000);
@@ -842,15 +834,28 @@ const AppointmentSendRequestsPage = () => {
                       </span>{" "}
                       {selectedRequest.tableId || "N/A"}
                     </p>
-                    {selectedRequest.totalPrice && (
-                      <p>
-                        <span className="font-medium">
-                          <strong>Số Tiền Cần Trả:</strong>
-                        </span>{" "}
-                        {selectedRequest.totalPrice.toLocaleString()} VND
-                      </p>
-                    )}
                   </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <h3 className="text-lg mb-2 font-bold">
+                  <strong>Thông Tin Thanh Toán</strong>
+                </h3>
+                <div className="space-y-2">
+                  {selectedRequest.isPaid ? (
+                    <p className="text-green-700 flex items-center">
+                      <CheckBadgeIcon className="w-5 h-5 mr-2" />
+                      <strong>Lời mời đã được bạn thanh toán</strong>
+                    </p>
+                  ) : (
+                    <p>
+                      <span className="font-medium">
+                        <strong>Số Tiền Cần Trả:</strong>
+                      </span>{" "}
+                      {selectedRequest.totalPrice?.toLocaleString() || 0} VND
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1062,10 +1067,12 @@ const AppointmentSendRequestsPage = () => {
                               request.endTime
                             )}
                           </p>
-                          <p className="text-gray-600 text-sm">
-                            <strong>Số Tiền Cần Trả:</strong>{" "}
-                            {request.totalPrice?.toLocaleString()} VND
-                          </p>
+                          {!request.isPaid && (
+                            <p className="text-gray-600 text-sm">
+                              <strong>Số Tiền Cần Trả:</strong>{" "}
+                              {request.totalPrice?.toLocaleString()} VND
+                            </p>
+                          )}
                           <p className="text-gray-600 text-sm">
                             <strong>Lời mời hết hạn sau:</strong>{" "}
                             {calculateTimeRemaining(request.expireAt)}
@@ -1074,7 +1081,7 @@ const AppointmentSendRequestsPage = () => {
                       </div>
 
                       <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row justify-between items-center gap-3">
-                        <div className="flex items-center">
+                        <div className="flex items-center gap-4">
                           {request.status === "pending" ? (
                             <span className="text-yellow-700 flex items-center text-sm">
                               <Clock className="w-4 h-4 mr-1" />
@@ -1113,6 +1120,12 @@ const AppointmentSendRequestsPage = () => {
                               <strong>Bàn Đã Bị Hủy</strong>
                             </span>
                           ) : null}
+                          {request.isPaid && (
+                            <span className="text-green-700 flex items-center text-sm">
+                              <CheckBadgeIcon className="w-4 h-4 mr-1" />
+                              <strong>Đã được bạn thanh toán</strong>
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex space-x-2">

@@ -23,6 +23,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/app/store";
 import { fetchWallet } from "@/app/[locale]/wallet/walletSlice";
 import { ConfirmPaymentPopup } from "./ConfirmPaymentPopup";
+import { ConfirmAcceptFreePopup } from "./ConfirmAcceptFreePopup";
 import { InsufficientBalancePopup } from "../chess_appointment_order/InsufficientBalancePopup";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
@@ -31,6 +32,7 @@ import { AlreadyRejectedPopup } from "./AcceptedByOtherPopup";
 import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 import { SuccessPaymentPopup } from "./SuccessPaymentPopup";
 import TermsDialog from "../chess_category/TermsDialog";
+import { toast } from "react-toastify";
 
 interface UserNavigation {
   userId: number;
@@ -102,6 +104,7 @@ interface AppointmentRequest {
   expireAt: string;
   createdAt: string;
   totalPrice: number | null;
+  isPaid: boolean;
   fromUserNavigation: UserNavigation;
   toUserNavigation: any | null;
   table: Table;
@@ -147,81 +150,6 @@ const AppointmentRequestsPage = () => {
   );
   const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
 
-  let isRefreshing = false;
-  let refreshPromise: Promise<void> | null = null;
-
-  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
-    if (isRefreshing) {
-      await refreshPromise;
-      await retryCallback();
-      return;
-    }
-
-    isRefreshing = true;
-    refreshPromise = new Promise(async (resolve, reject) => {
-      try {
-        const refreshToken = localStorage.getItem("refreshToken");
-        if (!refreshToken) {
-          throw new Error("Không có refresh token, vui lòng đăng nhập lại");
-        }
-
-        console.log("Sending refreshToken:", refreshToken);
-        const response = await fetch(
-          `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(
-            refreshToken
-          )}`,
-          {
-            method: "POST",
-            headers: {
-              Accept: "application/json",
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          const errorData = await response.text();
-          console.error("Lỗi refresh token:", errorData);
-          throw new Error(errorData || "Không thể làm mới token");
-        }
-
-        const data = await response.json();
-        if (!data.data?.newToken) {
-          throw new Error("Không có token mới trong phản hồi");
-        }
-
-        localStorage.setItem("accessToken", data.data.newToken);
-        if (data.data.refreshToken) {
-          localStorage.setItem("refreshToken", data.data.refreshToken);
-        }
-
-        console.log("Refresh token thành công:", {
-          newToken: data.data.newToken,
-          newRefreshToken: data.data.refreshToken,
-        });
-
-        await retryCallback();
-        resolve();
-      } catch (error) {
-        console.error("Refresh token thất bại:", error);
-        // localStorage.removeItem("accessToken");
-        // localStorage.removeItem("refreshToken");
-        // localStorage.removeItem("authData");
-        // document.cookie =
-        //   "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-        // document.cookie =
-        //   "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-        // window.location.href = `/${localActive}/login`;
-        reject(error);
-      } finally {
-        isRefreshing = false;
-        refreshPromise = null;
-      }
-    });
-
-    await refreshPromise;
-  };
-
   const getUserId = () => {
     const authDataString = localStorage.getItem("authData");
     if (!authDataString) return null;
@@ -266,8 +194,31 @@ const AppointmentRequestsPage = () => {
         });
 
         if (response.status === 401) {
-          await handleTokenExpiration(() => fetchAppointmentRequests(page));
-          return;
+          // Show toast notification for token expiration
+          toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
+
+          // Clear authentication data
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
+          localStorage.removeItem("authData");
+          document.cookie =
+            "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+          document.cookie =
+            "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+          // Redirect to login page after a short delay to allow toast to be visible
+          setTimeout(() => {
+            window.location.href = `/${localActive}/login`;
+          }, 2000);
+
+          return null;
         }
 
         if (!response.ok) {
@@ -319,8 +270,31 @@ const AppointmentRequestsPage = () => {
       );
 
       if (response.status === 401) {
-        await handleTokenExpiration(() => rejectAppointment(requestId));
-        return;
+        // Show toast notification for token expiration
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Clear authentication data
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+        // Redirect to login page after a short delay to allow toast to be visible
+        setTimeout(() => {
+          window.location.href = `/${localActive}/login`;
+        }, 2000);
+
+        return null;
       }
 
       if (!response.ok) {
@@ -371,13 +345,11 @@ const AppointmentRequestsPage = () => {
         opponentName:
           request.fromUserNavigation.fullName ||
           request.fromUserNavigation.username,
+        opponentRank: request.fromUserNavigation.ranking?.toString() || "N/A",
       };
 
       const isConfirmed = await ConfirmPaymentPopup({
-        tableInfo: {
-          ...tableInfo,
-          opponentRank: request.fromUserNavigation.ranking?.toString() || "N/A",
-        },
+        tableInfo,
         currentBalance: balance,
       });
 
@@ -403,8 +375,31 @@ const AppointmentRequestsPage = () => {
       );
 
       if (response.status === 401) {
-        await handleTokenExpiration(() => handleProcessPayment(requestId));
-        return;
+        // Show toast notification for token expiration
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Clear authentication data
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+        // Redirect to login page after a short delay to allow toast to be visible
+        setTimeout(() => {
+          window.location.href = `/${localActive}/login`;
+        }, 2000);
+
+        return null;
       }
 
       const result = await response.json();
@@ -459,6 +454,129 @@ const AppointmentRequestsPage = () => {
           confirmButtonText: "OK",
         });
         await fetchAppointmentRequests(currentPage);
+      }
+    } finally {
+      setProcessingAcceptId(null);
+    }
+  };
+
+  const handleAcceptWithoutPayment = async (requestId: number) => {
+    setProcessingAcceptId(requestId);
+    try {
+      const request = requests.find((req) => req.id === requestId);
+      if (!request || !request.appointmentId) {
+        throw new Error("Không tìm thấy lời mời hoặc ID cuộc hẹn không hợp lệ");
+      }
+
+      const tableInfo = {
+        tableId: request.tableId,
+        roomName: request.table.roomName,
+        gameType:
+          request.table.gameTypeId === 1
+            ? "Cờ Vua"
+            : request.table.gameTypeId === 2
+              ? "Cờ Tướng"
+              : "Cờ Vây",
+        roomType: request.table.roomType,
+        startTime: request.startTime,
+        endTime: request.endTime,
+        totalPrice: request.totalPrice || 0,
+        opponentName:
+          request.fromUserNavigation.fullName ||
+          request.fromUserNavigation.username,
+        opponentRank: request.fromUserNavigation.ranking?.toString() || "N/A",
+      };
+
+      const isConfirmed = await ConfirmAcceptFreePopup({
+        tableInfo,
+      });
+
+      if (!isConfirmed) {
+        return;
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/appointmentrequests/accept/${requestId}`,
+        {
+          method: "PUT",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+
+      if (response.status === 401) {
+        // Show toast notification for token expiration
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Clear authentication data
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+        // Redirect to login page after a short delay to allow toast to be visible
+        setTimeout(() => {
+          window.location.href = `/${localActive}/login`;
+        }, 2000);
+
+        return null;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Không thể chấp nhận lời mời");
+      }
+
+      await fetchAppointmentRequests(currentPage);
+      MySwal.fire({
+        title: "Thành công",
+        text: "Bạn đã chấp nhận lời mời thành công!",
+        icon: "success",
+        confirmButtonText: "OK",
+      });
+    } catch (error: any) {
+      const errorMessage =
+        error.message || error.response?.data?.message || JSON.stringify(error);
+
+      if (
+        errorMessage.includes(
+          "This appointment invitation is no longer available."
+        ) ||
+        errorMessage.includes("This appointment is already cancelled")
+      ) {
+        const request = requests.find((req) => req.id === requestId);
+        if (request) {
+          await AlreadyRejectedPopup({
+            opponentName:
+              request.fromUserNavigation.username ||
+              request.fromUserNavigation.fullName,
+            tableId: request.tableId,
+            startTime: request.startTime,
+            endTime: request.endTime,
+            onConfirm: () => fetchAppointmentRequests(currentPage),
+          });
+        }
+      } else {
+        console.error("Lỗi khi chấp nhận lời mời:", error);
+        await MySwal.fire({
+          title: "Lỗi",
+          text:
+            typeof errorMessage === "string" ? errorMessage : "Có lỗi xảy ra",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
       }
     } finally {
       setProcessingAcceptId(null);
@@ -633,10 +751,31 @@ const AppointmentRequestsPage = () => {
       );
 
       if (response.status === 401) {
-        await handleTokenExpiration(() =>
-          checkCancelCondition(tablesAppointmentId)
-        );
-        return;
+        // Show toast notification for token expiration
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Clear authentication data
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+        // Redirect to login page after a short delay to allow toast to be visible
+        setTimeout(() => {
+          window.location.href = `/${localActive}/login`;
+        }, 2000);
+
+        return null;
       }
 
       if (!response.ok) {
@@ -687,8 +826,31 @@ const AppointmentRequestsPage = () => {
       );
 
       if (response.status === 401) {
-        await handleTokenExpiration(confirmCancelAppointment);
-        return;
+        // Show toast notification for token expiration
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Clear authentication data
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+        // Redirect to login page after a short delay to allow toast to be visible
+        setTimeout(() => {
+          window.location.href = `/${localActive}/login`;
+        }, 2000);
+
+        return null;
       }
 
       const responseData = await response.json();
@@ -891,14 +1053,6 @@ const AppointmentRequestsPage = () => {
                           </span>
                         )}
                       </div>
-                      {/* <p className="text-gray-600 text-sm">
-                        <strong>Giới Tính:</strong>{" "}
-                        {selectedRequest.toUserNavigation?.gender === 0
-                          ? "Nam"
-                          : selectedRequest.toUserNavigation?.gender === 1
-                            ? "Nữ"
-                            : "Không xác định"}
-                      </p> */}
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -967,15 +1121,28 @@ const AppointmentRequestsPage = () => {
                       </span>{" "}
                       {selectedRequest.tableId || "N/A"}
                     </p>
-                    {selectedRequest.totalPrice && (
-                      <p>
-                        <span className="font-medium">
-                          <strong>Số Tiền Cần Trả:</strong>
-                        </span>{" "}
-                        {selectedRequest.totalPrice.toLocaleString()} VND
-                      </p>
-                    )}
                   </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <h3 className="text-lg mb-2 font-bold">
+                  <strong>Thông Tin Thanh Toán</strong>
+                </h3>
+                <div className="space-y-2">
+                  {selectedRequest.isPaid ? (
+                    <p className="text-green-700 flex items-center">
+                      <CheckBadgeIcon className="w-5 h-5 mr-2" />
+                      <strong>Lời mời đã được người gửi thanh toán</strong>
+                    </p>
+                  ) : (
+                    <p>
+                      <span className="font-medium">
+                        <strong>Số Tiền Cần Trả:</strong>
+                      </span>{" "}
+                      {selectedRequest.totalPrice?.toLocaleString() || 0} VND
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1137,14 +1304,6 @@ const AppointmentRequestsPage = () => {
                                 </span>
                               )}
                             </div>
-                            {/* <p className="text-gray-600 text-sm">
-                              <strong>Giới Tính:</strong>{" "}
-                              {request.toUserNavigation?.gender === 0
-                                ? "Nam"
-                                : request.toUserNavigation?.gender === 1
-                                  ? "Nữ"
-                                  : "Không xác định"}
-                            </p> */}
                           </div>
                         </div>
 
@@ -1163,10 +1322,12 @@ const AppointmentRequestsPage = () => {
                               request.endTime
                             )}
                           </p>
-                          <p className="text-gray-600 text-sm">
-                            <strong>Số Tiền Cần Trả:</strong>{" "}
-                            {request.totalPrice?.toLocaleString()} VND
-                          </p>
+                          {!request.isPaid && (
+                            <p className="text-gray-600 text-sm">
+                              <strong>Số Tiền Cần Trả:</strong>{" "}
+                              {request.totalPrice?.toLocaleString()} VND
+                            </p>
+                          )}
                           <p className="text-gray-600 text-sm">
                             <strong>Lời mời hết hạn sau:</strong>{" "}
                             {calculateTimeRemaining(request.expireAt)}
@@ -1175,7 +1336,7 @@ const AppointmentRequestsPage = () => {
                       </div>
 
                       <div className="mt-3 pt-3 border-t flex flex-col sm:flex-row justify-between items-center gap-3">
-                        <div className="flex items-center">
+                        <div className="flex items-center gap-4">
                           {request.status === "pending" ? (
                             <span className="text-yellow-700 flex items-center text-sm">
                               <Clock className="w-4 h-4 mr-1" />
@@ -1214,30 +1375,59 @@ const AppointmentRequestsPage = () => {
                               <strong>Bàn Đã Bị Hủy</strong>
                             </span>
                           ) : null}
+                          {request.isPaid && (
+                            <span className="text-green-700 flex items-center text-sm">
+                              <CheckBadgeIcon className="w-4 h-4 mr-1" />
+                              <strong>Đã được thanh toán bởi người gửi</strong>
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex space-x-2">
                           {request.status === "pending" &&
                             !isExpired(request.expireAt) && (
                               <>
-                                <Button
-                                  className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[100px]"
-                                  onClick={() =>
-                                    handleProcessPayment(request.id)
-                                  }
-                                  disabled={
-                                    isProcessing || isExpired(request.expireAt)
-                                  }
-                                >
-                                  {processingAcceptId === request.id ? (
-                                    <>
-                                      <Loader2 className="animate-spin mr-1 h-3 w-3" />
-                                      Đang xử lý...
-                                    </>
-                                  ) : (
-                                    "Chấp Nhận Và Thanh Toán"
-                                  )}
-                                </Button>
+                                {request.isPaid ? (
+                                  <Button
+                                    className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[100px]"
+                                    onClick={() =>
+                                      handleAcceptWithoutPayment(request.id)
+                                    }
+                                    disabled={
+                                      isProcessing ||
+                                      isExpired(request.expireAt)
+                                    }
+                                  >
+                                    {processingAcceptId === request.id ? (
+                                      <>
+                                        <Loader2 className="animate-spin mr-1 h-3 w-3" />
+                                        Đang xử lý...
+                                      </>
+                                    ) : (
+                                      "Chấp Nhận"
+                                    )}
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[100px]"
+                                    onClick={() =>
+                                      handleProcessPayment(request.id)
+                                    }
+                                    disabled={
+                                      isProcessing ||
+                                      isExpired(request.expireAt)
+                                    }
+                                  >
+                                    {processingAcceptId === request.id ? (
+                                      <>
+                                        <Loader2 className="animate-spin mr-1 h-3 w-3" />
+                                        Đang xử lý...
+                                      </>
+                                    ) : (
+                                      "Chấp Nhận Và Thanh Toán"
+                                    )}
+                                  </Button>
+                                )}
                                 <Button
                                   className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[80px]"
                                   onClick={() => rejectAppointment(request.id)}

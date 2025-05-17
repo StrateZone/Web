@@ -15,6 +15,7 @@ import { useQuill } from "react-quilljs";
 import "quill/dist/quill.snow.css";
 import DOMPurify from "dompurify";
 import { MembershipUpgradeDialog } from "../../MembershipUpgradeDialog ";
+import { useLocale } from "next-intl";
 
 interface Tag {
   tagId: number;
@@ -90,6 +91,7 @@ export default function EditPost() {
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const localActive = useLocale();
 
   const [touched, setTouched] = useState({
     title: false,
@@ -132,52 +134,7 @@ export default function EditPost() {
     ],
   });
   const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
-  const handleTokenExpiration = async (retryCallback: () => Promise<void>) => {
-    try {
-      const refreshToken = localStorage.getItem("refreshToken");
-      if (!refreshToken) {
-        throw new Error("Không có refresh token, vui lòng đăng nhập lại");
-      }
 
-      console.log("Sending refreshToken:", refreshToken); // Debug
-      const response = await fetch(
-        `${API_BASE_URL}/api/auth/refresh-token?refreshToken=${encodeURIComponent(refreshToken)}`,
-        {
-          method: "POST",
-          headers: {
-            Accept: "*/*",
-            // Remove Content-Type since we're not sending a JSON body
-            // Authorization header may still be needed if the API requires it
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Refresh token error:", errorData); // Debug
-        throw new Error(errorData.message || "Không thể làm mới token");
-      }
-
-      // Since the API returns 204, there may be no response body
-      // Check if the API sets the new token in headers or elsewhere
-      const newToken = response.headers.get("x-access-token"); // Adjust based on API behavior
-      if (newToken) {
-        localStorage.setItem("accessToken", newToken);
-      } else {
-        // If the API returns a JSON body (based on your original code), parse it
-        const data = await response.json();
-        localStorage.setItem("accessToken", data.data.newToken);
-        if (data.data.refreshToken) {
-          localStorage.setItem("refreshToken", data.data.refreshToken);
-        }
-      }
-
-      await retryCallback();
-    } catch (error) {
-      console.error("Token refresh failed:", error);
-    }
-  };
   // Sync content with Quill editor
   useEffect(() => {
     if (quill) {
@@ -249,8 +206,31 @@ export default function EditPost() {
         );
 
         if (response.status === 401) {
-          await handleTokenExpiration(checkUserMembership);
-          return;
+          // Show toast notification for token expiration
+          toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
+
+          // Clear authentication data
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
+          localStorage.removeItem("authData");
+          document.cookie =
+            "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+          document.cookie =
+            "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+          // Redirect to login page after a short delay to allow toast to be visible
+          setTimeout(() => {
+            window.location.href = `/${localActive}/login`;
+          }, 2000);
+
+          return null;
         }
 
         if (!response.ok) {
@@ -308,8 +288,31 @@ export default function EditPost() {
         }
       );
       if (response.status === 401) {
-        await handleTokenExpiration(fetchMembershipPrice);
-        return;
+        // Show toast notification for token expiration
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Clear authentication data
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+        // Redirect to login page after a short delay to allow toast to be visible
+        setTimeout(() => {
+          window.location.href = `/${localActive}/login`;
+        }, 2000);
+
+        return null;
       }
       if (!response.status) throw new Error("Failed to fetch membership price");
       const data: MembershipPrice = response.data;
@@ -336,8 +339,31 @@ export default function EditPost() {
         }
       );
       if (response.status === 401) {
-        await handleTokenExpiration(() => handleMembershipPayment());
-        return;
+        // Show toast notification for token expiration
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Clear authentication data
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+        // Redirect to login page after a short delay to allow toast to be visible
+        setTimeout(() => {
+          window.location.href = `/${localActive}/login`;
+        }, 2000);
+
+        return null;
       }
       if (!response.status || !response.data.success) {
         throw new Error(response.data.message || "Payment failed");
@@ -424,7 +450,31 @@ export default function EditPost() {
         );
 
         if (response.status === 401) {
-          await handleTokenExpiration(() => checkThreadOwnership());
+          // Show toast notification for token expiration
+          toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
+
+          // Clear authentication data
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
+          localStorage.removeItem("authData");
+          document.cookie =
+            "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+          document.cookie =
+            "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+          // Redirect to login page after a short delay to allow toast to be visible
+          setTimeout(() => {
+            window.location.href = `/${localActive}/login`;
+          }, 2000);
+
+          return null;
         }
         const thread: Thread = response.data;
         if (thread.createdBy !== userId) {
@@ -486,7 +536,31 @@ export default function EditPost() {
           }
         );
         if (response.status === 401) {
-          await handleTokenExpiration(() => fetchTags());
+          // Show toast notification for token expiration
+          toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
+
+          // Clear authentication data
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
+          localStorage.removeItem("authData");
+          document.cookie =
+            "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+          document.cookie =
+            "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+          // Redirect to login page after a short delay to allow toast to be visible
+          setTimeout(() => {
+            window.location.href = `/${localActive}/login`;
+          }, 2000);
+
+          return null;
         }
         const filteredTags = response.data.filter(
           (tag: Tag) => tag.tagId !== 8 && tag.tagId !== 9
@@ -629,8 +703,31 @@ export default function EditPost() {
         }
       );
       if (response.status === 401) {
-        await handleTokenExpiration(() => handleSubmit(e));
-        return;
+        // Show toast notification for token expiration
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Clear authentication data
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+        // Redirect to login page after a short delay to allow toast to be visible
+        setTimeout(() => {
+          window.location.href = `/${localActive}/login`;
+        }, 2000);
+
+        return null;
       }
       if (thumbnail) {
         const formData = new FormData();

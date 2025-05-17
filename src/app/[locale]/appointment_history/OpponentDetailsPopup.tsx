@@ -5,6 +5,7 @@ import OpponentRecommendationModalWithNewInvite from "../appointment_ongoing/Opp
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import Image from "next/image";
+import { useLocale } from "next-intl";
 
 interface User {
   userId: number;
@@ -59,6 +60,7 @@ function OpponentDetailsPopup({
   const [newlyInvitedUsers, setNewlyInvitedUsers] = useState<number[]>([]);
   const [localRequests, setLocalRequests] =
     useState<AppointmentRequest[]>(requests);
+  const localActive = useLocale();
 
   useEffect(() => {
     setLocalRequests((prev) => {
@@ -148,6 +150,7 @@ function OpponentDetailsPopup({
         appointmentId,
         startTime,
         endTime,
+
         totalPrice: 0,
       };
 
@@ -164,6 +167,31 @@ function OpponentDetailsPopup({
       );
 
       if (response.status === 401) {
+        // Show toast notification for token expiration
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Clear authentication data
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("authData");
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+        // Redirect to login page after a short delay to allow toast to be visible
+        setTimeout(() => {
+          window.location.href = `/${localActive}/login`;
+        }, 2000);
+
+        return false;
       }
       if (!response.ok) {
         throw new Error("Failed to send invitations");
