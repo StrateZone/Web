@@ -329,6 +329,7 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
             min="5"
             step="5"
             className="w-full"
+            crossOrigin={undefined}
           />
         </div>
       </CustomModal>
