@@ -16,8 +16,9 @@ import OpponentDetailsPopup from "../appointment_history/OpponentDetailsPopup";
 import { Button } from "@material-tailwind/react";
 import TermsDialog from "../chess_appointment/chess_category/TermsDialog";
 import { toast } from "react-toastify";
+import ExtendAppointmentDialog from "./ExtendAppointmentDialog";
 
-// Interfaces remain unchanged
+// Interfaces
 interface GameType {
   typeId: number;
   typeName: string;
@@ -131,9 +132,6 @@ function Page() {
     hasPrevious: false,
     hasNext: false,
   });
-  const router = useRouter();
-  const localActive = useLocale();
-
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
   const [totalPages, setTotalPages] = useState(1);
@@ -150,12 +148,21 @@ function Page() {
     AppointmentRequest[]
   >([]);
   const [currentTableId, setCurrentTableId] = useState<number | null>(null);
-  const [openTermsDialog, setOpenTermsDialog] = useState(false); // State for TermsDialog
+  const [currentScheduleTime, setCurrentScheduleTime] = useState<string | null>(
+    null
+  );
+  const [openTermsDialog, setOpenTermsDialog] = useState(false);
+  const [showExtendDialog, setShowExtendDialog] = useState(false);
+  const [currentTableAppointmentId, setCurrentTableAppointmentId] = useState<
+    number | null
+  >(null);
 
   const authDataString = localStorage.getItem("authData");
   const authData = JSON.parse(authDataString || "{}");
   const userId = authData.userId;
   const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
+  const localActive = useLocale();
 
   const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
 
@@ -180,7 +187,6 @@ function Page() {
       });
 
       if (response.status === 401) {
-        // Show toast notification for token expiration
         toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
           position: "top-right",
           autoClose: 3000,
@@ -190,7 +196,6 @@ function Page() {
           draggable: true,
         });
 
-        // Clear authentication data
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("authData");
@@ -199,7 +204,6 @@ function Page() {
         document.cookie =
           "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
 
-        // Redirect to login page after a short delay to allow toast to be visible
         setTimeout(() => {
           window.location.href = `/${localActive}/login`;
         }, 2000);
@@ -213,7 +217,6 @@ function Page() {
       }
 
       const result: ApiResponse = await response.json();
-
       setData(result);
       setCurrentPage(result.currentPage);
       setTotalPages(result.totalPages);
@@ -245,7 +248,6 @@ function Page() {
       );
 
       if (response.status === 401) {
-        // Show toast notification for token expiration
         toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
           position: "top-right",
           autoClose: 3000,
@@ -255,7 +257,6 @@ function Page() {
           draggable: true,
         });
 
-        // Clear authentication data
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("authData");
@@ -264,7 +265,6 @@ function Page() {
         document.cookie =
           "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
 
-        // Redirect to login page after a short delay to allow toast to be visible
         setTimeout(() => {
           window.location.href = `/${localActive}/login`;
         }, 2000);
@@ -348,7 +348,6 @@ function Page() {
       );
 
       if (response.status === 401) {
-        // Show toast notification for token expiration
         toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
           position: "top-right",
           autoClose: 3000,
@@ -358,7 +357,6 @@ function Page() {
           draggable: true,
         });
 
-        // Clear authentication data
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("authData");
@@ -367,7 +365,6 @@ function Page() {
         document.cookie =
           "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
 
-        // Redirect to login page after a short delay to allow toast to be visible
         setTimeout(() => {
           window.location.href = `/${localActive}/login`;
         }, 2000);
@@ -421,7 +418,6 @@ function Page() {
       );
 
       if (response.status === 401) {
-        // Show toast notification for token expiration
         toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
           position: "top-right",
           autoClose: 3000,
@@ -431,7 +427,6 @@ function Page() {
           draggable: true,
         });
 
-        // Clear authentication data
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("authData");
@@ -440,7 +435,6 @@ function Page() {
         document.cookie =
           "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
 
-        // Redirect to login page after a short delay to allow toast to be visible
         setTimeout(() => {
           window.location.href = `/${localActive}/login`;
         }, 2000);
@@ -496,11 +490,7 @@ function Page() {
           display: "Sắp diễn ra",
         };
       case "expired":
-        return {
-          bg: "bg-gray-100",
-          text: "text-gray-800",
-          display: "Hết hạn",
-        };
+        return { bg: "bg-gray-100", text: "text-gray-800", display: "Hết hạn" };
       case "completed":
         return {
           bg: "bg-purple-100",
@@ -508,11 +498,7 @@ function Page() {
           display: "Hoàn thành",
         };
       case "cancelled":
-        return {
-          bg: "bg-red-100",
-          text: "text-red-800",
-          display: "Đã hủy",
-        };
+        return { bg: "bg-red-100", text: "text-red-800", display: "Đã hủy" };
       case "refunded":
         return {
           bg: "bg-indigo-100",
@@ -531,12 +517,14 @@ function Page() {
           text: "text-orange-800",
           display: "Không hoàn thành",
         };
-      default:
+      case "checked_in":
         return {
-          bg: "bg-gray-100",
-          text: "text-gray-800",
-          display: status,
+          bg: "bg-green-100",
+          text: "text-green-800",
+          display: "Đã check-in",
         };
+      default:
+        return { bg: "bg-gray-100", text: "text-gray-800", display: status };
     }
   };
 
@@ -544,10 +532,6 @@ function Page() {
     setOrderBy(e.target.value);
     setCurrentPage(1);
   };
-
-  const [currentScheduleTime, setCurrentScheduleTime] = useState<string | null>(
-    null
-  );
 
   const handleShowOpponentDetails = (
     requests: AppointmentRequest[],
@@ -599,11 +583,22 @@ function Page() {
     setShowOpponentDetails(true);
   };
 
+  const handleExtendAppointment = (tableAppointmentId: number) => {
+    setCurrentTableAppointmentId(tableAppointmentId);
+    setShowExtendDialog(true);
+  };
+
+  const handleExtensionSuccess = async () => {
+    await fetchData();
+    if (selectedAppointment) {
+      await handleAppointmentClick(selectedAppointment);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
       <div className="flex-grow text-black">
-        {/* Background Banner */}
         <Banner
           title="Những Cuộc Hẹn Sắp Diễn Ra Của Bạn Tại StrateZone"
           subtitle="Hãy sẵn sàng cho những trận đấu sắp tới tại StrateZone"
@@ -622,7 +617,6 @@ function Page() {
             </Button>
           </div>
 
-          {/* Controls */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <div className="flex items-center gap-2">
               <label htmlFor="orderBy" className="font-medium">
@@ -748,8 +742,7 @@ function Page() {
                             {tableAppointment.table.roomName}
                           </td>
                           <td className="py-2 px-4 border text-center">
-                            {formatTime(tableAppointment.scheduleTime)}
-                                -    
+                            {formatTime(tableAppointment.scheduleTime)} -{" "}
                             {formatTime(tableAppointment.endTime)}
                           </td>
                           <td className="py-2 px-4 border text-center">
@@ -787,14 +780,6 @@ function Page() {
                             ) && (
                               <button
                                 onClick={() => {
-                                  console.log(
-                                    "Button clicked for tableAppointment:",
-                                    {
-                                      tableId: tableAppointment.table.tableId,
-                                      scheduleTime:
-                                        tableAppointment.scheduleTime,
-                                    }
-                                  );
                                   handleShowOpponentDetails(
                                     selectedAppointment.appointmentrequests,
                                     tableAppointment.table.tableId,
@@ -817,6 +802,16 @@ function Page() {
                                 className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition text-sm"
                               >
                                 Hủy
+                              </button>
+                            )}
+                            {tableAppointment.status === "checked_in" && (
+                              <button
+                                onClick={() =>
+                                  handleExtendAppointment(tableAppointment.id)
+                                }
+                                className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition text-sm"
+                              >
+                                Gia hạn
                               </button>
                             )}
                           </td>
@@ -898,7 +893,6 @@ function Page() {
                     </table>
                   </div>
 
-                  {/* Pagination */}
                   <div className="flex flex-col sm:flex-row justify-center items-center mt-4 gap-4">
                     {totalPages > 1 && (
                       <div className="flex justify-center mt-8 mb-8">
@@ -915,7 +909,6 @@ function Page() {
             </div>
           )}
 
-          {/* Cancel Confirmation Modal */}
           <CancelConfirmationModal
             show={showCancelConfirm}
             onClose={() => {
@@ -927,7 +920,6 @@ function Page() {
             isLoading={isLoading}
           />
 
-          {/* Opponent Details Popup */}
           <OpponentDetailsPopup
             show={showOpponentDetails}
             onClose={() => setShowOpponentDetails(false)}
@@ -957,7 +949,19 @@ function Page() {
             }
           />
 
-          {/* Terms Dialog */}
+          <ExtendAppointmentDialog
+            open={showExtendDialog}
+            onClose={() => {
+              setShowExtendDialog(false);
+              setCurrentTableAppointmentId(null);
+            }}
+            tableAppointmentId={currentTableAppointmentId || 0}
+            userId={userId}
+            appointmentId={selectedAppointment?.appointmentId || 0}
+            localActive={localActive}
+            onExtensionSuccess={handleExtensionSuccess}
+          />
+
           <TermsDialog
             open={openTermsDialog}
             onClose={() => setOpenTermsDialog(false)}
