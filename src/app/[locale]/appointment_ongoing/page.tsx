@@ -51,6 +51,7 @@ interface TablesAppointment {
   durationInHours: number;
   price: number;
   createdAt: string;
+  note: string;
   table: Table;
   paidForOpponent: boolean;
 }
@@ -604,7 +605,8 @@ function Page() {
           subtitle="Hãy sẵn sàng cho những trận đấu sắp tới tại StrateZone"
         />
 
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-12 py-8 max-w-full">
+          {" "}
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold">Cuộc Hẹn Sắp Diễn Ra</h1>
             <Button
@@ -616,7 +618,6 @@ function Page() {
               Xem Điều Khoản
             </Button>
           </div>
-
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <div className="flex items-center gap-2">
               <label htmlFor="orderBy" className="font-medium">
@@ -635,7 +636,6 @@ function Page() {
               </select>
             </div>
           </div>
-
           {isLoading ? (
             <div className="flex justify-center items-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -700,13 +700,16 @@ function Page() {
                         Giờ Bắt Đầu Và Kết Thúc
                       </th>
                       <th className="py-2 px-4 border">Ngày</th>
+
                       <th className="py-2 px-4 border">Tổng Giá</th>
+                      <th className="py-2 px-4 border">Trạng Thái</th>
+                      <th className="py-2 px-4 border">Đối Thủ</th>
+
                       <th className="py-2 px-4 border">
                         Thanh Toán Cho Đối Thủ
                       </th>
-                      <th className="py-2 px-4 border">Trạng thái</th>
-                      <th className="py-2 px-4 border">Đối Thủ</th>
                       <th className="py-2 px-4 border">Hành động</th>
+                      <th className="py-2 px-4 border">Ghi Chú</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -745,6 +748,7 @@ function Page() {
                             {formatTime(tableAppointment.scheduleTime)} -{" "}
                             {formatTime(tableAppointment.endTime)}
                           </td>
+
                           <td className="py-2 px-4 border text-center">
                             {new Date(
                               tableAppointment.scheduleTime
@@ -753,19 +757,7 @@ function Page() {
                           <td className="py-2 px-4 border text-center">
                             {formatCurrency(tableAppointment.price)}
                           </td>
-                          <td className="py-2 px-4 border text-center">
-                            <span
-                              className={`px-2 py-1 rounded ${
-                                tableAppointment.paidForOpponent
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-gray-100 text-gray-800"
-                              }`}
-                            >
-                              {tableAppointment.paidForOpponent
-                                ? "Có"
-                                : "Không"}
-                            </span>
-                          </td>
+
                           <td className="py-2 px-4 border text-center">
                             <span
                               className={`px-2 py-1 rounded ${getStatusColor(tableAppointment.status).bg} ${getStatusColor(tableAppointment.status).text}`}
@@ -773,6 +765,7 @@ function Page() {
                               {getStatusColor(tableAppointment.status).display}
                             </span>
                           </td>
+
                           <td className="py-2 px-4 border text-center">
                             {selectedAppointment.appointmentrequests.some(
                               (req) =>
@@ -791,6 +784,19 @@ function Page() {
                                 Xem đối thủ
                               </button>
                             )}
+                          </td>
+                          <td className="py-2 px-4 border text-center">
+                            <span
+                              className={`px-2 py-1 rounded ${
+                                tableAppointment.paidForOpponent
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-gray-100 text-gray-800"
+                              }`}
+                            >
+                              {tableAppointment.paidForOpponent
+                                ? "Có"
+                                : "Không"}
+                            </span>
                           </td>
                           <td className="py-2 px-4 border text-center space-x-2">
                             {(tableAppointment.status === "confirmed" ||
@@ -814,6 +820,9 @@ function Page() {
                                 Gia hạn
                               </button>
                             )}
+                          </td>
+                          <td className="py-2 px-4 border text-center">
+                            {tableAppointment.note}
                           </td>
                         </tr>
                       )
@@ -908,7 +917,6 @@ function Page() {
               )}
             </div>
           )}
-
           <CancelConfirmationModal
             show={showCancelConfirm}
             onClose={() => {
@@ -919,7 +927,6 @@ function Page() {
             refundInfo={refundInfo}
             isLoading={isLoading}
           />
-
           <OpponentDetailsPopup
             show={showOpponentDetails}
             onClose={() => setShowOpponentDetails(false)}
@@ -948,7 +955,6 @@ function Page() {
               )?.endTime
             }
           />
-
           <ExtendAppointmentDialog
             open={showExtendDialog}
             onClose={() => {
@@ -961,7 +967,6 @@ function Page() {
             localActive={localActive}
             onExtensionSuccess={handleExtensionSuccess}
           />
-
           <TermsDialog
             open={openTermsDialog}
             onClose={() => setOpenTermsDialog(false)}

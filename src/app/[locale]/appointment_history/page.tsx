@@ -51,6 +51,7 @@ interface TablesAppointment {
   createdAt: string;
   table: Table;
   paidForOpponent: boolean;
+  note: string;
 }
 
 interface User {
@@ -158,7 +159,9 @@ function Page() {
     (state: RootState) => state.wallet
   );
   const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
-
+  const [currentScheduleTime, setCurrentScheduleTime] = useState<string | null>(
+    null
+  );
   // Fetch paginated list of appointments
   const fetchData = async () => {
     setIsLoading(true);
@@ -551,10 +554,51 @@ function Page() {
 
   const handleShowOpponentDetails = (
     requests: AppointmentRequest[],
-    tableId: number
+    tableId: number,
+    scheduleTime: string
   ) => {
-    setCurrentOpponentRequests(requests);
+    console.log("handleShowOpponentDetails input:", {
+      tableId,
+      scheduleTime,
+      requests,
+      tablesAppointments: selectedAppointment?.tablesAppointments,
+    });
+
+    const targetTableAppointment = selectedAppointment?.tablesAppointments.find(
+      (ta) => ta.table.tableId === tableId && ta.scheduleTime === scheduleTime
+    );
+
+    if (!targetTableAppointment) {
+      console.error("No table appointment found for:", {
+        tableId,
+        scheduleTime,
+      });
+      setCurrentOpponentRequests([]);
+      setCurrentTableId(tableId);
+      setCurrentScheduleTime(null);
+      setShowOpponentDetails(true);
+      return;
+    }
+
+    const filteredRequests = requests.filter(
+      (req) =>
+        req.tableId === tableId &&
+        req.startTime === scheduleTime &&
+        req.endTime === targetTableAppointment.endTime
+    );
+
+    console.log("Data passed to OpponentDetailsPopup:", {
+      filteredRequests,
+      tableId,
+      tableAppointmentStatus: targetTableAppointment.status,
+      appointmentId: selectedAppointment?.appointmentId,
+      startTime: targetTableAppointment.scheduleTime,
+      endTime: targetTableAppointment.endTime,
+    });
+
+    setCurrentOpponentRequests(filteredRequests);
     setCurrentTableId(tableId);
+    setCurrentScheduleTime(scheduleTime);
     setShowOpponentDetails(true);
   };
 
@@ -568,9 +612,9 @@ function Page() {
             subtitle="Xem lại các lần bạn đã tham gia thi đấu tại StrateZone"
           />
 
-          <div className="container mx-auto px-4 py-8 flex-grow">
+          <div className="container mx-auto px-12 py-8 max-w-full">
+            {" "}
             <h1 className="text-3xl font-bold mb-8">Lịch Sử Đặt Hẹn</h1>
-
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
               <div className="flex items-center gap-2">
                 <label htmlFor="orderBy" className="font-medium">
@@ -589,7 +633,6 @@ function Page() {
                 </select>
               </div>
             </div>
-
             {isLoading ? (
               <div className="flex justify-center items-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -662,17 +705,20 @@ function Page() {
                         <th className="py-2 px-4 border">Loại Cờ</th>
                         <th className="py-2 px-4 border">Loại Phòng</th>
                         <th className="py-2 px-4 border">Tên Phòng</th>
-                        <th className="py-2 px-2 border">
+                        <th className="py-2 px-4 border">
                           Giờ Bắt Đầu Và Kết Thúc
                         </th>
                         <th className="py-2 px-4 border">Ngày</th>
+
                         <th className="py-2 px-4 border">Tổng Giá</th>
+                        <th className="py-2 px-4 border">Trạng Thái</th>
+                        <th className="py-2 px-4 border">Đối Thủ</th>
+
                         <th className="py-2 px-4 border">
                           Thanh Toán Cho Đối Thủ
                         </th>
-                        <th className="py-2 px-4 border">Trạng thái</th>
-                        <th className="py-2 px-4 border">Đối Thủ</th>
                         <th className="py-2 px-4 border">Hành động</th>
+                        <th className="py-2 px-4 border">Ghi Chú</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -701,17 +747,17 @@ function Page() {
                                   ? "Phòng cao cấp"
                                   : tableAppointment.table.roomType ===
                                       "openspaced"
-                                    ? "không gian mở"
+                                    ? "Không gian mở"
                                     : tableAppointment.table.roomType}
                             </td>
                             <td className="py-2 px-4 border text-center">
                               {tableAppointment.table.roomName}
                             </td>
                             <td className="py-2 px-4 border text-center">
-                              {formatTime(tableAppointment.scheduleTime)}
-                                  -    
+                              {formatTime(tableAppointment.scheduleTime)} -{" "}
                               {formatTime(tableAppointment.endTime)}
                             </td>
+
                             <td className="py-2 px-4 border text-center">
                               {new Date(
                                 tableAppointment.scheduleTime
@@ -719,6 +765,37 @@ function Page() {
                             </td>
                             <td className="py-2 px-4 border text-center">
                               {formatCurrency(tableAppointment.price)}
+                            </td>
+
+                            <td className="py-2 px-4 border text-center">
+                              <span
+                                className={`px-2 py-1 rounded ${getStatusColor(tableAppointment.status).bg} ${getStatusColor(tableAppointment.status).text}`}
+                              >
+                                {
+                                  getStatusColor(tableAppointment.status)
+                                    .display
+                                }
+                              </span>
+                            </td>
+
+                            <td className="py-2 px-4 border text-center">
+                              {selectedAppointment.appointmentrequests.some(
+                                (req) =>
+                                  req.tableId === tableAppointment.table.tableId
+                              ) && (
+                                <button
+                                  onClick={() => {
+                                    handleShowOpponentDetails(
+                                      selectedAppointment.appointmentrequests,
+                                      tableAppointment.table.tableId,
+                                      tableAppointment.scheduleTime
+                                    );
+                                  }}
+                                  className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm"
+                                >
+                                  Xem đối thủ
+                                </button>
+                              )}
                             </td>
                             <td className="py-2 px-4 border text-center">
                               <span
@@ -733,34 +810,6 @@ function Page() {
                                   : "Không"}
                               </span>
                             </td>
-                            <td className="py-2 px-4 border text-center">
-                              <span
-                                className={`px-2 py-1 rounded ${getStatusColor(tableAppointment.status).bg} ${getStatusColor(tableAppointment.status).text}`}
-                              >
-                                {
-                                  getStatusColor(tableAppointment.status)
-                                    .display
-                                }
-                              </span>
-                            </td>
-                            <td className="py-2 px-4 border text-center">
-                              {selectedAppointment.appointmentrequests.some(
-                                (req) =>
-                                  req.tableId === tableAppointment.table.tableId
-                              ) && (
-                                <button
-                                  onClick={() =>
-                                    handleShowOpponentDetails(
-                                      selectedAppointment.appointmentrequests,
-                                      tableAppointment.table.tableId
-                                    )
-                                  }
-                                  className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm"
-                                >
-                                  Xem đối thủ
-                                </button>
-                              )}
-                            </td>
                             <td className="py-2 px-4 border text-center space-x-2">
                               {(tableAppointment.status === "confirmed" ||
                                 tableAppointment.status === "pending") && (
@@ -773,6 +822,19 @@ function Page() {
                                   Hủy
                                 </button>
                               )}
+                              {/* {tableAppointment.status === "checked_in" && (
+                                <button
+                                  onClick={() =>
+                                    handleExtendAppointment(tableAppointment.id)
+                                  }
+                                  className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition text-sm"
+                                >
+                                  Gia hạn
+                                </button>
+                              )} */}
+                            </td>
+                            <td className="py-2 px-4 border text-center">
+                              {tableAppointment.note}
                             </td>
                           </tr>
                         )
@@ -871,7 +933,6 @@ function Page() {
                 )}
               </div>
             )}
-
             <CancelConfirmationModal
               show={showCancelConfirm}
               onClose={() => {
@@ -882,7 +943,6 @@ function Page() {
               refundInfo={refundInfo}
               isLoading={isLoading}
             />
-
             <OpponentDetailsPopup
               show={showOpponentDetails}
               onClose={() => setShowOpponentDetails(false)}
@@ -905,7 +965,6 @@ function Page() {
                 )?.endTime
               }
             />
-
             <TermsDialog
               open={openTermsDialog}
               onClose={() => setOpenTermsDialog(false)}
