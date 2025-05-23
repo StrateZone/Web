@@ -701,7 +701,8 @@ function Page() {
                   <table className="min-w-full bg-white">
                     <thead>
                       <tr className="bg-gray-100">
-                        <th className="py-2 px-4 border">Mã Bàn</th>
+                        <th className="py-2 px-4 border">Mã đặt bàn</th>
+                        <th className="py-2 px-4 border">Mã Bàn</th>{" "}
                         <th className="py-2 px-4 border">Loại Cờ</th>
                         <th className="py-2 px-4 border">Loại Phòng</th>
                         <th className="py-2 px-4 border">Tên Phòng</th>
@@ -709,11 +710,9 @@ function Page() {
                           Giờ Bắt Đầu Và Kết Thúc
                         </th>
                         <th className="py-2 px-4 border">Ngày</th>
-
                         <th className="py-2 px-4 border">Tổng Giá</th>
                         <th className="py-2 px-4 border">Trạng Thái</th>
                         <th className="py-2 px-4 border">Đối Thủ</th>
-
                         <th className="py-2 px-4 border">
                           Thanh Toán Cho Đối Thủ
                         </th>
@@ -725,6 +724,9 @@ function Page() {
                       {selectedAppointment.tablesAppointments.map(
                         (tableAppointment) => (
                           <tr key={tableAppointment.id} className="border-b">
+                            <td className="py-2 px-4 border text-center">
+                              {tableAppointment.id}
+                            </td>
                             <td className="py-2 px-4 border text-center">
                               {tableAppointment.table.tableId}
                             </td>

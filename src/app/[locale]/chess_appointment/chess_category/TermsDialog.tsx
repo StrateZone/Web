@@ -47,7 +47,22 @@ export default function TermsDialog({ open, onClose }: TermsDialogProps) {
   ] = useState<number | null>(null);
   const [percentageRefundIfNotFull, setPercentageRefundIfNotFull] = useState<
     number | null
-  >(null); // New state
+  >(null);
+  // New state variables for table extension
+  const [maxMinutesForTableExtend, setMaxMinutesForTableExtend] = useState<
+    number | null
+  >(null);
+  const [minMinutesForTableExtend, setMinMinutesForTableExtend] = useState<
+    number | null
+  >(null);
+  const [
+    extendAllow_BeforeMinutes_FromTableComplete,
+    setExtendAllow_BeforeMinutes_FromTableComplete,
+  ] = useState<number | null>(null);
+  const [
+    extendCancel_BeforeMinutes_FromPlayTime,
+    setExtendCancel_BeforeMinutes_FromPlayTime,
+  ] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -93,6 +108,19 @@ export default function TermsDialog({ open, onClose }: TermsDialogProps) {
         setAppointmentRequest_MaxHours_UntilExpiration(
           systemData.appointmentRequest_MaxHours_UntilExpiration
         );
+        // Set new table extension settings
+        setMaxMinutesForTableExtend(
+          systemData.maxMinutesForTableExtend || 60 // Fallback to 60 if not provided
+        );
+        setMinMinutesForTableExtend(
+          systemData.minMinutesForTableExtend || 5 // Fallback to 5 if not provided
+        );
+        setExtendAllow_BeforeMinutes_FromTableComplete(
+          systemData.extendAllow_BeforeMinutes_FromTableComplete || 90
+        );
+        setExtendCancel_BeforeMinutes_FromPlayTime(
+          systemData.extendCancel_BeforeMinutes_FromPlayTime || 0
+        );
 
         // Fetch percentage refund if not full
         const refundResponse = await fetch(
@@ -105,7 +133,7 @@ export default function TermsDialog({ open, onClose }: TermsDialogProps) {
           }
         );
         const refundData = await refundResponse.json();
-        setPercentageRefundIfNotFull(refundData * 100); // Convert to percentage (e.g., 0.5 -> 50)
+        setPercentageRefundIfNotFull(refundData * 100); // Convert to percentage
       } catch (error) {
         console.error("Error fetching system settings:", error);
         setRefundHours(3.5);
@@ -118,7 +146,12 @@ export default function TermsDialog({ open, onClose }: TermsDialogProps) {
         setNumberof_TopContributors_PerWeek(10);
         setMax_NumberOfUsers_InvitedToTable(6);
         setAppointmentRequest_MaxHours_UntilExpiration(48);
-        setPercentageRefundIfNotFull(50); // Fallback for percentage refund
+        setPercentageRefundIfNotFull(50);
+        // Fallback values for table extension
+        setMaxMinutesForTableExtend(60);
+        setMinMinutesForTableExtend(5);
+        setExtendAllow_BeforeMinutes_FromTableComplete(90);
+        setExtendCancel_BeforeMinutes_FromPlayTime(0);
       } finally {
         setIsLoading(false);
       }
@@ -398,7 +431,43 @@ export default function TermsDialog({ open, onClose }: TermsDialogProps) {
               variant="h6"
               sx={{ fontWeight: "600", color: "#1e40af", mt: 2, mb: 1 }}
             >
-              8. Liên Hệ
+              8. Gia Hạn Bàn
+            </Typography>
+            <Typography
+              paragraph
+              sx={{ color: "#475569", lineHeight: "1.6", fontSize: "0.95rem" }}
+            >
+              - Thời gian gia hạn tối đa cho mỗi bàn là{" "}
+              <strong className="text-indigo-700">
+                {maxMinutesForTableExtend ?? "Lỗi hiển thị"}
+              </strong>{" "}
+              phút.
+              <br />- Thời gian gia hạn tối thiểu cho mỗi bàn là{" "}
+              <strong className="text-indigo-700">
+                {minMinutesForTableExtend ?? "Lỗi hiển thị"}
+              </strong>{" "}
+              phút.
+              <br />- Gia hạn bàn chỉ được phép thực hiện trước khi bàn hiện tại
+              kết thúc ít nhất{" "}
+              <strong className="text-indigo-700">
+                {extendAllow_BeforeMinutes_FromTableComplete ?? "Lỗi hiển thị"}
+              </strong>{" "}
+              phút.
+              <br />- Sau khi gia hạn, bàn gia hạn có thể bị hủy trước giờ chơi
+              của bàn gia hạn ít nhất{" "}
+              <strong className="text-indigo-700">
+                {extendCancel_BeforeMinutes_FromPlayTime ?? "Lỗi hiển thị"}
+              </strong>{" "}
+              phút. Nếu hủy bàn gia hạn, người dùng sẽ được hoàn tiền 100%.
+              <br />- Gia hạn bàn yêu cầu xác nhận thanh toán trước khi hoàn
+              tất.
+            </Typography>
+
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: "600", color: "#1e40af", mt: 2, mb: 1 }}
+            >
+              9. Liên Hệ
             </Typography>
             <Typography
               paragraph

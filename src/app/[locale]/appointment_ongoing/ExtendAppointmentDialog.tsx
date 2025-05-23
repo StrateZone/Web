@@ -4,6 +4,11 @@ import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { fetchWallet } from "@/app/[locale]/wallet/walletSlice";
 import { AppDispatch } from "@/app/store";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
+import { useRouter } from "next/navigation";
+
+const MySwal = withReactContent(Swal);
 
 // Interfaces remain unchanged
 interface Table {
@@ -55,7 +60,42 @@ interface ExtendAppointmentDialogProps {
   onExtensionSuccess: () => Promise<void>;
 }
 
+interface InsufficientBalanceProps {
+  finalPrice?: number;
+}
+
 const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
+
+const InsufficientBalancePopup = async ({
+  finalPrice,
+}: InsufficientBalanceProps = {}): Promise<boolean> => {
+  const { isConfirmed } = await MySwal.fire({
+    title: "Số dư không đủ",
+    html: (
+      <div className="text-center text-black">
+        <p className="mb-4">
+          {finalPrice
+            ? `Số dư trong ví không đủ để thanh toán ${finalPrice.toLocaleString()}đ.`
+            : "Số dư trong ví không đủ để thanh toán."}
+        </p>
+        <p>Bạn có muốn chuyển đến trang nạp tiền ngay bây giờ?</p>
+      </div>
+    ),
+    icon: "error",
+    showCancelButton: true,
+    confirmButtonText: "Đến trang nạp tiền",
+    cancelButtonText: "Ở lại",
+    buttonsStyling: false,
+    customClass: {
+      confirmButton: "btn-confirm mr-2",
+      cancelButton: "btn-cancel ml-2",
+    },
+    reverseButtons: true,
+    focusCancel: true,
+  });
+
+  return isConfirmed;
+};
 
 // Custom Modal Component
 const CustomModal: React.FC<{
@@ -113,8 +153,10 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
   const [extensionDetails, setExtensionDetails] =
     useState<ExtensionDetails | null>(null);
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
+  const [showPaymentConfirmPopup, setShowPaymentConfirmPopup] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
 
   const formatTime = (timeString: string) => {
     const date = new Date(timeString);
@@ -148,14 +190,19 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
       });
 
       if (response.status === 401) {
-        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
+        toast.error(
+          <span className="font-bold">
+            Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.
+          </span>,
+          {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          }
+        );
 
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
@@ -173,8 +220,15 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
       }
 
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(errorData || "Không thể tải thông tin gia hạn");
+        let errorMessage = "Không thể tải thông tin gia hạn";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          const errorText = await response.text();
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       const data: ExtensionDetails = await response.json();
@@ -182,7 +236,9 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
       setShowConfirmPopup(true);
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Lỗi khi tải thông tin gia hạn",
+        <span className="font-bold">
+          {err instanceof Error ? err.message : "Lỗi khi tải thông tin gia hạn"}
+        </span>,
         {
           position: "top-right",
           autoClose: 3000,
@@ -195,7 +251,13 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
 
   const confirmExtendAppointment = async () => {
     if (!extensionDetails) {
-      toast.error("Thiếu thông tin để gia hạn");
+      toast.error(
+        <span className="font-bold">Thiếu thông tin để gia hạn</span>,
+        {
+          position: "top-right",
+          autoClose: 3000,
+        }
+      );
       return;
     }
 
@@ -224,15 +286,22 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
         }
       );
 
+      const responseData = await response.json();
+
       if (response.status === 401) {
-        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
+        toast.error(
+          <span className="font-bold">
+            Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.
+          </span>,
+          {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          }
+        );
 
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
@@ -249,25 +318,42 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
         return;
       }
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Gia hạn không thành công");
+      if (
+        !responseData.success &&
+        responseData.message === "Balance is not enough"
+      ) {
+        const isConfirmed = await InsufficientBalancePopup({
+          finalPrice: extensionDetails.table.totalPrice,
+        });
+        if (isConfirmed) {
+          router.push(`/${localActive}/wallet`);
+        }
+        return;
       }
 
-      toast.success("Gia hạn thành công!", {
+      if (!response.ok) {
+        throw new Error(responseData.message || "Gia hạn không thành công");
+      }
+
+      toast.success(<span className="font-bold">Gia hạn thành công!</span>, {
         position: "top-right",
         autoClose: 3000,
       });
 
       dispatch(fetchWallet(userId));
       await onExtensionSuccess();
+      setShowPaymentConfirmPopup(false);
       setShowConfirmPopup(false);
       setExtensionDetails(null);
       setExtendMinutes("");
       onClose();
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Lỗi không xác định khi gia hạn",
+        <span className="font-bold">
+          {err instanceof Error
+            ? err.message
+            : "Lỗi không xác định khi gia hạn"}
+        </span>,
         {
           position: "top-right",
           autoClose: 3000,
@@ -278,10 +364,15 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
     }
   };
 
+  const handlePaymentConfirm = () => {
+    setShowConfirmPopup(false);
+    setShowPaymentConfirmPopup(true);
+  };
+
   return (
     <>
       <CustomModal
-        open={open && !showConfirmPopup}
+        open={open && !showConfirmPopup && !showPaymentConfirmPopup}
         onClose={() => {
           setExtendMinutes("");
           onClose();
@@ -307,7 +398,13 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
                 const minutes = parseInt(extendMinutes as string);
                 if (isNaN(minutes) || minutes < 5) {
                   toast.error(
-                    "Vui lòng nhập số phút hợp lệ (tối thiểu 5 phút)"
+                    <span className="font-bold">
+                      Vui lòng nhập số phút hợp lệ (tối thiểu 5 phút)
+                    </span>,
+                    {
+                      position: "top-right",
+                      autoClose: 3000,
+                    }
                   );
                   return;
                 }
@@ -357,7 +454,7 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
             <Button
               variant="filled"
               color="blue"
-              onClick={confirmExtendAppointment}
+              onClick={handlePaymentConfirm}
               disabled={isLoading}
             >
               Xác nhận gia hạn
@@ -369,36 +466,85 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
           <div>
             <p className="mb-2">
               <span className="font-medium">Mã bàn:</span>{" "}
-              {extensionDetails.table.tableId}
+              <strong>{extensionDetails.table.tableId}</strong>
             </p>
             <p className="mb-2">
               <span className="font-medium">Tên phòng:</span>{" "}
-              {extensionDetails.table.roomName}
+              <strong>{extensionDetails.table.roomName}</strong>
             </p>
             <p className="mb-2">
               <span className="font-medium">Loại cờ:</span>{" "}
-              {extensionDetails.table.gameType.typeName}
+              <strong>{extensionDetails.table.gameType.typeName}</strong>
             </p>
             <p className="mb-2">
               <span className="font-medium">Thời gian bắt đầu:</span>{" "}
-              {formatTime(extensionDetails.scheduleTime)}
+              <strong>{formatTime(extensionDetails.scheduleTime)}</strong>
             </p>
             <p className="mb-2">
               <span className="font-medium">Thời gian kết thúc:</span>{" "}
-              {formatTime(extensionDetails.endTime)}
+              <strong>{formatTime(extensionDetails.endTime)}</strong>
             </p>
             <p className="mb-2">
               <span className="font-medium">Thời lượng:</span>{" "}
-              {(extensionDetails.durationInHours * 60).toFixed(0)} phút
+              <strong>
+                {(extensionDetails.durationInHours * 60).toFixed(0)} phút
+              </strong>
             </p>
             <p className="mb-2">
               <span className="font-medium">Tổng giá:</span>{" "}
-              {formatCurrency(extensionDetails.table.totalPrice)}
+              <strong>
+                {formatCurrency(extensionDetails.table.totalPrice)}
+              </strong>
             </p>
             <p className="mb-2">
               <span className="font-medium">Ghi chú:</span>{" "}
-              {extensionDetails.note}
+              <strong>{extensionDetails.note}</strong>
             </p>
+          </div>
+        )}
+      </CustomModal>
+
+      <CustomModal
+        open={showPaymentConfirmPopup}
+        onClose={() => {
+          setShowPaymentConfirmPopup(false);
+        }}
+        title="Xác nhận thanh toán"
+        footer={
+          <>
+            <Button
+              variant="text"
+              color="red"
+              onClick={() => {
+                setShowPaymentConfirmPopup(false);
+              }}
+              className="mr-2"
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="filled"
+              color="blue"
+              onClick={confirmExtendAppointment}
+              disabled={isLoading}
+            >
+              Xác nhận thanh toán
+            </Button>
+          </>
+        }
+      >
+        {extensionDetails && (
+          <div>
+            <p className="mb-2">
+              Bạn sẽ thanh toán{" "}
+              <span className="font-medium">
+                <strong>
+                  {formatCurrency(extensionDetails.table.totalPrice)}
+                </strong>
+              </span>{" "}
+              để gia hạn thời gian chơi.
+            </p>
+            <p className="mb-2">Vui lòng xác nhận để tiến hành thanh toán.</p>
           </div>
         )}
       </CustomModal>
