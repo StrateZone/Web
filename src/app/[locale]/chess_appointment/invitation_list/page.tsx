@@ -194,7 +194,6 @@ const AppointmentRequestsPage = () => {
         });
 
         if (response.status === 401) {
-          // Show toast notification for token expiration
           toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
             position: "top-right",
             autoClose: 3000,
@@ -204,7 +203,6 @@ const AppointmentRequestsPage = () => {
             draggable: true,
           });
 
-          // Clear authentication data
           localStorage.removeItem("accessToken");
           localStorage.removeItem("refreshToken");
           localStorage.removeItem("authData");
@@ -213,7 +211,6 @@ const AppointmentRequestsPage = () => {
           document.cookie =
             "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
 
-          // Redirect to login page after a short delay to allow toast to be visible
           setTimeout(() => {
             window.location.href = `/${localActive}/login`;
           }, 2000);
@@ -251,6 +248,10 @@ const AppointmentRequestsPage = () => {
     fetchAppointmentRequests(currentPage);
   };
 
+  const handleBackToList = () => {
+    setSelectedRequest(null);
+  };
+
   useEffect(() => {
     fetchAppointmentRequests(currentPage);
   }, [fetchAppointmentRequests]);
@@ -270,7 +271,6 @@ const AppointmentRequestsPage = () => {
       );
 
       if (response.status === 401) {
-        // Show toast notification for token expiration
         toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
           position: "top-right",
           autoClose: 3000,
@@ -280,7 +280,6 @@ const AppointmentRequestsPage = () => {
           draggable: true,
         });
 
-        // Clear authentication data
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("authData");
@@ -289,7 +288,6 @@ const AppointmentRequestsPage = () => {
         document.cookie =
           "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
 
-        // Redirect to login page after a short delay to allow toast to be visible
         setTimeout(() => {
           window.location.href = `/${localActive}/login`;
         }, 2000);
@@ -303,6 +301,14 @@ const AppointmentRequestsPage = () => {
       }
 
       await fetchAppointmentRequests(currentPage);
+      handleBackToList(); // Return to list view after rejecting
+      /*
+      // Alternative: Update selectedRequest to reflect new status
+      const updatedRequest = requests.find((req) => req.id === requestId);
+      if (updatedRequest && selectedRequest) {
+        setSelectedRequest({ ...selectedRequest, status: updatedRequest.status });
+      }
+      */
     } catch (err) {
       console.error("Lỗi khi từ chối lời mời:", err);
       setError(err instanceof Error ? err.message : "Lỗi khi từ chối lời mời");
@@ -375,7 +381,6 @@ const AppointmentRequestsPage = () => {
       );
 
       if (response.status === 401) {
-        // Show toast notification for token expiration
         toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
           position: "top-right",
           autoClose: 3000,
@@ -385,7 +390,6 @@ const AppointmentRequestsPage = () => {
           draggable: true,
         });
 
-        // Clear authentication data
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("authData");
@@ -394,7 +398,6 @@ const AppointmentRequestsPage = () => {
         document.cookie =
           "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
 
-        // Redirect to login page after a short delay to allow toast to be visible
         setTimeout(() => {
           window.location.href = `/${localActive}/login`;
         }, 2000);
@@ -420,8 +423,15 @@ const AppointmentRequestsPage = () => {
 
       dispatch(fetchWallet(userId));
       await fetchAppointmentRequests(currentPage);
-
       await SuccessPaymentPopup(request.totalPrice || 0);
+      handleBackToList(); // Return to list view after successful payment
+      /*
+      // Alternative: Update selectedRequest to reflect new status
+      const updatedRequest = requests.find((req) => req.id === requestId);
+      if (updatedRequest && selectedRequest) {
+        setSelectedRequest({ ...selectedRequest, status: updatedRequest.status });
+      }
+      */
     } catch (error: any) {
       const errorMessage =
         error.message || error.response?.data?.message || JSON.stringify(error);
@@ -441,7 +451,10 @@ const AppointmentRequestsPage = () => {
             tableId: request.tableId,
             startTime: request.startTime,
             endTime: request.endTime,
-            onConfirm: () => fetchAppointmentRequests(currentPage),
+            onConfirm: () => {
+              fetchAppointmentRequests(currentPage);
+              handleBackToList(); // Return to list view after error
+            },
           });
         }
       } else {
@@ -454,6 +467,7 @@ const AppointmentRequestsPage = () => {
           confirmButtonText: "OK",
         });
         await fetchAppointmentRequests(currentPage);
+        handleBackToList(); // Return to list view after error
       }
     } finally {
       setProcessingAcceptId(null);
@@ -507,7 +521,6 @@ const AppointmentRequestsPage = () => {
       );
 
       if (response.status === 401) {
-        // Show toast notification for token expiration
         toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
           position: "top-right",
           autoClose: 3000,
@@ -517,7 +530,6 @@ const AppointmentRequestsPage = () => {
           draggable: true,
         });
 
-        // Clear authentication data
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("authData");
@@ -526,7 +538,6 @@ const AppointmentRequestsPage = () => {
         document.cookie =
           "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
 
-        // Redirect to login page after a short delay to allow toast to be visible
         setTimeout(() => {
           window.location.href = `/${localActive}/login`;
         }, 2000);
@@ -546,6 +557,14 @@ const AppointmentRequestsPage = () => {
         icon: "success",
         confirmButtonText: "OK",
       });
+      handleBackToList(); // Return to list view after accepting
+      /*
+      // Alternative: Update selectedRequest to reflect new status
+      const updatedRequest = requests.find((req) => req.id === requestId);
+      if (updatedRequest && selectedRequest) {
+        setSelectedRequest({ ...selectedRequest, status: updatedRequest.status });
+      }
+      */
     } catch (error: any) {
       const errorMessage =
         error.message || error.response?.data?.message || JSON.stringify(error);
@@ -565,7 +584,10 @@ const AppointmentRequestsPage = () => {
             tableId: request.tableId,
             startTime: request.startTime,
             endTime: request.endTime,
-            onConfirm: () => fetchAppointmentRequests(currentPage),
+            onConfirm: () => {
+              fetchAppointmentRequests(currentPage);
+              handleBackToList(); // Return to list view after error
+            },
           });
         }
       } else {
@@ -577,6 +599,8 @@ const AppointmentRequestsPage = () => {
           icon: "error",
           confirmButtonText: "OK",
         });
+        await fetchAppointmentRequests(currentPage);
+        handleBackToList(); // Return to list view after error
       }
     } finally {
       setProcessingAcceptId(null);
@@ -724,10 +748,6 @@ const AppointmentRequestsPage = () => {
     setSelectedRequest(request);
   };
 
-  const handleBackToList = () => {
-    setSelectedRequest(null);
-  };
-
   function toLocalISOString(date: Date) {
     const tzOffset = date.getTimezoneOffset() * 60000;
     const localDate = new Date(date.getTime() - tzOffset);
@@ -751,7 +771,6 @@ const AppointmentRequestsPage = () => {
       );
 
       if (response.status === 401) {
-        // Show toast notification for token expiration
         toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
           position: "top-right",
           autoClose: 3000,
@@ -761,7 +780,6 @@ const AppointmentRequestsPage = () => {
           draggable: true,
         });
 
-        // Clear authentication data
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("authData");
@@ -770,7 +788,6 @@ const AppointmentRequestsPage = () => {
         document.cookie =
           "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
 
-        // Redirect to login page after a short delay to allow toast to be visible
         setTimeout(() => {
           window.location.href = `/${localActive}/login`;
         }, 2000);
@@ -826,7 +843,6 @@ const AppointmentRequestsPage = () => {
       );
 
       if (response.status === 401) {
-        // Show toast notification for token expiration
         toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
           position: "top-right",
           autoClose: 3000,
@@ -836,7 +852,6 @@ const AppointmentRequestsPage = () => {
           draggable: true,
         });
 
-        // Clear authentication data
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("authData");
@@ -845,7 +860,6 @@ const AppointmentRequestsPage = () => {
         document.cookie =
           "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
 
-        // Redirect to login page after a short delay to allow toast to be visible
         setTimeout(() => {
           window.location.href = `/${localActive}/login`;
         }, 2000);
@@ -1186,6 +1200,111 @@ const AppointmentRequestsPage = () => {
                     </p>
                   )}
                 </div>
+              </div>
+
+              <div className="flex space-x-2 justify-end">
+                {selectedRequest.status === "pending" &&
+                  !isExpired(selectedRequest.expireAt) && (
+                    <>
+                      {selectedRequest.isPaid ? (
+                        <Button
+                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[100px]"
+                          onClick={() =>
+                            handleAcceptWithoutPayment(selectedRequest.id)
+                          }
+                          disabled={
+                            processingAcceptId === selectedRequest.id ||
+                            processingRequestId === selectedRequest.id ||
+                            (isRejecting &&
+                              selectedRequest.tablesAppointmentId ===
+                                currentCancellingId)
+                          }
+                        >
+                          {processingAcceptId === selectedRequest.id ? (
+                            <>
+                              <Loader2 className="animate-spin mr-1 h-3 w-3" />
+                              Đang xử lý...
+                            </>
+                          ) : (
+                            "Chấp Nhận"
+                          )}
+                        </Button>
+                      ) : (
+                        <Button
+                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[100px]"
+                          onClick={() =>
+                            handleProcessPayment(selectedRequest.id)
+                          }
+                          disabled={
+                            processingAcceptId === selectedRequest.id ||
+                            processingRequestId === selectedRequest.id ||
+                            (isRejecting &&
+                              selectedRequest.tablesAppointmentId ===
+                                currentCancellingId)
+                          }
+                        >
+                          {processingAcceptId === selectedRequest.id ? (
+                            <>
+                              <Loader2 className="animate-spin mr-1 h-3 w-3" />
+                              Đang xử lý...
+                            </>
+                          ) : (
+                            "Chấp Nhận Và Thanh Toán"
+                          )}
+                        </Button>
+                      )}
+                      <Button
+                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[80px]"
+                        onClick={() => rejectAppointment(selectedRequest.id)}
+                        disabled={
+                          processingAcceptId === selectedRequest.id ||
+                          processingRequestId === selectedRequest.id ||
+                          (isRejecting &&
+                            selectedRequest.tablesAppointmentId ===
+                              currentCancellingId)
+                        }
+                      >
+                        {processingRequestId === selectedRequest.id ? (
+                          <>
+                            <Loader2 className="animate-spin mr-1 h-3 w-3" />
+                            Đang Xử Lý
+                          </>
+                        ) : (
+                          "Từ Chối"
+                        )}
+                      </Button>
+                    </>
+                  )}
+                {selectedRequest.status === "accepted" &&
+                  !isExpired(selectedRequest.expireAt) &&
+                  selectedRequest.tablesAppointmentStatus !== "incoming" && (
+                    <Button
+                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-sm flex items-center justify-center min-w-[80px]"
+                      onClick={() =>
+                        checkCancelCondition(
+                          selectedRequest.tablesAppointmentId!
+                        )
+                      }
+                      disabled={
+                        processingAcceptId === selectedRequest.id ||
+                        processingRequestId === selectedRequest.id ||
+                        (isRejecting &&
+                          selectedRequest.tablesAppointmentId ===
+                            currentCancellingId)
+                      }
+                    >
+                      {isRejecting &&
+                      selectedRequest.tablesAppointmentId ===
+                        currentCancellingId ? (
+                        <>
+                          <Loader2 className="animate-spin mr-1 h-3 w-3" />
+                          Đang Xử Lý
+                        </>
+                      ) : (
+                        "Hủy"
+                      )}
+                    </Button>
+                  )}
               </div>
             </div>
           ) : requests.length === 0 ? (

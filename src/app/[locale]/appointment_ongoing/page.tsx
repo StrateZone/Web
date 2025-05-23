@@ -17,6 +17,7 @@ import { Button } from "@material-tailwind/react";
 import TermsDialog from "../chess_appointment/chess_category/TermsDialog";
 import { toast } from "react-toastify";
 import ExtendAppointmentDialog from "./ExtendAppointmentDialog";
+import { time } from "console";
 
 // Interfaces
 interface GameType {
@@ -54,6 +55,8 @@ interface TablesAppointment {
   note: string;
   table: Table;
   paidForOpponent: boolean;
+  extendedOf: number | null;
+  isExtended: boolean;
 }
 
 interface User {
@@ -692,7 +695,9 @@ function Page() {
                 <table className="min-w-full bg-white">
                   <thead>
                     <tr className="bg-gray-100">
+                      <th className="py-2 px-4 border">Mã đặt bàn</th>
                       <th className="py-2 px-4 border">Mã Bàn</th>
+
                       <th className="py-2 px-4 border">Loại Cờ</th>
                       <th className="py-2 px-4 border">Loại Phòng</th>
                       <th className="py-2 px-4 border">Tên Phòng</th>
@@ -716,6 +721,9 @@ function Page() {
                     {selectedAppointment.tablesAppointments.map(
                       (tableAppointment) => (
                         <tr key={tableAppointment.id} className="border-b">
+                          <td className="py-2 px-4 border text-center">
+                            {tableAppointment.id}
+                          </td>
                           <td className="py-2 px-4 border text-center">
                             {tableAppointment.table.tableId}
                           </td>
@@ -800,26 +808,34 @@ function Page() {
                           </td>
                           <td className="py-2 px-4 border text-center space-x-2">
                             {(tableAppointment.status === "confirmed" ||
-                              tableAppointment.status === "pending") && (
+                              tableAppointment.status === "pending" ||
+                              (tableAppointment.status === "incoming" &&
+                                tableAppointment.extendedOf !== null &&
+                                new Date(tableAppointment.scheduleTime) >
+                                  new Date())) && (
                               <button
                                 onClick={() =>
                                   checkCancelCondition(tableAppointment.id)
                                 }
                                 className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition text-sm"
                               >
-                                Hủy
+                                {tableAppointment.status === "incoming" &&
+                                tableAppointment.extendedOf !== null
+                                  ? "Hủy gia hạn"
+                                  : "Hủy"}
                               </button>
                             )}
-                            {tableAppointment.status === "checked_in" && (
-                              <button
-                                onClick={() =>
-                                  handleExtendAppointment(tableAppointment.id)
-                                }
-                                className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition text-sm"
-                              >
-                                Gia hạn
-                              </button>
-                            )}
+                            {tableAppointment.status === "checked_in" &&
+                              tableAppointment.isExtended == false && (
+                                <button
+                                  onClick={() =>
+                                    handleExtendAppointment(tableAppointment.id)
+                                  }
+                                  className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition text-sm"
+                                >
+                                  Gia hạn
+                                </button>
+                              )}
                           </td>
                           <td className="py-2 px-4 border text-center">
                             {tableAppointment.note}

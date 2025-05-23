@@ -41,7 +41,7 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
 
   const formatDate = (dateString: string) => {
     if (!dateString || isNaN(new Date(dateString).getTime())) {
-      return "Ngày không hợp lệ";
+      return "Không xác định";
     }
     const date = new Date(dateString);
     return (
