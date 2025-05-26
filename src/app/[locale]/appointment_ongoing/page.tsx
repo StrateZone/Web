@@ -774,11 +774,14 @@ function Page() {
                               {getStatusColor(tableAppointment.status).display}
                             </span>
                           </td>
-
                           <td className="py-2 px-4 border text-center">
                             {selectedAppointment.appointmentrequests.some(
                               (req) =>
-                                req.tableId === tableAppointment.table.tableId
+                                req.tableId ===
+                                  tableAppointment.table.tableId &&
+                                req.startTime ===
+                                  tableAppointment.scheduleTime &&
+                                req.endTime === tableAppointment.endTime
                             ) && (
                               <button
                                 onClick={() => {
