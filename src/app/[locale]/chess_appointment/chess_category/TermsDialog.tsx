@@ -63,6 +63,11 @@ export default function TermsDialog({ open, onClose }: TermsDialogProps) {
     extendCancel_BeforeMinutes_FromPlayTime,
     setExtendCancel_BeforeMinutes_FromPlayTime,
   ] = useState<number | null>(null);
+  const [
+    percentage_Refund_On_ExtendedTables,
+    setPercentage_Refund_On_ExtendedTables,
+  ] = useState<number | null>(null);
+
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -121,7 +126,9 @@ export default function TermsDialog({ open, onClose }: TermsDialogProps) {
         setExtendCancel_BeforeMinutes_FromPlayTime(
           systemData.extendCancel_BeforeMinutes_FromPlayTime || 0
         );
-
+        setPercentage_Refund_On_ExtendedTables(
+          systemData.percentage_Refund_On_ExtendedTables || 50
+        );
         // Fetch percentage refund if not full
         const refundResponse = await fetch(
           "https://backend-production-ac5e.up.railway.app/api/system/1/percentage-refund-ifnotfull",
@@ -458,7 +465,14 @@ export default function TermsDialog({ open, onClose }: TermsDialogProps) {
               <strong className="text-indigo-700">
                 {extendCancel_BeforeMinutes_FromPlayTime ?? "Lỗi hiển thị"}
               </strong>{" "}
-              phút. Nếu hủy bàn gia hạn, người dùng sẽ được hoàn tiền 100%.
+              phút. Nếu hủy bàn gia hạn, người dùng sẽ được hoàn tiền{" "}
+              <strong className="text-indigo-700">
+                {percentage_Refund_On_ExtendedTables !== null
+                  ? percentage_Refund_On_ExtendedTables * 100
+                  : "Lỗi hiển thị"}
+                %
+              </strong>{" "}
+              .
               <br />- Gia hạn bàn yêu cầu xác nhận thanh toán trước khi hoàn
               tất.
             </Typography>
