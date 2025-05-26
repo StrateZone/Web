@@ -88,6 +88,7 @@ interface Appointment {
   status: string;
   createdAt: string;
   tablesCount: number;
+  isMonthlyAppointment: boolean;
   user: null | {
     userId: number;
     name: string;
@@ -865,6 +866,9 @@ function Page() {
                             <th className="py-3 px-5 text-left">
                               Ngày Tạo Đơn
                             </th>
+                            <th className="py-3 px-5 text-left">
+                              Phương thức đặt hẹn
+                            </th>
                             <th className="py-3 px-4 text-left">Tổng Số Bàn</th>
                             <th className="py-3 px-4 text-left">Tổng Giá</th>
                             <th className="py-3 px-4 text-left">Trạng Thái</th>
@@ -890,6 +894,11 @@ function Page() {
                                 </td>
                                 <td className="py-3 px-4">
                                   {formatDate(appointment.createdAt)}
+                                </td>
+                                <td className="py-3 px-4">
+                                  {appointment.isMonthlyAppointment
+                                    ? "Đặt hẹn Tháng"
+                                    : "Đặt hẹn Thường"}
                                 </td>
                                 <td className="py-3 px-14">
                                   {appointment.tablesCount}
