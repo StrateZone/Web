@@ -1160,7 +1160,9 @@ const TableBookingPage = () => {
           <div className="bg-white rounded-lg shadow-md p-6">
             <Tabs
               value={activeTab}
-              onChange={(value) => setActiveTab(value as "regular" | "monthly")}
+              onChange={(value: string) =>
+                setActiveTab(value as "regular" | "monthly")
+              }
             >
               <TabsHeader className="bg-gray-200 rounded-t-lg">
                 <Tab value="regular" className="py-3 text-base">
