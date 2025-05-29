@@ -23,7 +23,7 @@ import { toast } from "react-toastify";
 import BusinessHoursNotice from "@/components/BusinessHoursNotice/page";
 import Banner from "@/components/banner/banner";
 import TermsDialog from "./TermsDialog";
-
+import { FormControl, Select, MenuItem, ListItemText } from "@mui/material";
 interface Room {
   id: number;
   roomId: number;
@@ -1147,53 +1147,54 @@ export default function ChessCategoryPage() {
                   >
                     Chọn Ngày Trong Tuần
                   </label>
-                  <Box
-                    sx={{
-                      maxHeight: "100px",
-                      overflowY: "auto",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "0.375rem",
-                      bgcolor: "white",
-                    }}
-                  >
-                    <List dense>
+                  <FormControl sx={{ width: "100%" }}>
+                    <Select
+                      id="daysOfWeek"
+                      multiple
+                      value={daysOfWeek}
+                      onChange={(e) =>
+                        setDaysOfWeek(e.target.value as string[])
+                      }
+                      renderValue={(selected) =>
+                        selected.map(translateDayToVietnamese).join(", ")
+                      }
+                      sx={{
+                        height: "40px",
+                        bgcolor: "white",
+                        borderRadius: "0.375rem",
+                        "& .MuiSelect-select": {
+                          padding: "8px 12px",
+                          fontSize: "0.875rem",
+                          color: "#374151",
+                        },
+                      }}
+                      MenuProps={{
+                        PaperProps: {
+                          sx: {
+                            maxHeight: 200,
+                            bgcolor: "white",
+                          },
+                        },
+                      }}
+                    >
                       {daysOfWeekOptions.map((day) => (
-                        <ListItem key={day} disablePadding>
-                          <FormControlLabel
-                            control={
-                              <Checkbox
-                                checked={daysOfWeek.includes(day)}
-                                onChange={(e) => {
-                                  const checked = e.target.checked;
-                                  setDaysOfWeek((prev) =>
-                                    checked
-                                      ? [...prev, day]
-                                      : prev.filter((d) => d !== day)
-                                  );
-                                }}
-                                sx={{
-                                  color: "#374151",
-                                  "&.Mui-checked": {
-                                    color: "#3b82f6",
-                                  },
-                                }}
-                              />
-                            }
-                            label={translateDayToVietnamese(day)}
+                        <MenuItem key={day} value={day}>
+                          <Checkbox
+                            checked={daysOfWeek.includes(day)}
                             sx={{
-                              width: "100%",
-                              margin: 0,
-                              padding: "4px 8px",
-                              "& .MuiFormControlLabel-label": {
-                                fontSize: "0.875rem",
-                                color: "#374151",
+                              color: "#374151",
+                              "&.Mui-checked": {
+                                color: "#3b82f6",
                               },
                             }}
                           />
-                        </ListItem>
+                          <ListItemText
+                            primary={translateDayToVietnamese(day)}
+                          />
+                        </MenuItem>
                       ))}
-                    </List>
-                  </Box>
+                    </Select>
+                  </FormControl>
                 </div>
               </>
             ) : (

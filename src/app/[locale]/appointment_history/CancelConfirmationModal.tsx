@@ -8,6 +8,7 @@ interface RefundInfo {
   cancellation_PartialRefund_TimeGate: string | null;
   refundStatus?: number;
   numerOfTablesCancelledThisWeek?: number;
+  isExtended: boolean; // Added isExtended to the interface
 }
 
 interface CancelConfirmationModalProps {
@@ -73,14 +74,29 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
     return (
       <div className="text-left space-y-2">
         <p>
-          Bạn sẽ được hoàn tiền{" "}
-          <strong>
-            {refundInfo.message.includes("100%")
-              ? "100%"
-              : refundInfo.message.includes("50%")
-                ? "50%"
-                : refundInfo.message}
-          </strong>
+          {refundInfo.isExtended ? (
+            <>
+              Bạn sẽ được hoàn tiền{" "}
+              <strong>
+                {refundInfo.message.includes("100%")
+                  ? "100%"
+                  : refundInfo.message.includes("50%")
+                    ? "50%"
+                    : refundInfo.message}
+              </strong>
+            </>
+          ) : (
+            <>
+              Nếu hủy bàn ở thời điểm hiện tại bạn sẽ nhận lại được{" "}
+              <strong>
+                {refundInfo.message.includes("100%")
+                  ? "100%"
+                  : refundInfo.message.includes("50%")
+                    ? "50%"
+                    : refundInfo.message}
+              </strong>
+            </>
+          )}
         </p>
         <p>
           <span className="font-medium">Số tiền nhận lại được:</span>{" "}

@@ -117,6 +117,11 @@ const TableBookingPage = () => {
   const [availableVouchers, setAvailableVouchers] = useState<Voucher[]>([]);
   const [userVouchers, setUserVouchers] = useState<Voucher[]>([]);
   const [showVoucherModal, setShowVoucherModal] = useState(false);
+  const [
+    min_Tables_For_MonthlyAppointment,
+    setMin_Tables_For_MonthlyAppointment,
+  ] = useState<number | null>(null);
+  const [isLoadingSystemData, setIsLoadingSystemData] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<{
     tableId: number;
     startDate: string;
@@ -163,8 +168,9 @@ const TableBookingPage = () => {
     }
   };
   useEffect(() => {
-    const fetchVouchers = async () => {
+    const fetchData = async () => {
       try {
+        // Fetch vouchers (existing code)
         const sampleResponse = await fetch(
           "https://backend-production-ac5e.up.railway.app/api/vouchers/samples",
           {
@@ -224,13 +230,49 @@ const TableBookingPage = () => {
             setUserVouchers(userData.pagedList);
           }
         }
+
+        // Fetch system data for min_Tables_For_MonthlyAppointment
+        setIsLoadingSystemData(true);
+        const systemResponse = await fetch(
+          "https://backend-production-ac5e.up.railway.app/api/system/1", // Replace with actual endpoint
+          {
+            headers: {
+              accept: "*/*",
+              authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
+        );
+        if (systemResponse.status === 401) {
+          toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
+          localStorage.removeItem("authData");
+          document.cookie =
+            "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+          document.cookie =
+            "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+          setTimeout(() => {
+            window.location.href = `/${localActive}/login`;
+          }, 2000);
+          return;
+        }
+        if (systemResponse.ok) {
+          const systemData = await systemResponse.json();
+          setMin_Tables_For_MonthlyAppointment(
+            systemData.min_Tables_For_MonthlyAppointment || 1
+          );
+        } else {
+          throw new Error("Failed to fetch system data");
+        }
       } catch (error) {
-        console.error("Error fetching vouchers:", error);
-        toast.error("Không thể tải danh sách voucher");
+        console.error("Error fetching data:", error);
+        toast.error("Không thể tải dữ liệu hệ thống hoặc voucher");
+      } finally {
+        setIsLoadingSystemData(false);
       }
     };
 
-    fetchVouchers();
+    fetchData();
   }, [localActive]);
 
   useEffect(() => {
@@ -686,6 +728,12 @@ const TableBookingPage = () => {
           if (isConfirmed) {
             router.push(`/${localActive}/wallet`);
           }
+        } else if (
+          error.message.includes(
+            "Mỗi lịch tháng phải bao gồm tối thiểu 5 đơn bàn."
+          )
+        ) {
+          toast.error("Mỗi lịch tháng phải bao gồm tối thiểu 5 đơn bàn.");
         } else if (error.message.includes("Can not select time in the past")) {
           const now = new Date();
           const pastBookings = bookingsToProcess
@@ -1236,7 +1284,16 @@ const TableBookingPage = () => {
                   )}
                 </TabPanel>
                 <TabPanel value="monthly">
-                  {renderBookingSection(monthlyBookings, "Đặt Lịch Tháng")}
+                  {renderBookingSection(
+                    monthlyBookings,
+                    `Đặt Lịch Tháng (Số bàn tối thiểu phải đặt là: ${
+                      isLoadingSystemData
+                        ? "Đang tải..."
+                        : min_Tables_For_MonthlyAppointment !== null
+                          ? min_Tables_For_MonthlyAppointment
+                          : "Chưa xác định"
+                    })`
+                  )}
                   {monthlyBookings.length > 0 && (
                     <div className="mt-6 flex justify-between items-center">
                       <p className="font-bold text-xl">

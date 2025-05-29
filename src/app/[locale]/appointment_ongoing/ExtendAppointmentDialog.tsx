@@ -38,6 +38,8 @@ interface ExtensionDetails {
   durationInHours: number;
   note: string;
   table: Table;
+  maxNumberOfExtends: number;
+  numberOfExtends: number;
 }
 
 interface ExtensionRequest {
@@ -647,6 +649,18 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
               <strong>
                 {(extensionDetails.durationInHours * 60).toFixed(0)} phút
               </strong>
+            </p>
+            <p>
+              <span className="font-medium">
+                Số lần gia hạn mỗi bàn tối đa:
+              </span>{" "}
+              <strong>{extensionDetails.maxNumberOfExtends}</strong>
+            </p>
+            <p>
+              <span className="font-medium">
+                Số lần đã gia hạn trên bàn hiện tại:
+              </span>{" "}
+              <strong>{extensionDetails.numberOfExtends}</strong>
             </p>
             <p>
               <span className="font-medium">Tổng giá:</span>{" "}
