@@ -123,7 +123,45 @@ const TableBookingPage = () => {
     endDate: string;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<"regular" | "monthly">("regular");
+  const handleDeselectAllMonthly = async () => {
+    if (isLoading) return;
 
+    try {
+      setIsLoading(true);
+
+      if (monthlyBookings.length === 0) {
+        toast.info("Không có bàn đặt lịch tháng nào để bỏ chọn!");
+        return;
+      }
+
+      // Check if any monthly bookings have invitations
+      const bookingsWithInvitations = monthlyBookings.filter(
+        (booking) => booking.invitedUsers && booking.invitedUsers.length > 0
+      );
+
+      if (bookingsWithInvitations.length > 0) {
+        const isConfirmed = await ConfirmCancelPopup();
+        if (!isConfirmed) {
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Filter out monthly bookings, keep regular bookings
+      const updatedBookings = chessBookings.filter(
+        (booking) => booking.bookingMode !== "monthly"
+      );
+
+      setChessBookings(updatedBookings);
+      localStorage.setItem("chessBookings", JSON.stringify(updatedBookings));
+      toast.success("Đã bỏ chọn tất cả các bàn đặt lịch tháng!");
+    } catch (error) {
+      console.error("Lỗi khi bỏ chọn tất cả bàn lịch tháng:", error);
+      toast.error("Có lỗi xảy ra khi bỏ chọn tất cả bàn lịch tháng!");
+    } finally {
+      setIsLoading(false);
+    }
+  };
   useEffect(() => {
     const fetchVouchers = async () => {
       try {
@@ -1204,20 +1242,31 @@ const TableBookingPage = () => {
                       <p className="font-bold text-xl">
                         Thành tiền: {monthlyTotalPrice.toLocaleString()} đ
                       </p>
-                      <Button
-                        onClick={() => handleConfirmBooking(true)}
-                        className="bg-green-600 hover:bg-green-400 text-white px-8 py-3 text-base"
-                        disabled={monthlyBookings.length === 0 || isLoading}
-                      >
-                        {isLoading ? (
-                          <div className="flex items-center justify-center">
-                            <Spinner size={6} />
-                            <span className="ml-2">Đang xử lý...</span>
-                          </div>
-                        ) : (
-                          "Xác nhận đặt bàn tháng"
-                        )}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleDeselectAllMonthly}
+                          variant="gradient"
+                          color="red"
+                          className="px-5 py-3 text-base"
+                          disabled={isLoading}
+                        >
+                          Bỏ Chọn Tất Cả
+                        </Button>
+                        <Button
+                          onClick={() => handleConfirmBooking(true)}
+                          className="bg-green-600 hover:bg-green-400 text-white px-8 py-3 text-base"
+                          disabled={monthlyBookings.length === 0 || isLoading}
+                        >
+                          {isLoading ? (
+                            <div className="flex items-center justify-center">
+                              <Spinner size={6} />
+                              <span className="ml-2">Đang xử lý...</span>
+                            </div>
+                          ) : (
+                            "Xác nhận đặt bàn tháng"
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </TabPanel>

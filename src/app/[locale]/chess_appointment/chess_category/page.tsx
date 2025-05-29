@@ -9,6 +9,10 @@ import {
   Typography,
   Box,
   CircularProgress,
+  List,
+  ListItem,
+  Checkbox,
+  FormControlLabel,
 } from "@mui/material";
 import { Button } from "@material-tailwind/react";
 import React, { useEffect, useState } from "react";
@@ -21,6 +25,7 @@ import Banner from "@/components/banner/banner";
 import TermsDialog from "./TermsDialog";
 
 interface Room {
+  id: number;
   roomId: number;
   roomName: string;
   type: string;
@@ -52,6 +57,7 @@ interface ChessBooking {
   roomDescription?: string;
   date?: string;
   bookingMode: "regular" | "monthly";
+  dayOfWeek?: number;
 }
 
 interface SearchParams {
@@ -63,9 +69,9 @@ interface SearchParams {
 }
 
 interface MonthlySearchParams {
-  year: number;
-  month: number;
-  dayOfWeek: string;
+  fromDate: Date;
+  toDate: Date;
+  daysOfWeek: string[];
   startTime: string;
   endTime: string;
   roomType: string;
@@ -93,7 +99,14 @@ const saveSearchParams = (params: SearchParams | MonthlySearchParams) => {
       })
     );
   } else {
-    sessionStorage.setItem("chessSearchParams", JSON.stringify(params));
+    sessionStorage.setItem(
+      "chessSearchParams",
+      JSON.stringify({
+        ...params,
+        fromDate: params.fromDate.toLocaleDateString("en-CA"),
+        toDate: params.toDate.toLocaleDateString("en-CA"),
+      })
+    );
   }
 };
 
@@ -115,8 +128,27 @@ const getSavedSearchParams = (): SearchParams | MonthlySearchParams | null => {
         ...parsed,
         startDate: localDate,
       };
+    } else {
+      const fromDateParts = parsed.fromDate.split("-");
+      const toDateParts = parsed.toDate.split("-");
+      const fromDate = new Date(
+        parseInt(fromDateParts[0]),
+        parseInt(fromDateParts[1]) - 1,
+        parseInt(fromDateParts[2])
+      );
+      const toDate = new Date(
+        parseInt(toDateParts[0]),
+        parseInt(toDateParts[1]) - 1,
+        parseInt(toDateParts[2])
+      );
+      fromDate.setHours(12, 0, 0, 0);
+      toDate.setHours(12, 0, 0, 0);
+      return {
+        ...parsed,
+        fromDate,
+        toDate,
+      };
     }
-    return parsed;
   } catch (e) {
     console.error("Lỗi khi parse search params:", e);
     return null;
@@ -137,6 +169,8 @@ export default function ChessCategoryPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [chessBookings, setChessBookings] = useState<ChessBooking[]>([]);
   const [startDate, setStartDate] = useState(new Date());
+  const [fromDate, setFromDate] = useState(new Date());
+  const [toDate, setToDate] = useState(new Date());
   const [startTime, setStartTime] = useState<string>("");
   const [endTime, setEndTime] = useState<string>("");
   const [roomType, setRoomType] = useState("");
@@ -164,23 +198,18 @@ export default function ChessCategoryPage() {
   const [bookingMode, setBookingMode] = useState<"regular" | "monthly">(
     "regular"
   );
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [month, setMonth] = useState(new Date().getMonth() + 1);
-  const [dayOfWeek, setDayOfWeek] = useState("");
-  const [apiDayOfWeek, setApiDayOfWeek] = useState<string>("");
-  const currentDate = new Date();
-  const currentYear = currentDate.getFullYear();
-  const currentMonth = currentDate.getMonth() + 1;
-  const [searchedMonth, setSearchedMonth] = useState(new Date().getMonth() + 1); // Default to current month
-  const [searchedYear, setSearchedYear] = useState(new Date().getFullYear()); // Default to current year
-  const daysOfWeek = [
+  const [daysOfWeek, setDaysOfWeek] = useState<string[]>([]);
+  const hasMonthlyBookings = localBookings.some(
+    (booking) => booking.bookingMode === "monthly"
+  );
+  const daysOfWeekOptions = [
+    "Sunday",
     "Monday",
     "Tuesday",
     "Wednesday",
     "Thursday",
     "Friday",
     "Saturday",
-    "Sunday",
   ];
   const translateDayToVietnamese = (day: string): string => {
     switch (day) {
@@ -202,27 +231,35 @@ export default function ChessCategoryPage() {
         return day;
     }
   };
-  const yearOptions = [2025, 2026];
-  const monthOptions = Array.from({ length: 12 }, (_, i) => i + 1).map(
-    (month) => ({
-      value: month,
-      disabled: year === currentYear && month < currentMonth,
-    })
-  );
-  const getDayOfWeekFromDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    const days = [
-      "Sunday",
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
-    ];
-    return days[date.getDay()];
-  };
+  const handleDeselectTable = (chessBooking: ChessBooking) => {
+    try {
+      const updatedBookings = localBookings.filter(
+        (booking) =>
+          !(
+            booking.tableId === chessBooking.tableId &&
+            booking.startDate === chessBooking.startDate &&
+            booking.endDate === chessBooking.endDate &&
+            booking.bookingMode === "monthly"
+          )
+      );
 
+      if (updatedBookings.length === localBookings.length) {
+        toast.info("Bàn này chưa được chọn!");
+        return;
+      }
+
+      localStorage.setItem("chessBookings", JSON.stringify(updatedBookings));
+      setLocalBookings(updatedBookings);
+      toast.success(
+        `Đã bỏ chọn bàn số ${chessBooking.tableId} từ ${formatShortTime(
+          chessBooking.startDate
+        )} đến ${formatShortTime(chessBooking.endDate)}!`
+      );
+    } catch (error) {
+      console.error("Lỗi khi bỏ chọn bàn:", error);
+      toast.error("Có lỗi xảy ra khi bỏ chọn bàn!");
+    }
+  };
   useEffect(() => {
     const fetchGameTypes = async () => {
       setIsLoadingGameTypes(true);
@@ -337,19 +374,14 @@ export default function ChessCategoryPage() {
     setChessBookings([]);
     setCurrentPage(1);
     setTotalPages(1);
-    setApiDayOfWeek("");
     if (bookingMode === "regular") {
-      setYear(new Date().getFullYear());
-      setMonth(new Date().getMonth() + 1);
-      setDayOfWeek("");
-      setSearchedMonth(new Date().getMonth() + 1); // Reset to current month
-      setSearchedYear(new Date().getFullYear()); // Reset to current year
+      setDaysOfWeek([]);
+      setFromDate(new Date());
+      setToDate(new Date());
     } else {
       setStartDate(new Date());
       setStartTime("");
       setEndTime("");
-      setSearchedMonth(new Date().getMonth() + 1); // Reset to current month
-      setSearchedYear(new Date().getFullYear()); // Reset to current year
     }
   }, [bookingMode]);
 
@@ -368,9 +400,9 @@ export default function ChessCategoryPage() {
         fetchChessBookings(1);
       } else {
         setBookingMode("monthly");
-        setYear(savedParams.year);
-        setMonth(savedParams.month);
-        setDayOfWeek(savedParams.dayOfWeek);
+        setFromDate(savedParams.fromDate);
+        setToDate(savedParams.toDate);
+        setDaysOfWeek(savedParams.daysOfWeek);
         setStartTime(savedParams.startTime);
         setEndTime(savedParams.endTime);
         setRoomType(savedParams.roomType);
@@ -513,10 +545,14 @@ export default function ChessCategoryPage() {
         url =
           "https://backend-production-ac5e.up.railway.app/api/tables/available/monthly";
         params = {
-          Year: (effectiveParams as MonthlySearchParams).year || year,
-          Month: (effectiveParams as MonthlySearchParams).month || month,
-          dayOfWeek:
-            (effectiveParams as MonthlySearchParams).dayOfWeek || dayOfWeek,
+          FromDate: (effectiveParams as MonthlySearchParams).fromDate
+            .toISOString()
+            .split("T")[0],
+          ToDate: (effectiveParams as MonthlySearchParams).toDate
+            .toISOString()
+            .split("T")[0],
+          DaysOfWeek:
+            (effectiveParams as MonthlySearchParams).daysOfWeek || daysOfWeek,
           StartTime:
             (effectiveParams as MonthlySearchParams).startTime || startTime,
           EndTime: (effectiveParams as MonthlySearchParams).endTime || endTime,
@@ -580,30 +616,30 @@ export default function ChessCategoryPage() {
         setChessBookings([]);
         setTotalPages(1);
         setCurrentPage(1);
-        setApiDayOfWeek("");
         return;
       }
 
       if (bookingMode === "monthly") {
         const { datesAndTables } = response.data;
-        const bookings: ChessBooking[] = Object.entries(datesAndTables).map(
-          ([date, booking]: [string, any]) => ({
-            ...booking,
-            date,
-            bookingMode: "monthly",
-          })
+        const bookings: ChessBooking[] = Object.entries(datesAndTables).flatMap(
+          ([, entries]: [
+            string,
+            {
+              tableResponse: ChessBooking;
+              onDate: string;
+              dayOfWeek: number;
+            }[],
+          ]) =>
+            entries.map((entry) => ({
+              ...entry.tableResponse,
+              date: entry.onDate,
+              dayOfWeek: entry.dayOfWeek,
+              bookingMode: "monthly" as const,
+            }))
         );
         setChessBookings(bookings || []);
         setTotalPages(1);
         setCurrentPage(1);
-
-        if (Object.keys(datesAndTables).length > 0) {
-          const firstDate = Object.keys(datesAndTables)[0];
-          const derivedDayOfWeek = getDayOfWeekFromDate(firstDate);
-          setApiDayOfWeek(derivedDayOfWeek);
-        } else {
-          setApiDayOfWeek("");
-        }
       } else {
         setChessBookings(
           (response.data.pagedList || []).map((booking: any) => ({
@@ -613,7 +649,6 @@ export default function ChessCategoryPage() {
         );
         setTotalPages(response.data.totalPages || 1);
         setCurrentPage(response.data.currentPage || 1);
-        setApiDayOfWeek("");
       }
     } catch (error: unknown) {
       console.error("Lỗi khi lấy danh sách bàn cờ:", error);
@@ -651,19 +686,19 @@ export default function ChessCategoryPage() {
       setChessBookings([]);
       setTotalPages(1);
       setCurrentPage(1);
-      setApiDayOfWeek("");
     } finally {
       setIsLoading(false);
     }
   };
+
   const handleSearch = async () => {
     if (!startTime || !endTime) {
       toast.error("Vui lòng chọn cả giờ bắt đầu và giờ kết thúc");
       return;
     }
 
-    if (bookingMode === "monthly" && !dayOfWeek) {
-      toast.error("Vui lòng chọn ngày trong tuần");
+    if (bookingMode === "monthly" && daysOfWeek.length === 0) {
+      toast.error("Vui lòng chọn ít nhất một ngày trong tuần");
       return;
     }
 
@@ -675,10 +710,14 @@ export default function ChessCategoryPage() {
     const [startHour, startMinute] = startTime.split(":").map(Number);
     const [endHour, endMinute] = endTime.split(":").map(Number);
 
-    const selectedStartTime = new Date(startDate);
+    const selectedStartTime = new Date(
+      bookingMode === "regular" ? startDate : fromDate
+    );
     selectedStartTime.setHours(startHour, startMinute, 0, 0);
 
-    const selectedEndTime = new Date(startDate);
+    const selectedEndTime = new Date(
+      bookingMode === "regular" ? startDate : fromDate
+    );
     selectedEndTime.setHours(endHour, endMinute, 0, 0);
 
     const now = new Date();
@@ -708,10 +747,15 @@ export default function ChessCategoryPage() {
     }
 
     if (bookingMode === "monthly") {
+      if (fromDate > toDate) {
+        toast.error("Ngày bắt đầu phải sớm hơn hoặc bằng ngày kết thúc!");
+        return;
+      }
+
       saveSearchParams({
-        year,
-        month,
-        dayOfWeek,
+        fromDate,
+        toDate,
+        daysOfWeek,
         startTime,
         endTime,
         roomType,
@@ -731,17 +775,10 @@ export default function ChessCategoryPage() {
     setHasSearched(true);
     setCurrentPage(1);
 
-    // Call fetchChessBookings and update searchedMonth/searchedYear on success
     try {
       await fetchChessBookings(1);
-      // If fetchChessBookings succeeds, update searchedMonth and searchedYear
-      if (bookingMode === "monthly" && chessBookings.length > 0) {
-        setSearchedMonth(month);
-        setSearchedYear(year);
-      }
     } catch (error) {
       console.error("Search failed:", error);
-      // If the search fails, we don't update searchedMonth and searchedYear
     }
   };
 
@@ -823,6 +860,45 @@ export default function ChessCategoryPage() {
       toast.error("Có lỗi xảy ra khi chọn tất cả bàn!");
     }
   };
+  const handleDeselectAll = () => {
+    try {
+      if (localBookings.length === 0) {
+        toast.info("Không có bàn nào trong danh sách để bỏ chọn!");
+        return;
+      }
+
+      // Lọc chỉ giữ lại các booking có bookingMode là "regular"
+      const updatedBookings = localBookings.filter(
+        (booking) => booking.bookingMode !== "monthly"
+      );
+
+      if (updatedBookings.length === localBookings.length) {
+        toast.info("Không có bàn đặt lịch tháng nào để bỏ chọn!");
+        return;
+      }
+
+      localStorage.setItem("chessBookings", JSON.stringify(updatedBookings));
+      setLocalBookings(updatedBookings);
+      toast.success("Đã bỏ chọn tất cả các bàn đặt lịch tháng!");
+    } catch (error) {
+      console.error("Lỗi khi bỏ chọn tất cả:", error);
+      toast.error("Có lỗi xảy ra khi bỏ chọn tất cả bàn!");
+    }
+  };
+  // Group bookings by day of week for monthly mode
+  const groupedBookings = chessBookings.reduce(
+    (acc, booking) => {
+      if (bookingMode === "monthly" && booking.dayOfWeek !== undefined) {
+        const dayName = daysOfWeekOptions[booking.dayOfWeek] || "Unknown";
+        if (!acc[dayName]) {
+          acc[dayName] = [];
+        }
+        acc[dayName].push(booking);
+      }
+      return acc;
+    },
+    {} as Record<string, ChessBooking[]>
+  );
 
   return (
     <div>
@@ -831,7 +907,7 @@ export default function ChessCategoryPage() {
         title="Sẵn Sàng So Tài – Đặt Hẹn Ngay Tại Strate Zone!"
         subtitle="Bàn Cờ Sẵn Sàng – Thách Thức Đẳng Cấp!"
       />
-      <div>
+      <div className="flex-1" style={{ paddingBottom: "27vh" }}>
         <div className="mt-10">
           <BusinessHoursNotice
             openHour={parseInt(businessHours.openHour.split(":")[0])}
@@ -965,74 +1041,146 @@ export default function ChessCategoryPage() {
               <>
                 <div className="w-44">
                   <label
-                    htmlFor="year"
+                    htmlFor="fromDate"
                     className="block text-gray-500 text-xs font-medium leading-tight mb-0.5"
                   >
-                    Chọn Năm
+                    Từ Ngày
                   </label>
-                  <select
-                    id="year"
-                    value={year}
-                    onChange={(e) => setYear(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700"
-                  >
-                    {yearOptions.map((y) => (
-                      <option key={y} value={y}>
-                        {y}
-                      </option>
-                    ))}
-                  </select>
+                  <DatePicker
+                    minDate={new Date()}
+                    selected={fromDate}
+                    onChange={(date) => {
+                      if (date) {
+                        setFromDate(date);
+                      }
+                    }}
+                    dateFormat="dd/MM/yyyy"
+                    popperPlacement="bottom-start"
+                    portalId="root"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 cursor-pointer"
+                    customInput={
+                      <TextField
+                        id="fromDate"
+                        size="small"
+                        sx={{
+                          width: "100%",
+                          "& .MuiInputBase-root": {
+                            height: "40px",
+                            bgcolor: "white",
+                            borderRadius: "0.375rem",
+                          },
+                          "& .MuiInputBase-input": {
+                            padding: "8px 12px",
+                            fontSize: "0.875rem",
+                            color: "#374151",
+                            cursor: "pointer",
+                          },
+                        }}
+                        InputProps={{
+                          readOnly: true,
+                        }}
+                      />
+                    }
+                  />
                 </div>
                 <div className="w-44">
                   <label
-                    htmlFor="month"
+                    htmlFor="toDate"
                     className="block text-gray-500 text-xs font-medium leading-tight mb-0.5"
                   >
-                    Chọn Tháng
+                    Đến Ngày
                   </label>
-                  <select
-                    id="month"
-                    value={month}
-                    onChange={(e) => setMonth(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700"
-                  >
-                    {monthOptions.map(({ value, disabled }) => (
-                      <option
-                        key={value}
-                        value={value}
-                        disabled={disabled}
-                        className={
-                          disabled
-                            ? "text-gray-400 opacity-50"
-                            : "text-gray-700"
-                        }
-                      >
-                        Tháng {value}
-                      </option>
-                    ))}
-                  </select>
+                  <DatePicker
+                    minDate={fromDate}
+                    selected={toDate}
+                    onChange={(date) => {
+                      if (date) {
+                        setToDate(date);
+                      }
+                    }}
+                    dateFormat="dd/MM/yyyy"
+                    popperPlacement="bottom-start"
+                    portalId="root"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 cursor-pointer"
+                    customInput={
+                      <TextField
+                        id="toDate"
+                        size="small"
+                        sx={{
+                          width: "100%",
+                          "& .MuiInputBase-root": {
+                            height: "40px",
+                            bgcolor: "white",
+                            borderRadius: "0.375rem",
+                          },
+                          "& .MuiInputBase-input": {
+                            padding: "8px 12px",
+                            fontSize: "0.875rem",
+                            color: "#374151",
+                            cursor: "pointer",
+                          },
+                        }}
+                        InputProps={{
+                          readOnly: true,
+                        }}
+                      />
+                    }
+                  />
                 </div>
-
                 <div className="w-44">
                   <label
-                    htmlFor="dayOfWeek"
+                    htmlFor="daysOfWeek"
                     className="block text-gray-500 text-xs font-medium leading-tight mb-0.5"
                   >
                     Chọn Ngày Trong Tuần
                   </label>
-                  <select
-                    id="dayOfWeek"
-                    value={dayOfWeek}
-                    onChange={(e) => setDayOfWeek(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700"
+                  <Box
+                    sx={{
+                      maxHeight: "100px",
+                      overflowY: "auto",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "0.375rem",
+                      bgcolor: "white",
+                    }}
                   >
-                    <option value="">Chọn ngày</option>
-                    {daysOfWeek.map((day) => (
-                      <option key={day} value={day}>
-                        {translateDayToVietnamese(day)}
-                      </option>
-                    ))}
-                  </select>
+                    <List dense>
+                      {daysOfWeekOptions.map((day) => (
+                        <ListItem key={day} disablePadding>
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={daysOfWeek.includes(day)}
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  setDaysOfWeek((prev) =>
+                                    checked
+                                      ? [...prev, day]
+                                      : prev.filter((d) => d !== day)
+                                  );
+                                }}
+                                sx={{
+                                  color: "#374151",
+                                  "&.Mui-checked": {
+                                    color: "#3b82f6",
+                                  },
+                                }}
+                              />
+                            }
+                            label={translateDayToVietnamese(day)}
+                            sx={{
+                              width: "100%",
+                              margin: 0,
+                              padding: "4px 8px",
+                              "& .MuiFormControlLabel-label": {
+                                fontSize: "0.875rem",
+                                color: "#374151",
+                              },
+                            }}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
                 </div>
               </>
             ) : (
@@ -1154,19 +1302,36 @@ export default function ChessCategoryPage() {
             <div className="max-w-7xl mx-auto px-2">
               <div className="mt-8 ml-4 flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-black">
-                  {bookingMode === "monthly" && apiDayOfWeek
-                    ? `Đặt lịch tháng ${gameType} vào mỗi ${translateDayToVietnamese(apiDayOfWeek)} trong tháng ${searchedMonth}/${searchedYear}`
+                  {bookingMode === "monthly"
+                    ? `Đặt lịch tháng ${gameType} vào mỗi ${daysOfWeek
+                        .map(translateDayToVietnamese)
+                        .join(", ")} từ ${fromDate.toLocaleDateString(
+                        "vi-VN"
+                      )} đến ${toDate.toLocaleDateString("vi-VN")}`
                     : gameType}
                 </h2>
                 {bookingMode === "monthly" && chessBookings.length > 0 && (
-                  <Button
-                    onClick={handleSelectAll}
-                    variant="gradient"
-                    color="blue"
-                    className="py-2 px-4 text-sm"
-                  >
-                    Chọn Hết
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleSelectAll}
+                      variant="gradient"
+                      color="blue"
+                      className="py-2 px-4 text-sm"
+                    >
+                      Chọn Hết
+                    </Button>
+                    {bookingMode === "monthly" && chessBookings.length > 0 && (
+                      <Button
+                        onClick={handleDeselectAll}
+                        variant="gradient"
+                        color="red"
+                        className="py-2 px-4 text-sm"
+                        disabled={!hasMonthlyBookings}
+                      >
+                        Bỏ Chọn Hết
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -1176,42 +1341,20 @@ export default function ChessCategoryPage() {
                   <span className="ml-3">Đang tải dữ liệu...</span>
                 </div>
               ) : chessBookings.length > 0 ? (
-                <>
-                  <div className="max-w-7xl mx-auto px-2">
-                    {/* <div className="mt-8 ml-4 flex justify-between items-center">
-    <h2 className="text-2xl font-bold text-black">
-      {bookingMode === "monthly" && apiDayOfWeek
-        ? `Đặt lịch tháng - ${gameType} (${translateDayToVietnamese(apiDayOfWeek)})`
-        : gameType}
-    </h2>
-    {bookingMode === "monthly" && chessBookings.length > 0 && (
-      <Button
-        onClick={handleSelectAll}
-        variant="gradient"
-        color="blue"
-        className="py-2 px-4 text-sm"
-      >
-        Chọn Hết
-      </Button>
-    )}
-  </div> */}
-
-                    {isLoading ? (
-                      <div className="flex justify-center items-center h-64">
-                        <CircularProgress />
-                        <span className="ml-3">Đang tải dữ liệu...</span>
-                      </div>
-                    ) : chessBookings.length > 0 ? (
-                      <div
-                        className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${bookingMode === "monthly" ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-6 mt-6 mb-6`}
-                      >
-                        {chessBookings.map((chessBooking) => (
-                          <div
-                            key={`${chessBooking.tableId}-${chessBooking.date || chessBooking.startDate}`}
-                            className="flex flex-col items-center"
-                          >
-                            {bookingMode === "monthly" && (
-                              <p className="text-2xl font-bold text-black mb-2">
+                <div className="mt-6 mb-6">
+                  {bookingMode === "monthly" ? (
+                    Object.entries(groupedBookings).map(([day, bookings]) => (
+                      <div key={day} className="mb-8">
+                        <h3 className="text-xl font-semibold text-black mb-4">
+                          {translateDayToVietnamese(day)}
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                          {bookings.map((chessBooking) => (
+                            <div
+                              key={`${chessBooking.tableId}-${chessBooking.date}`}
+                              className="flex flex-col items-center"
+                            >
+                              <p className="text-lg font-bold text-black mb-2">
                                 <span className="font-medium">Ngày: </span>
                                 <strong>
                                   {new Date(
@@ -1219,356 +1362,674 @@ export default function ChessCategoryPage() {
                                   ).toLocaleDateString("vi-VN")}
                                 </strong>
                               </p>
-                            )}
-                            <div className="bg-white shadow-md hover:shadow-lg transition rounded-md p-3 transform hover:scale-105 w-full">
-                              {isBooked(
-                                chessBooking.tableId,
-                                chessBooking.startDate,
-                                chessBooking.endDate
-                              ) && (
-                                <div className="mt-2 text-sm text-green-600">
-                                  {(() => {
-                                    const localBooking = getLocalBooking(
-                                      chessBooking.tableId,
-                                      new Date(chessBooking.startDate)
-                                    );
-                                    if (localBooking) {
-                                      return (
-                                        <p>
-                                          Bạn đã chọn bàn này (
-                                          {localBooking.bookingMode ===
-                                          "monthly"
-                                            ? "Lịch Tháng"
-                                            : "Lịch Thường"}
-                                          ) từ{" "}
-                                          {formatShortTime(
-                                            localBooking.startDate
-                                          )}{" "}
-                                          đến{" "}
-                                          {formatShortTime(
-                                            localBooking.endDate
-                                          )}
-                                        </p>
+                              <div className="bg-white shadow-md hover:shadow-lg transition rounded-md p-3 transform hover:scale-105 w-full">
+                                {isBooked(
+                                  chessBooking.tableId,
+                                  chessBooking.startDate,
+                                  chessBooking.endDate
+                                ) && (
+                                  <div className="mt-2 text-sm text-green-600">
+                                    {(() => {
+                                      const localBooking = getLocalBooking(
+                                        chessBooking.tableId,
+                                        new Date(chessBooking.startDate)
                                       );
-                                    }
-                                    return null;
-                                  })()}
-                                </div>
-                              )}
-                              <p
-                                onClick={() => {
-                                  viewBookingDetail({
-                                    id: chessBooking.tableId,
-                                    startDate: chessBooking.startDate,
-                                    endDate: chessBooking.endDate,
-                                  });
-                                }}
-                                className="text-blue-500 text-sm italic cursor-pointer hover:underline"
-                              >
-                                🔍 Bấm vào để xem chi tiết bàn
-                              </p>
-                              <p className="text-gray-600 text-sm mt-2">
-                                <span className="font-medium text-black">
-                                  Loại Đặt Lịch:{" "}
-                                </span>
-                                {chessBooking.bookingMode === "monthly"
-                                  ? "Lịch Tháng"
-                                  : "Lịch Thường"}
-                              </p>
-                              <h3 className="text-base font-medium mt-2 text-black">
-                                Loại cờ: {chessBooking.gameType.typeName}{" "}
-                                <span className="font-medium text-black text-sm ml-1">
-                                  (
-                                  {Number(
-                                    chessBooking.gameTypePrice
-                                  ).toLocaleString("vi-VN")}{" "}
-                                  ₫/giờ)
-                                </span>
-                              </h3>
-
-                              <p className="text-gray-600 text-sm mt-2">
-                                <span className="font-medium text-black">
-                                  Loại Phòng:{" "}
-                                </span>{" "}
-                                {chessBooking.roomType}{" "}
-                                <span className="font-medium text-black text-sm ml-1">
-                                  (
-                                  {Number(
-                                    chessBooking.roomTypePrice
-                                  ).toLocaleString("vi-VN")}{" "}
-                                  ₫/giờ)
-                                </span>
-                              </p>
-
-                              <p className="text-gray-600 text-sm mt-2">
-                                <span className="font-medium text-black">
-                                  Mã Bàn:{" "}
-                                </span>{" "}
-                                {chessBooking.tableId}
-                              </p>
-                              <p className="text-gray-600 text-sm mt-2">
-                                <span className="font-medium text-black">
-                                  Tên Phòng:{" "}
-                                </span>{" "}
-                                {chessBooking.roomName}
-                              </p>
-                              {bookingMode !== "monthly" && (
+                                      if (localBooking) {
+                                        return (
+                                          <p>
+                                            Bạn đã chọn bàn này (
+                                            {localBooking.bookingMode ===
+                                            "monthly"
+                                              ? "Lịch Tháng"
+                                              : "Lịch Thường"}
+                                            ) từ{" "}
+                                            {formatShortTime(
+                                              localBooking.startDate
+                                            )}{" "}
+                                            đến{" "}
+                                            {formatShortTime(
+                                              localBooking.endDate
+                                            )}
+                                          </p>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                  </div>
+                                )}
+                                <p
+                                  onClick={() =>
+                                    viewBookingDetail({
+                                      id: chessBooking.tableId,
+                                      startDate: chessBooking.startDate,
+                                      endDate: chessBooking.endDate,
+                                    })
+                                  }
+                                  className="text-blue-500 text-sm italic cursor-pointer hover:underline"
+                                >
+                                  🔍 Bấm vào để xem chi tiết bàn
+                                </p>
                                 <p className="text-gray-600 text-sm mt-2">
                                   <span className="font-medium text-black">
-                                    Ngày:{" "}
+                                    Loại Đặt Lịch:{" "}
+                                  </span>
+                                  {chessBooking.bookingMode === "monthly"
+                                    ? "Lịch Tháng"
+                                    : "Lịch Thường"}
+                                </p>
+                                <h3 className="text-base font-medium mt-2 text-black">
+                                  Loại cờ: {chessBooking.gameType.typeName}{" "}
+                                  <span className="font-medium text-black text-sm ml-1">
+                                    (
+                                    {Number(
+                                      chessBooking.gameTypePrice
+                                    ).toLocaleString("vi-VN")}{" "}
+                                    ₫/giờ)
+                                  </span>
+                                </h3>
+                                <p className="text-gray-600 text-sm mt-2">
+                                  <span className="font-medium text-black">
+                                    Loại Phòng:{" "}
                                   </span>{" "}
-                                  <strong>
+                                  {chessBooking.roomType}{" "}
+                                  <span className="font-medium text-black text-sm ml-1">
+                                    (
+                                    {Number(
+                                      chessBooking.roomTypePrice
+                                    ).toLocaleString("vi-VN")}{" "}
+                                    ₫/giờ)
+                                  </span>
+                                </p>
+                                <p className="text-gray-600 text-sm mt-2">
+                                  <span className="font-medium text-black">
+                                    Mã Bàn:{" "}
+                                  </span>{" "}
+                                  {chessBooking.tableId}
+                                </p>
+                                <p className="text-gray-600 text-sm mt-2">
+                                  <span className="font-medium text-black">
+                                    Tên Phòng:{" "}
+                                  </span>{" "}
+                                  {chessBooking.roomName}
+                                </p>
+                                <div className="text-gray-600 text-sm mt-2">
+                                  <p>
+                                    <span className="font-medium text-black">
+                                      Giờ Bắt Đầu:{" "}
+                                    </span>
                                     {new Date(
-                                      chessBooking.date ||
-                                        chessBooking.startDate
-                                    ).toLocaleDateString("vi-VN")}
-                                  </strong>
-                                </p>
-                              )}
-                              <div className="text-gray-600 text-sm mt-2">
-                                <p>
+                                      chessBooking.startDate
+                                    ).toLocaleTimeString("vi-VN", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      hour12: false,
+                                      timeZone: "Asia/Ho_Chi_Minh",
+                                    })}
+                                  </p>
+                                  <p className="mt-2">
+                                    <span className="font-medium text-black">
+                                      Giờ Kết Thúc:{" "}
+                                    </span>
+                                    {new Date(
+                                      chessBooking.endDate
+                                    ).toLocaleTimeString("vi-VN", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      hour12: false,
+                                      timeZone: "Asia/Ho_Chi_Minh",
+                                    })}
+                                  </p>
+                                </div>
+                                <p className="text-gray-600 text-sm mt-2">
                                   <span className="font-medium text-black">
-                                    Giờ Bắt Đầu:{" "}
-                                  </span>
-                                  {new Date(
-                                    chessBooking.startDate
-                                  ).toLocaleTimeString("vi-VN", {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                    hour12: false,
-                                    timeZone: "Asia/Ho_Chi_Minh",
-                                  })}
+                                    Giá Thuê Theo Giờ:{" "}
+                                  </span>{" "}
+                                  {(
+                                    chessBooking.roomTypePrice +
+                                    chessBooking.gameTypePrice
+                                  ).toLocaleString("vi-VN")}{" "}
+                                  đ
                                 </p>
-                                <p className="mt-2">
+                                <p className="text-gray-600 text-sm mt-2">
                                   <span className="font-medium text-black">
-                                    Giờ Kết Thúc:{" "}
+                                    Tổng Thời Gian Đặt Bàn:{" "}
                                   </span>
-                                  {new Date(
-                                    chessBooking.endDate
-                                  ).toLocaleTimeString("vi-VN", {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                    hour12: false,
-                                    timeZone: "Asia/Ho_Chi_Minh",
-                                  })}
+                                  {formatDuration(chessBooking.durationInHours)}
                                 </p>
-                              </div>
-                              <p className="text-gray-600 text-sm mt-2">
-                                <span className="font-medium text-black">
-                                  Giá Thuê Theo Giờ:{" "}
-                                </span>{" "}
-                                {(
-                                  chessBooking.roomTypePrice +
-                                  chessBooking.gameTypePrice
-                                ).toLocaleString("vi-VN")}
-                                đ
-                              </p>
-                              <p className="text-gray-600 text-sm mt-2">
-                                <span className="font-medium text-black">
-                                  Tổng Thời Gian Đặt Bàn:{" "}
-                                </span>
-                                {formatDuration(chessBooking.durationInHours)}
-                              </p>
-                              <p className="text-gray-600 text-sm mt-2">
-                                <span className="font-medium text-black">
-                                  Tổng Giá:{" "}
-                                </span>{" "}
-                                {chessBooking.totalPrice > 0
-                                  ? chessBooking.totalPrice.toLocaleString(
-                                      "vi-VN",
-                                      {
-                                        style: "currency",
-                                        currency: "VND",
-                                      }
-                                    )
-                                  : "Không xác định"}
-                              </p>
+                                <p className="text-gray-600 text-sm mt-2">
+                                  <span className="font-medium text-black">
+                                    Tổng Giá:{" "}
+                                  </span>{" "}
+                                  {chessBooking.totalPrice > 0
+                                    ? chessBooking.totalPrice.toLocaleString(
+                                        "vi-VN",
+                                        {
+                                          style: "currency",
+                                          currency: "VND",
+                                        }
+                                      )
+                                    : "Không xác định"}
+                                </p>
+                                <div className="flex flex-col gap-2 mt-3">
+                                  <Button
+                                    variant="gradient"
+                                    color="amber"
+                                    className={`w-full py-2 text-sm ${
+                                      isBooked(
+                                        chessBooking.tableId,
+                                        chessBooking.startDate,
+                                        chessBooking.endDate
+                                      )
+                                        ? "opacity-70 cursor-not-allowed"
+                                        : "hover:shadow-md transition-shadow"
+                                    }`}
+                                    disabled={isBooked(
+                                      chessBooking.tableId,
+                                      chessBooking.startDate,
+                                      chessBooking.endDate
+                                    )}
+                                    onClick={() => {
+                                      try {
+                                        const newStart = new Date(
+                                          chessBooking.startDate
+                                        );
+                                        const newEnd = new Date(
+                                          chessBooking.endDate
+                                        );
 
-                              <div className="flex gap-2 mt-3">
-                                <Button
-                                  variant="gradient"
-                                  color="amber"
-                                  className={`flex-1 py-2 text-sm ${
-                                    isBooked(
+                                        const isAlreadyBooked =
+                                          localBookings.some((booking) => {
+                                            if (
+                                              booking.tableId !==
+                                              chessBooking.tableId
+                                            )
+                                              return false;
+                                            const bookingStart = new Date(
+                                              booking.startDate
+                                            );
+                                            const bookingEnd = new Date(
+                                              booking.endDate
+                                            );
+                                            return (
+                                              (newStart >= bookingStart &&
+                                                newStart < bookingEnd) ||
+                                              (newEnd > bookingStart &&
+                                                newEnd <= bookingEnd) ||
+                                              (newStart <= bookingStart &&
+                                                newEnd >= bookingEnd)
+                                            );
+                                          });
+
+                                        if (isAlreadyBooked) {
+                                          const existingBookings =
+                                            localBookings.filter(
+                                              (b) =>
+                                                b.tableId ===
+                                                chessBooking.tableId
+                                            );
+                                          const bookingDetails =
+                                            existingBookings
+                                              .map((b) => {
+                                                const start = new Date(
+                                                  b.startDate
+                                                ).toLocaleTimeString("vi-VN", {
+                                                  hour: "2-digit",
+                                                  minute: "2-digit",
+                                                  hour12: false,
+                                                });
+                                                const end = new Date(
+                                                  b.endDate
+                                                ).toLocaleTimeString("vi-VN", {
+                                                  hour: "2-digit",
+                                                  minute: "2-digit",
+                                                  hour12: false,
+                                                });
+                                                return `${start} - ${end}`;
+                                              })
+                                              .join(", ");
+                                          toast.warning(
+                                            `Bàn số ${chessBooking.tableId} đã được đặt trong khung giờ: ${bookingDetails}`
+                                          );
+                                          return;
+                                        }
+
+                                        const updatedBooking = {
+                                          ...chessBooking,
+                                          bookingMode,
+                                        };
+                                        const updatedBookings = [
+                                          ...localBookings,
+                                          updatedBooking,
+                                        ];
+                                        const startTimeStr =
+                                          newStart.toLocaleTimeString("vi-VN", {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                            hour12: false,
+                                          });
+                                        const endTimeStr =
+                                          newEnd.toLocaleTimeString("vi-VN", {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                            hour12: false,
+                                          });
+
+                                        localStorage.setItem(
+                                          "chessBookings",
+                                          JSON.stringify(updatedBookings)
+                                        );
+                                        setLocalBookings(updatedBookings);
+                                        toast.success(
+                                          `Đã thêm bàn số ${chessBooking.tableId} (${
+                                            bookingMode === "monthly"
+                                              ? "Lịch Tháng"
+                                              : "Lịch Thường"
+                                          }) từ ${startTimeStr} đến ${endTimeStr} vào danh sách đặt!`
+                                        );
+                                      } catch (error) {
+                                        console.error(
+                                          "Lỗi khi xử lý đặt bàn:",
+                                          error
+                                        );
+                                        toast.error(
+                                          "Có lỗi xảy ra khi đặt bàn!"
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    {isBooked(
                                       chessBooking.tableId,
                                       chessBooking.startDate,
                                       chessBooking.endDate
                                     )
-                                      ? "opacity-70 cursor-not-allowed"
-                                      : "hover:shadow-md transition-shadow"
-                                  }`}
-                                  disabled={isBooked(
-                                    chessBooking.tableId,
-                                    chessBooking.startDate,
-                                    chessBooking.endDate
-                                  )}
-                                  onClick={() => {
-                                    try {
-                                      const newStart = new Date(
-                                        chessBooking.startDate
-                                      );
-                                      const newEnd = new Date(
-                                        chessBooking.endDate
-                                      );
-
-                                      const isAlreadyBooked =
-                                        localBookings.some((booking) => {
-                                          if (
-                                            booking.tableId !==
-                                            chessBooking.tableId
-                                          )
-                                            return false;
-
-                                          const bookingStart = new Date(
-                                            booking.startDate
-                                          );
-                                          const bookingEnd = new Date(
-                                            booking.endDate
-                                          );
-
-                                          return (
-                                            (newStart >= bookingStart &&
-                                              newStart < bookingEnd) ||
-                                            (newEnd > bookingStart &&
-                                              newEnd <= bookingEnd) ||
-                                            (newStart <= bookingStart &&
-                                              newEnd >= bookingEnd)
-                                          );
-                                        });
-
-                                      if (isAlreadyBooked) {
-                                        const existingBookings =
-                                          localBookings.filter(
-                                            (b) =>
-                                              b.tableId === chessBooking.tableId
-                                          );
-
-                                        const bookingDetails = existingBookings
-                                          .map((b) => {
-                                            const start = new Date(
-                                              b.startDate
-                                            ).toLocaleTimeString("vi-VN", {
-                                              hour: "2-digit",
-                                              minute: "2-digit",
-                                              hour12: false,
-                                            });
-                                            const end = new Date(
-                                              b.endDate
-                                            ).toLocaleTimeString("vi-VN", {
-                                              hour: "2-digit",
-                                              minute: "2-digit",
-                                              hour12: false,
-                                            });
-                                            return `${start} - ${end}`;
-                                          })
-                                          .join(", ");
-
-                                        toast.warning(
-                                          `Bàn số ${chessBooking.tableId} đã được đặt trong khung giờ: ${bookingDetails}`
-                                        );
-                                        return;
-                                      }
-
-                                      const updatedBooking = {
-                                        ...chessBooking,
-                                        bookingMode,
-                                      };
-
-                                      const updatedBookings = [
-                                        ...localBookings,
-                                        updatedBooking,
-                                      ];
-
-                                      const startTimeStr =
-                                        newStart.toLocaleTimeString("vi-VN", {
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                          hour12: false,
-                                        });
-                                      const endTimeStr =
-                                        newEnd.toLocaleTimeString("vi-VN", {
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                          hour12: false,
-                                        });
-
-                                      localStorage.setItem(
-                                        "chessBookings",
-                                        JSON.stringify(updatedBookings)
-                                      );
-                                      setLocalBookings(updatedBookings);
-                                      toast.success(
-                                        `Đã thêm bàn số ${chessBooking.tableId} (${
-                                          bookingMode === "monthly"
-                                            ? "Lịch Tháng"
-                                            : "Lịch Thường"
-                                        }) từ ${startTimeStr} đến ${endTimeStr} vào danh sách đặt!`
-                                      );
-                                    } catch (error) {
-                                      console.error(
-                                        "Lỗi khi xử lý đặt bàn:",
-                                        error
-                                      );
-                                      toast.error("Có lỗi xảy ra khi đặt bàn!");
+                                      ? "Đã thêm vào danh sách"
+                                      : "Thêm vào danh sách"}
+                                  </Button>
+                                  <Button
+                                    onClick={() =>
+                                      viewBookingDetail({
+                                        id: chessBooking.tableId,
+                                        startDate: chessBooking.startDate,
+                                        endDate: chessBooking.endDate,
+                                      })
                                     }
-                                  }}
-                                >
-                                  {isBooked(
+                                    className="w-full text-xs py-2 bg-green-600 text-white"
+                                  >
+                                    Xem Chi Tiết
+                                  </Button>
+                                  <Button
+                                    variant="gradient"
+                                    color="red"
+                                    className={`w-full text-xs py-2 ${
+                                      !isBooked(
+                                        chessBooking.tableId,
+                                        chessBooking.startDate,
+                                        chessBooking.endDate
+                                      )
+                                        ? "opacity-70 cursor-not-allowed"
+                                        : "hover:shadow-md transition-shadow"
+                                    }`}
+                                    disabled={
+                                      !isBooked(
+                                        chessBooking.tableId,
+                                        chessBooking.startDate,
+                                        chessBooking.endDate
+                                      )
+                                    }
+                                    onClick={() =>
+                                      handleDeselectTable(chessBooking)
+                                    }
+                                  >
+                                    Bỏ Chọn
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                      {chessBookings.map((chessBooking) => (
+                        <div
+                          key={`${chessBooking.tableId}-${chessBooking.date || chessBooking.startDate}`}
+                          className="flex flex-col items-center"
+                        >
+                          <div className="bg-white shadow-md hover:shadow-lg transition rounded-md p-3 transform hover:scale-105 w-full">
+                            {isBooked(
+                              chessBooking.tableId,
+                              chessBooking.startDate,
+                              chessBooking.endDate
+                            ) && (
+                              <div className="mt-2 text-sm text-green-600">
+                                {(() => {
+                                  const localBooking = getLocalBooking(
+                                    chessBooking.tableId,
+                                    new Date(chessBooking.startDate)
+                                  );
+                                  if (localBooking) {
+                                    return (
+                                      <p>
+                                        Bạn đã chọn bàn này (
+                                        {localBooking.bookingMode === "monthly"
+                                          ? "Lịch Tháng"
+                                          : "Lịch Thường"}
+                                        ) từ{" "}
+                                        {formatShortTime(
+                                          localBooking.startDate
+                                        )}{" "}
+                                        đến{" "}
+                                        {formatShortTime(localBooking.endDate)}
+                                      </p>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            )}
+                            <p
+                              onClick={() =>
+                                viewBookingDetail({
+                                  id: chessBooking.tableId,
+                                  startDate: chessBooking.startDate,
+                                  endDate: chessBooking.endDate,
+                                })
+                              }
+                              className="text-blue-500 text-sm italic cursor-pointer hover:underline"
+                            >
+                              🔍 Bấm vào để xem chi tiết bàn
+                            </p>
+                            <p className="text-gray-600 text-sm mt-2">
+                              <span className="font-medium text-black">
+                                Loại Đặt Lịch:{" "}
+                              </span>
+                              {chessBooking.bookingMode === "monthly"
+                                ? "Lịch Tháng"
+                                : "Lịch Thường"}
+                            </p>
+                            <h3 className="text-base font-medium mt-2 text-black">
+                              Loại cờ: {chessBooking.gameType.typeName}{" "}
+                              <span className="font-medium text-black text-sm ml-1">
+                                (
+                                {Number(
+                                  chessBooking.gameTypePrice
+                                ).toLocaleString("vi-VN")}{" "}
+                                ₫/giờ)
+                              </span>
+                            </h3>
+                            <p className="text-gray-600 text-sm mt-2">
+                              <span className="font-medium text-black">
+                                Loại Phòng:{" "}
+                              </span>{" "}
+                              {chessBooking.roomType}{" "}
+                              <span className="font-medium text-black text-sm ml-1">
+                                (
+                                {Number(
+                                  chessBooking.roomTypePrice
+                                ).toLocaleString("vi-VN")}{" "}
+                                ₫/giờ)
+                              </span>
+                            </p>
+                            <p className="text-gray-600 text-sm mt-2">
+                              <span className="font-medium text-black">
+                                Mã Bàn:{" "}
+                              </span>{" "}
+                              {chessBooking.tableId}
+                            </p>
+                            <p className="text-gray-600 text-sm mt-2">
+                              <span className="font-medium text-black">
+                                Tên Phòng:{" "}
+                              </span>{" "}
+                              {chessBooking.roomName}
+                            </p>
+                            <p className="text-gray-600 text-sm mt-2">
+                              <span className="font-medium text-black">
+                                Ngày:{" "}
+                              </span>{" "}
+                              <strong>
+                                {new Date(
+                                  chessBooking.date || chessBooking.startDate
+                                ).toLocaleDateString("vi-VN")}
+                              </strong>
+                            </p>
+                            <div className="text-gray-600 text-sm mt-2">
+                              <p>
+                                <span className="font-medium text-black">
+                                  Giờ Bắt Đầu:{" "}
+                                </span>
+                                {new Date(
+                                  chessBooking.startDate
+                                ).toLocaleTimeString("vi-VN", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: false,
+                                  timeZone: "Asia/Ho_Chi_Minh",
+                                })}
+                              </p>
+                              <p className="mt-2">
+                                <span className="font-medium text-black">
+                                  Giờ Kết Thúc:{" "}
+                                </span>
+                                {new Date(
+                                  chessBooking.endDate
+                                ).toLocaleTimeString("vi-VN", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: false,
+                                  timeZone: "Asia/Ho_Chi_Minh",
+                                })}
+                              </p>
+                            </div>
+                            <p className="text-gray-600 text-sm mt-2">
+                              <span className="font-medium text-black">
+                                Giá Thuê Theo Giờ:{" "}
+                              </span>{" "}
+                              {(
+                                chessBooking.roomTypePrice +
+                                chessBooking.gameTypePrice
+                              ).toLocaleString("vi-VN")}{" "}
+                              đ
+                            </p>
+                            <p className="text-gray-600 text-sm mt-2">
+                              <span className="font-medium text-black">
+                                Tổng Thời Gian Đặt Bàn:{" "}
+                              </span>
+                              {formatDuration(chessBooking.durationInHours)}
+                            </p>
+                            <p className="text-gray-600 text-sm mt-2">
+                              <span className="font-medium text-black">
+                                Tổng Giá:{" "}
+                              </span>{" "}
+                              {chessBooking.totalPrice > 0
+                                ? chessBooking.totalPrice.toLocaleString(
+                                    "vi-VN",
+                                    {
+                                      style: "currency",
+                                      currency: "VND",
+                                    }
+                                  )
+                                : "Không xác định"}
+                            </p>
+                            <div className="flex gap-2 mt-3">
+                              <Button
+                                variant="gradient"
+                                color="amber"
+                                className={`flex-1 py-2 text-sm ${
+                                  isBooked(
                                     chessBooking.tableId,
                                     chessBooking.startDate,
                                     chessBooking.endDate
                                   )
-                                    ? "Đã thêm vào danh sách"
-                                    : "Thêm vào danh sách"}
-                                </Button>
-                                <Button
-                                  onClick={() => {
-                                    router.push(
-                                      `/${locale}/chess_appointment/${chessBooking.tableId}?startTime=${encodeURIComponent(
-                                        chessBooking.startDate
-                                      )}&endTime=${encodeURIComponent(
-                                        chessBooking.endDate
-                                      )}`
+                                    ? "opacity-70 cursor-not-allowed"
+                                    : "hover:shadow-md transition-shadow"
+                                }`}
+                                disabled={isBooked(
+                                  chessBooking.tableId,
+                                  chessBooking.startDate,
+                                  chessBooking.endDate
+                                )}
+                                onClick={() => {
+                                  try {
+                                    const newStart = new Date(
+                                      chessBooking.startDate
                                     );
-                                  }}
-                                  className="text-xs px-2 py-1 bg-green-600 text-white"
-                                >
-                                  Xem Chi Tiết
-                                </Button>
-                              </div>
+                                    const newEnd = new Date(
+                                      chessBooking.endDate
+                                    );
+
+                                    const isAlreadyBooked = localBookings.some(
+                                      (booking) => {
+                                        if (
+                                          booking.tableId !==
+                                          chessBooking.tableId
+                                        )
+                                          return false;
+
+                                        const bookingStart = new Date(
+                                          booking.startDate
+                                        );
+                                        const bookingEnd = new Date(
+                                          booking.endDate
+                                        );
+
+                                        return (
+                                          (newStart >= bookingStart &&
+                                            newStart < bookingEnd) ||
+                                          (newEnd > bookingStart &&
+                                            newEnd <= bookingEnd) ||
+                                          (newStart <= bookingStart &&
+                                            newEnd >= bookingEnd)
+                                        );
+                                      }
+                                    );
+
+                                    if (isAlreadyBooked) {
+                                      const existingBookings =
+                                        localBookings.filter(
+                                          (b) =>
+                                            b.tableId === chessBooking.tableId
+                                        );
+
+                                      const bookingDetails = existingBookings
+                                        .map((b) => {
+                                          const start = new Date(
+                                            b.startDate
+                                          ).toLocaleTimeString("vi-VN", {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                            hour12: false,
+                                          });
+                                          const end = new Date(
+                                            b.endDate
+                                          ).toLocaleTimeString("vi-VN", {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                            hour12: false,
+                                          });
+                                          return `${start} - ${end}`;
+                                        })
+                                        .join(", ");
+
+                                      toast.warning(
+                                        `Bàn số ${chessBooking.tableId} đã được đặt trong khung giờ: ${bookingDetails}`
+                                      );
+                                      return;
+                                    }
+
+                                    const updatedBooking = {
+                                      ...chessBooking,
+                                      bookingMode,
+                                    };
+
+                                    const updatedBookings = [
+                                      ...localBookings,
+                                      updatedBooking,
+                                    ];
+
+                                    const startTimeStr =
+                                      newStart.toLocaleTimeString("vi-VN", {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                        hour12: false,
+                                      });
+                                    const endTimeStr =
+                                      newEnd.toLocaleTimeString("vi-VN", {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                        hour12: false,
+                                      });
+
+                                    localStorage.setItem(
+                                      "chessBookings",
+                                      JSON.stringify(updatedBookings)
+                                    );
+                                    setLocalBookings(updatedBookings);
+                                    toast.success(
+                                      `Đã thêm bàn số ${chessBooking.tableId} (${
+                                        bookingMode === "monthly"
+                                          ? "Lịch Tháng"
+                                          : "Lịch Thường"
+                                      }) từ ${startTimeStr} đến ${endTimeStr} vào danh sách đặt!`
+                                    );
+                                  } catch (error) {
+                                    console.error(
+                                      "Lỗi khi xử lý đặt bàn:",
+                                      error
+                                    );
+                                    toast.error("Có lỗi xảy ra khi đặt bàn!");
+                                  }
+                                }}
+                              >
+                                {isBooked(
+                                  chessBooking.tableId,
+                                  chessBooking.startDate,
+                                  chessBooking.endDate
+                                )
+                                  ? "Đã thêm vào danh sách"
+                                  : "Thêm vào danh sách"}
+                              </Button>
+                              <Button
+                                onClick={() =>
+                                  viewBookingDetail({
+                                    id: chessBooking.tableId,
+                                    startDate: chessBooking.startDate,
+                                    endDate: chessBooking.endDate,
+                                  })
+                                }
+                                className="text-xs px-2 py-1 bg-green-600 text-white"
+                              >
+                                Xem Chi Tiết
+                              </Button>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-12">
-                        <p className="text-gray-600">
-                          Không tìm thấy bàn cờ phù hợp
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {bookingMode !== "monthly" && totalPages > 1 && (
-                    <div className="flex justify-center mt-8 mb-8">
-                      <DefaultPagination
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        onPageChange={handlePageChange}
-                      />
+                        </div>
+                      ))}
                     </div>
                   )}
-                </>
+                </div>
               ) : (
                 <div className="text-center py-12">
                   <p className="text-gray-600">Không tìm thấy bàn cờ phù hợp</p>
+                </div>
+              )}
+
+              {bookingMode !== "monthly" && totalPages > 1 && (
+                <div className="flex justify-center mt-8 mb-8">
+                  <DefaultPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                  />
                 </div>
               )}
             </div>
           )}
         </div>
       </div>
-      <Footer />
+      <div className="">
+        <Footer />
+      </div>
     </div>
   );
 }
