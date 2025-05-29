@@ -36,6 +36,7 @@ interface UserData {
   imageUrl: string | null;
   userRole: string;
   userLabel: string;
+  membershipExpiry: string | null; // Assuming it's a string (e.g., ISO date or null)
 }
 
 function ProfilePage() {
@@ -53,6 +54,7 @@ function ProfilePage() {
     imageUrl: null,
     userRole: "",
     userLabel: "",
+    membershipExpiry: null, // Initialize new field
   });
 
   // Store original user data for cancel functionality
@@ -213,6 +215,7 @@ function ProfilePage() {
           imageUrl: userInfo.avatarUrl || null,
           userRole: userInfo.userRole || "",
           userLabel: userInfo.userLabel || "",
+          membershipExpiry: userInfo.membershipExpiry || null, // Add new field
         };
 
         setUserData(newUserData);
@@ -601,6 +604,34 @@ function ProfilePage() {
                   </div>
                 ))}
 
+                {/* Add Membership Expiry Field */}
+                {isMember && (
+                  <div className="mb-4">
+                    <label
+                      className={`block text-base font-bold ${
+                        isMember ? "text-purple-700" : "text-gray-700"
+                      } mb-1`}
+                    >
+                      Ngày Hết Hạn Thành Viên
+                    </label>
+                    <p
+                      className={`text-gray-900 py-2 px-3 ${
+                        isMember ? "bg-purple-50" : "bg-gray-50"
+                      } rounded-md`}
+                    >
+                      {userData.membershipExpiry
+                        ? new Date(
+                            userData.membershipExpiry
+                          ).toLocaleDateString("vi-VN", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })
+                        : "Không có thông tin"}
+                    </p>
+                  </div>
+                )}
+
                 <div className="mb-4">
                   <label
                     className={`block text-base font-bold ${
@@ -666,6 +697,7 @@ function ProfilePage() {
                 </div>
               </div>
 
+              {/* Rest of the fields (address, bio, etc.) remain unchanged */}
               <div className="mb-4">
                 <label
                   className={`block text-base font-bold ${

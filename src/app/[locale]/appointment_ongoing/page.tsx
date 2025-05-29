@@ -56,7 +56,7 @@ interface TablesAppointment {
   table: Table;
   paidForOpponent: boolean;
   extendedOf: number | null;
-  isExtended: boolean;
+  allowExtend: boolean;
 }
 
 interface User {
@@ -120,6 +120,7 @@ interface RefundInfo {
   cancellation_Block_TimeGate: string;
   cancellation_PartialRefund_TimeGate: string;
   numerOfTablesCancelledThisWeek: number;
+  isExtended: boolean; // Added isExtended to the interface
 }
 
 function Page() {
@@ -389,6 +390,7 @@ function Page() {
         cancellationTime: data.cancellationTime,
         cancellation_Block_TimeGate: data.cancellation_Block_TimeGate,
         numerOfTablesCancelledThisWeek: data.numerOfTablesCancelledThisWeek,
+        isExtended: data.tablesAppointmentModel.isExtended,
         cancellation_PartialRefund_TimeGate:
           data.cancellation_PartialRefund_TimeGate,
       });
@@ -829,17 +831,16 @@ function Page() {
                                   : "Hủy"}
                               </button>
                             )}
-                            {tableAppointment.status === "checked_in" &&
-                              tableAppointment.isExtended == false && (
-                                <button
-                                  onClick={() =>
-                                    handleExtendAppointment(tableAppointment.id)
-                                  }
-                                  className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition text-sm"
-                                >
-                                  Gia hạn
-                                </button>
-                              )}
+                            {tableAppointment.allowExtend == true && (
+                              <button
+                                onClick={() =>
+                                  handleExtendAppointment(tableAppointment.id)
+                                }
+                                className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition text-sm"
+                              >
+                                Gia hạn
+                              </button>
+                            )}
                           </td>
                           <td className="py-2 px-4 border text-center">
                             {tableAppointment.note}

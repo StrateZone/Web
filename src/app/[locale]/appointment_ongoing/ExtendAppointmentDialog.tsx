@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button, Input } from "@material-tailwind/react";
 import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
@@ -38,6 +38,8 @@ interface ExtensionDetails {
   durationInHours: number;
   note: string;
   table: Table;
+  maxNumberOfExtends: number;
+  numberOfExtends: number;
 }
 
 interface ExtensionRequest {
@@ -155,8 +157,76 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
   const [showPaymentConfirmPopup, setShowPaymentConfirmPopup] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSettingsLoading, setIsSettingsLoading] = useState(true);
+  const [maxMinutesForTableExtend, setMaxMinutesForTableExtend] = useState<
+    number | null
+  >(null);
+  const [minMinutesForTableExtend, setMinMinutesForTableExtend] = useState<
+    number | null
+  >(null);
+  const [
+    extendAllow_BeforeMinutes_FromTableComplete,
+    setExtendAllow_BeforeMinutes_FromTableComplete,
+  ] = useState<number | null>(null);
+  const [
+    extendCancel_BeforeMinutes_FromPlayTime,
+    setExtendCancel_BeforeMinutes_FromPlayTime,
+  ] = useState<number | null>(null);
+  const [
+    percentage_Refund_On_ExtendedTables,
+    setPercentage_Refund_On_ExtendedTables,
+  ] = useState<number | null>(null);
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
+
+  useEffect(() => {
+    const fetchSystemSettings = async () => {
+      try {
+        setIsSettingsLoading(true);
+        const systemResponse = await fetch(`${API_BASE_URL}/api/system/1`, {
+          method: "GET",
+          headers: {
+            Accept: "*/*",
+          },
+        });
+        if (!systemResponse.ok) {
+          throw new Error("Không thể tải cài đặt hệ thống");
+        }
+        const systemData = await systemResponse.json();
+        setMaxMinutesForTableExtend(systemData.maxMinutesForTableExtend || 60);
+        setMinMinutesForTableExtend(systemData.minMinutesForTableExtend || 5);
+        setExtendAllow_BeforeMinutes_FromTableComplete(
+          systemData.extendAllow_BeforeMinutes_FromTableComplete || 90
+        );
+        setExtendCancel_BeforeMinutes_FromPlayTime(
+          systemData.extendCancel_BeforeMinutes_FromPlayTime || 0
+        );
+        setPercentage_Refund_On_ExtendedTables(
+          systemData.percentage_Refund_On_ExtendedTables || 50
+        );
+      } catch (error) {
+        console.error("Error fetching system settings:", error);
+        setMaxMinutesForTableExtend(60);
+        setMinMinutesForTableExtend(5);
+        setExtendAllow_BeforeMinutes_FromTableComplete(90);
+        setExtendCancel_BeforeMinutes_FromPlayTime(0);
+        setPercentage_Refund_On_ExtendedTables(50);
+        toast.error(
+          <span className="font-bold">Không thể tải cài đặt hệ thống</span>,
+          {
+            position: "top-right",
+            autoClose: 3000,
+          }
+        );
+      } finally {
+        setIsSettingsLoading(false);
+      }
+    };
+
+    if (open) {
+      fetchSystemSettings();
+    }
+  }, [open]);
 
   const formatTime = (timeString: string) => {
     const date = new Date(timeString);
@@ -396,10 +466,27 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
               color="blue"
               onClick={() => {
                 const minutes = parseInt(extendMinutes as string);
-                if (isNaN(minutes) || minutes < 5) {
+                if (
+                  isNaN(minutes) ||
+                  minutes < (minMinutesForTableExtend || 5)
+                ) {
                   toast.error(
                     <span className="font-bold">
-                      Vui lòng nhập số phút hợp lệ (tối thiểu 5 phút)
+                      Vui lòng nhập số phút hợp lệ (tối thiểu{" "}
+                      {minMinutesForTableExtend || 5} phút)
+                    </span>,
+                    {
+                      position: "top-right",
+                      autoClose: 3000,
+                    }
+                  );
+                  return;
+                }
+                if (minutes > (maxMinutesForTableExtend || 60)) {
+                  toast.error(
+                    <span className="font-bold">
+                      Số phút gia hạn không được vượt quá{" "}
+                      {maxMinutesForTableExtend || 60} phút
                     </span>,
                     {
                       position: "top-right",
@@ -412,7 +499,32 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
               }}
               disabled={isLoading}
             >
-              Xác nhận
+              {isLoading ? (
+                <>
+                  <svg
+                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white "
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                </>
+              ) : (
+                "Xác nhận"
+              )}
             </Button>
           </>
         }
@@ -423,11 +535,59 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
             label="Số phút gia hạn"
             value={extendMinutes}
             onChange={(e) => setExtendMinutes(e.target.value)}
-            min="5"
+            min={minMinutesForTableExtend || 5}
+            max={maxMinutesForTableExtend || 60}
             step="5"
             className="w-full"
             crossOrigin={undefined}
           />
+        </div>
+        <div className="text-left text-gray-700">
+          <h3 className="font-semibold text-gray-800 mb-2">
+            Quy định gia hạn bàn
+          </h3>
+          {isSettingsLoading ? (
+            <p className="text-sm">Đang tải quy định...</p>
+          ) : (
+            <ul className="list-disc pl-5 space-y-1 text-sm">
+              <li>
+                Thời gian gia hạn tối đa cho mỗi bàn là{" "}
+                <strong>{maxMinutesForTableExtend ?? "Lỗi hiển thị"}</strong>{" "}
+                phút.
+              </li>
+              <li>
+                Thời gian gia hạn tối thiểu cho mỗi bàn là{" "}
+                <strong>{minMinutesForTableExtend ?? "Lỗi hiển thị"}</strong>{" "}
+                phút.
+              </li>
+              <li>
+                Gia hạn bàn chỉ được phép thực hiện trước khi bàn hiện tại kết
+                thúc ít nhất{" "}
+                <strong>
+                  {extendAllow_BeforeMinutes_FromTableComplete ??
+                    "Lỗi hiển thị"}
+                </strong>{" "}
+                phút.
+              </li>
+              <li>
+                Sau khi gia hạn, bàn gia hạn có thể bị hủy trước giờ chơi của
+                bàn gia hạn ít nhất{" "}
+                <strong>
+                  {extendCancel_BeforeMinutes_FromPlayTime ?? "Lỗi hiển thị"}
+                </strong>{" "}
+                phút. Nếu hủy bàn gia hạn, người dùng sẽ được hoàn tiền{" "}
+                <strong>
+                  {percentage_Refund_On_ExtendedTables !== null
+                    ? percentage_Refund_On_ExtendedTables * 100
+                    : "Lỗi hiển thị"}
+                </strong>
+                %.
+              </li>
+              <li>
+                Gia hạn bàn yêu cầu xác nhận thanh toán trước khi hoàn tất.
+              </li>
+            </ul>
+          )}
         </div>
       </CustomModal>
 
@@ -463,40 +623,52 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
         }
       >
         {extensionDetails && (
-          <div>
-            <p className="mb-2">
+          <div className="text-left space-y-2">
+            <p>
               <span className="font-medium">Mã bàn:</span>{" "}
               <strong>{extensionDetails.table.tableId}</strong>
             </p>
-            <p className="mb-2">
+            <p>
               <span className="font-medium">Tên phòng:</span>{" "}
               <strong>{extensionDetails.table.roomName}</strong>
             </p>
-            <p className="mb-2">
+            <p>
               <span className="font-medium">Loại cờ:</span>{" "}
               <strong>{extensionDetails.table.gameType.typeName}</strong>
             </p>
-            <p className="mb-2">
+            <p>
               <span className="font-medium">Thời gian bắt đầu:</span>{" "}
               <strong>{formatTime(extensionDetails.scheduleTime)}</strong>
             </p>
-            <p className="mb-2">
+            <p>
               <span className="font-medium">Thời gian kết thúc:</span>{" "}
               <strong>{formatTime(extensionDetails.endTime)}</strong>
             </p>
-            <p className="mb-2">
+            <p>
               <span className="font-medium">Thời lượng:</span>{" "}
               <strong>
                 {(extensionDetails.durationInHours * 60).toFixed(0)} phút
               </strong>
             </p>
-            <p className="mb-2">
+            <p>
+              <span className="font-medium">
+                Số lần gia hạn mỗi bàn tối đa:
+              </span>{" "}
+              <strong>{extensionDetails.maxNumberOfExtends}</strong>
+            </p>
+            <p>
+              <span className="font-medium">
+                Số lần đã gia hạn trên bàn hiện tại:
+              </span>{" "}
+              <strong>{extensionDetails.numberOfExtends}</strong>
+            </p>
+            <p>
               <span className="font-medium">Tổng giá:</span>{" "}
               <strong>
                 {formatCurrency(extensionDetails.table.totalPrice)}
               </strong>
             </p>
-            <p className="mb-2">
+            <p>
               <span className="font-medium">Ghi chú:</span>{" "}
               <strong>{extensionDetails.note}</strong>
             </p>
@@ -534,8 +706,8 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
         }
       >
         {extensionDetails && (
-          <div>
-            <p className="mb-2">
+          <div className="text-left space-y-2">
+            <p>
               Bạn sẽ thanh toán{" "}
               <span className="font-medium">
                 <strong>
@@ -544,7 +716,7 @@ const ExtendAppointmentDialog: React.FC<ExtendAppointmentDialogProps> = ({
               </span>{" "}
               để gia hạn thời gian chơi.
             </p>
-            <p className="mb-2">Vui lòng xác nhận để tiến hành thanh toán.</p>
+            <p>Vui lòng xác nhận để tiến hành thanh toán.</p>
           </div>
         )}
       </CustomModal>

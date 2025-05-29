@@ -117,16 +117,60 @@ const TableBookingPage = () => {
   const [availableVouchers, setAvailableVouchers] = useState<Voucher[]>([]);
   const [userVouchers, setUserVouchers] = useState<Voucher[]>([]);
   const [showVoucherModal, setShowVoucherModal] = useState(false);
+  const [
+    min_Tables_For_MonthlyAppointment,
+    setMin_Tables_For_MonthlyAppointment,
+  ] = useState<number | null>(null);
+  const [isLoadingSystemData, setIsLoadingSystemData] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<{
     tableId: number;
     startDate: string;
     endDate: string;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<"regular" | "monthly">("regular");
+  const handleDeselectAllMonthly = async () => {
+    if (isLoading) return;
 
+    try {
+      setIsLoading(true);
+
+      if (monthlyBookings.length === 0) {
+        toast.info("Không có bàn đặt lịch tháng nào để bỏ chọn!");
+        return;
+      }
+
+      // Check if any monthly bookings have invitations
+      const bookingsWithInvitations = monthlyBookings.filter(
+        (booking) => booking.invitedUsers && booking.invitedUsers.length > 0
+      );
+
+      if (bookingsWithInvitations.length > 0) {
+        const isConfirmed = await ConfirmCancelPopup();
+        if (!isConfirmed) {
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Filter out monthly bookings, keep regular bookings
+      const updatedBookings = chessBookings.filter(
+        (booking) => booking.bookingMode !== "monthly"
+      );
+
+      setChessBookings(updatedBookings);
+      localStorage.setItem("chessBookings", JSON.stringify(updatedBookings));
+      toast.success("Đã bỏ chọn tất cả các bàn đặt lịch tháng!");
+    } catch (error) {
+      console.error("Lỗi khi bỏ chọn tất cả bàn lịch tháng:", error);
+      toast.error("Có lỗi xảy ra khi bỏ chọn tất cả bàn lịch tháng!");
+    } finally {
+      setIsLoading(false);
+    }
+  };
   useEffect(() => {
-    const fetchVouchers = async () => {
+    const fetchData = async () => {
       try {
+        // Fetch vouchers (existing code)
         const sampleResponse = await fetch(
           "https://backend-production-ac5e.up.railway.app/api/vouchers/samples",
           {
@@ -186,13 +230,49 @@ const TableBookingPage = () => {
             setUserVouchers(userData.pagedList);
           }
         }
+
+        // Fetch system data for min_Tables_For_MonthlyAppointment
+        setIsLoadingSystemData(true);
+        const systemResponse = await fetch(
+          "https://backend-production-ac5e.up.railway.app/api/system/1", // Replace with actual endpoint
+          {
+            headers: {
+              accept: "*/*",
+              authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
+        );
+        if (systemResponse.status === 401) {
+          toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
+          localStorage.removeItem("authData");
+          document.cookie =
+            "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+          document.cookie =
+            "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+          setTimeout(() => {
+            window.location.href = `/${localActive}/login`;
+          }, 2000);
+          return;
+        }
+        if (systemResponse.ok) {
+          const systemData = await systemResponse.json();
+          setMin_Tables_For_MonthlyAppointment(
+            systemData.min_Tables_For_MonthlyAppointment || 1
+          );
+        } else {
+          throw new Error("Failed to fetch system data");
+        }
       } catch (error) {
-        console.error("Error fetching vouchers:", error);
-        toast.error("Không thể tải danh sách voucher");
+        console.error("Error fetching data:", error);
+        toast.error("Không thể tải dữ liệu hệ thống hoặc voucher");
+      } finally {
+        setIsLoadingSystemData(false);
       }
     };
 
-    fetchVouchers();
+    fetchData();
   }, [localActive]);
 
   useEffect(() => {
@@ -648,6 +728,12 @@ const TableBookingPage = () => {
           if (isConfirmed) {
             router.push(`/${localActive}/wallet`);
           }
+        } else if (
+          error.message.includes(
+            "Mỗi lịch tháng phải bao gồm tối thiểu 5 đơn bàn."
+          )
+        ) {
+          toast.error("Mỗi lịch tháng phải bao gồm tối thiểu 5 đơn bàn.");
         } else if (error.message.includes("Can not select time in the past")) {
           const now = new Date();
           const pastBookings = bookingsToProcess
@@ -1198,26 +1284,46 @@ const TableBookingPage = () => {
                   )}
                 </TabPanel>
                 <TabPanel value="monthly">
-                  {renderBookingSection(monthlyBookings, "Đặt Lịch Tháng")}
+                  {renderBookingSection(
+                    monthlyBookings,
+                    `Đặt Lịch Tháng (Số bàn tối thiểu phải đặt là: ${
+                      isLoadingSystemData
+                        ? "Đang tải..."
+                        : min_Tables_For_MonthlyAppointment !== null
+                          ? min_Tables_For_MonthlyAppointment
+                          : "Chưa xác định"
+                    })`
+                  )}
                   {monthlyBookings.length > 0 && (
                     <div className="mt-6 flex justify-between items-center">
                       <p className="font-bold text-xl">
                         Thành tiền: {monthlyTotalPrice.toLocaleString()} đ
                       </p>
-                      <Button
-                        onClick={() => handleConfirmBooking(true)}
-                        className="bg-green-600 hover:bg-green-400 text-white px-8 py-3 text-base"
-                        disabled={monthlyBookings.length === 0 || isLoading}
-                      >
-                        {isLoading ? (
-                          <div className="flex items-center justify-center">
-                            <Spinner size={6} />
-                            <span className="ml-2">Đang xử lý...</span>
-                          </div>
-                        ) : (
-                          "Xác nhận đặt bàn tháng"
-                        )}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleDeselectAllMonthly}
+                          variant="gradient"
+                          color="red"
+                          className="px-5 py-3 text-base"
+                          disabled={isLoading}
+                        >
+                          Bỏ Chọn Tất Cả
+                        </Button>
+                        <Button
+                          onClick={() => handleConfirmBooking(true)}
+                          className="bg-green-600 hover:bg-green-400 text-white px-8 py-3 text-base"
+                          disabled={monthlyBookings.length === 0 || isLoading}
+                        >
+                          {isLoading ? (
+                            <div className="flex items-center justify-center">
+                              <Spinner size={6} />
+                              <span className="ml-2">Đang xử lý...</span>
+                            </div>
+                          ) : (
+                            "Xác nhận đặt bàn tháng"
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </TabPanel>

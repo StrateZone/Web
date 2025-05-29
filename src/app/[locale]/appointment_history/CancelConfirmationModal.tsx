@@ -8,6 +8,7 @@ interface RefundInfo {
   cancellation_PartialRefund_TimeGate: string | null;
   refundStatus?: number;
   numerOfTablesCancelledThisWeek?: number;
+  isExtended: boolean; // Added isExtended to the interface
 }
 
 interface CancelConfirmationModalProps {
@@ -67,71 +68,72 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
             } bàn trong tuần này, vượt quá giới hạn cho phép.`
           : refundInfo.message;
 
-      return <p className="font-medium text-red-600">{reason}</p>;
+      return <p className="text-left text-red-600">{reason}</p>;
     }
 
     return (
-      <>
-        <p className="font-medium text-black">
-          Nếu hủy bàn này ở thời điểm hiện tại, bạn sẽ được hoàn tiền{" "}
-          <strong>
-            {refundInfo.message.includes("100%")
-              ? "100%"
-              : refundInfo.message.includes("50%")
-                ? "50%"
-                : refundInfo.message}
-          </strong>
+      <div className="text-left space-y-2">
+        <p>
+          {refundInfo.isExtended ? (
+            <>
+              Bạn sẽ được hoàn tiền{" "}
+              <strong>
+                {refundInfo.message.includes("100%")
+                  ? "100%"
+                  : refundInfo.message.includes("50%")
+                    ? "50%"
+                    : refundInfo.message}
+              </strong>
+            </>
+          ) : (
+            <>
+              Nếu hủy bàn ở thời điểm hiện tại bạn sẽ nhận lại được{" "}
+              <strong>
+                {refundInfo.message.includes("100%")
+                  ? "100%"
+                  : refundInfo.message.includes("50%")
+                    ? "50%"
+                    : refundInfo.message}
+              </strong>
+            </>
+          )}
         </p>
         <p>
-          <span className="font-medium text-black">
-            **Số tiền nhận lại được**:
-          </span>{" "}
-          <strong className="text-black">
-            {formatCurrency(refundInfo.refundAmount)}
-          </strong>
+          <span className="font-medium">Số tiền nhận lại được:</span>{" "}
+          <strong>{formatCurrency(refundInfo.refundAmount)}</strong>
         </p>
         <p>
-          <span className="font-medium text-black">
-            **Thời gian hủy của bạn là**:
-          </span>{" "}
-          <strong className="text-black">
-            {formatDate(refundInfo.cancellationTime)}
-          </strong>
+          <span className="font-medium">Thời gian hủy của bạn là:</span>{" "}
+          <strong>{formatDate(refundInfo.cancellationTime)}</strong>
         </p>
         {refundInfo.cancellation_PartialRefund_TimeGate && (
           <p>
-            <span className="font-medium text-black">
-              **Hạn hoàn tiền một phần**:
-            </span>{" "}
-            <strong className="text-black">
+            <span className="font-medium">Hạn hoàn tiền một phần:</span>{" "}
+            <strong>
               {formatDate(refundInfo.cancellation_PartialRefund_TimeGate)}
             </strong>
           </p>
         )}
         <p>
-          <span className="font-medium text-black">**Hạn chót hủy đơn**:</span>{" "}
-          <strong className="text-black">
-            {formatDate(refundInfo.cancellation_Block_TimeGate)}
-          </strong>
+          <span className="font-medium">Hạn chót hủy đơn:</span>{" "}
+          <strong>{formatDate(refundInfo.cancellation_Block_TimeGate)}</strong>
         </p>
-      </>
+      </div>
     );
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full text-center">
-        <h3 className="text-xl font-bold mb-4 text-black">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full">
+        <h3 className="text-xl font-bold mb-4 text-left text-black">
           Xác Nhận Hủy Bàn Đã Đặt
         </h3>
 
-        <div className="space-y-3 mb-4">
+        <div className="space-y-2 mb-4">
           {renderRefundMessage()}
-          <p>
-            <span className="font-medium text-black">
-              **Số bàn đã hủy trong tuần**:
-            </span>{" "}
-            <strong className="text-black">
+          <p className="text-left">
+            <span className="font-medium">Số bàn đã hủy trong tuần:</span>{" "}
+            <strong>
               {typeof refundInfo.numerOfTablesCancelledThisWeek === "number"
                 ? refundInfo.numerOfTablesCancelledThisWeek
                 : "Không xác định"}

@@ -114,6 +114,7 @@ interface RefundInfo {
   cancellationTime: string;
   cancellation_Block_TimeGate: string;
   cancellation_PartialRefund_TimeGate: string;
+  isExtended: boolean; // Added isExtended to the interface
 }
 
 function Page() {
@@ -390,6 +391,8 @@ function Page() {
         refundAmount: data.refundAmount,
         cancellationTime: data.cancellationTime,
         cancellation_Block_TimeGate: data.cancellation_Block_TimeGate,
+        isExtended: data.tablesAppointmentModel.isExtended,
+
         cancellation_PartialRefund_TimeGate:
           data.cancellation_PartialRefund_TimeGate,
       });

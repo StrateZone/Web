@@ -69,7 +69,10 @@ export default function TermsDialog({ open, onClose }: TermsDialogProps) {
   ] = useState<number | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
-
+  const [
+    min_Tables_For_MonthlyAppointment,
+    setMin_Tables_For_MonthlyAppointment,
+  ] = useState<number | null>(null);
   useEffect(() => {
     const fetchSystemSettings = async () => {
       setIsLoading(true);
@@ -128,6 +131,9 @@ export default function TermsDialog({ open, onClose }: TermsDialogProps) {
         );
         setPercentage_Refund_On_ExtendedTables(
           systemData.percentage_Refund_On_ExtendedTables || 50
+        );
+        setMin_Tables_For_MonthlyAppointment(
+          systemData.min_Tables_For_MonthlyAppointment || 1
         );
         // Fetch percentage refund if not full
         const refundResponse = await fetch(
@@ -268,6 +274,11 @@ export default function TermsDialog({ open, onClose }: TermsDialogProps) {
                 {appointmentRequest_MaxHours_UntilExpiration ?? "Lỗi hiển thị"}
               </strong>{" "}
               giờ.
+              <br />- Số bàn tối thiểu phải đặt trong đặt hẹn tháng là{" "}
+              <strong className="text-indigo-700">
+                {min_Tables_For_MonthlyAppointment ?? "Lỗi hiển thị"}
+              </strong>{" "}
+              bàn.
             </Typography>
 
             <Typography
