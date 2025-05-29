@@ -620,7 +620,20 @@ export default function ChessCategoryPage() {
       }
 
       if (bookingMode === "monthly") {
-        const { datesAndTables } = response.data;
+        const response = await axios.get(url, {
+          params,
+          paramsSerializer: {
+            indexes: null,
+            encode: (param) => param,
+          },
+        });
+
+        const { datesAndTables } = response.data as {
+          datesAndTables: Record<
+            string,
+            { tableResponse: ChessBooking; onDate: string; dayOfWeek: number }[]
+          >;
+        };
         const bookings: ChessBooking[] = Object.entries(datesAndTables).flatMap(
           ([, entries]: [
             string,
