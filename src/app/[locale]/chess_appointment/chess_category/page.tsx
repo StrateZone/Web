@@ -1018,7 +1018,7 @@ export default function ChessCategoryPage() {
               </select>
             </div>
 
-            {roomType && (
+            {bookingMode === "regular" && roomType && (
               <div className="w-44">
                 <label
                   htmlFor="roomNumber"
