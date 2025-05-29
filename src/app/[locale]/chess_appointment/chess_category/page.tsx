@@ -1980,7 +1980,7 @@ export default function ChessCategoryPage() {
                                     setLocalBookings(updatedBookings);
                                     toast.success(
                                       `Đã thêm bàn số ${chessBooking.tableId} (${
-                                        bookingMode === "monthly"
+                                        chessBooking.bookingMode === "monthly"
                                           ? "Lịch Tháng"
                                           : "Lịch Thường"
                                       }) từ ${startTimeStr} đến ${endTimeStr} vào danh sách đặt!`
