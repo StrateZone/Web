@@ -128,6 +128,7 @@ const TableBookingPage = () => {
     endDate: string;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<"regular" | "monthly">("regular");
+
   const handleDeselectAllMonthly = async () => {
     if (isLoading) return;
 
@@ -167,6 +168,7 @@ const TableBookingPage = () => {
       setIsLoading(false);
     }
   };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -1284,45 +1286,56 @@ const TableBookingPage = () => {
                   )}
                 </TabPanel>
                 <TabPanel value="monthly">
-                  {renderBookingSection(
-                    monthlyBookings,
-                    `Đặt Lịch Tháng (Số bàn tối thiểu phải đặt là: ${
-                      isLoadingSystemData
-                        ? "Đang tải..."
-                        : min_Tables_For_MonthlyAppointment !== null
-                          ? min_Tables_For_MonthlyAppointment
-                          : "Chưa xác định"
-                    })`
-                  )}
+                  {renderBookingSection(monthlyBookings, `Đặt Lịch Tháng`)}
                   {monthlyBookings.length > 0 && (
                     <div className="mt-6 flex justify-between items-center">
                       <p className="font-bold text-xl">
                         Thành tiền: {monthlyTotalPrice.toLocaleString()} đ
                       </p>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={handleDeselectAllMonthly}
-                          variant="gradient"
-                          color="red"
-                          className="px-5 py-3 text-base"
-                          disabled={isLoading}
-                        >
-                          Bỏ Chọn Tất Cả
-                        </Button>
-                        <Button
-                          onClick={() => handleConfirmBooking(true)}
-                          className="bg-green-600 hover:bg-green-400 text-white px-8 py-3 text-base"
-                          disabled={monthlyBookings.length === 0 || isLoading}
-                        >
-                          {isLoading ? (
-                            <div className="flex items-center justify-center">
-                              <Spinner size={6} />
-                              <span className="ml-2">Đang xử lý...</span>
-                            </div>
-                          ) : (
-                            "Xác nhận đặt bàn tháng"
+                      <div className="flex flex-col items-end">
+                        {min_Tables_For_MonthlyAppointment !== null &&
+                          monthlyBookings.length <
+                            min_Tables_For_MonthlyAppointment && (
+                            <p className="text-red-500 text-sm mb-2">
+                              Số bàn tối thiểu bạn cần đặt là:{" "}
+                              {min_Tables_For_MonthlyAppointment} {""}
+                              Hiện tại bạn đã chọn: {
+                                monthlyBookings.length
+                              }{" "}
+                              bàn.
+                            </p>
                           )}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleDeselectAllMonthly}
+                            variant="gradient"
+                            color="red"
+                            className="px-5 py-3 text-base"
+                            disabled={isLoading}
+                          >
+                            Bỏ Chọn Tất Cả
+                          </Button>
+                          <Button
+                            onClick={() => handleConfirmBooking(true)}
+                            className="bg-green-600 hover:bg-green-400 text-white px-8 py-3 text-base"
+                            disabled={
+                              monthlyBookings.length === 0 ||
+                              isLoading ||
+                              (min_Tables_For_MonthlyAppointment !== null &&
+                                monthlyBookings.length <
+                                  min_Tables_For_MonthlyAppointment)
+                            }
+                          >
+                            {isLoading ? (
+                              <div className="flex items-center justify-center">
+                                <Spinner size={6} />
+                                <span className="ml-2">Đang xử lý...</span>
+                              </div>
+                            ) : (
+                              "Xác nhận đặt bàn tháng"
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}
