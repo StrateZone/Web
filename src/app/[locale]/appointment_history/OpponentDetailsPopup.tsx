@@ -1,4 +1,5 @@
 "use client";
+
 import { Badge, Button } from "@material-tailwind/react";
 import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 import OpponentRecommendationModalWithNewInvite from "../appointment_ongoing/OpponentRecommendationModal";
@@ -17,7 +18,7 @@ interface User {
   skillLevel: string;
   ranking: string;
   userRole?: number | string;
-  userLabel?: string; // Added userLabel for Top Contributor
+  userLabel?: string;
 }
 
 interface AppointmentRequest {
@@ -44,6 +45,7 @@ interface OpponentDetailsPopupProps {
   appointmentId?: number;
   startTime?: string;
   endTime?: string;
+  onResetInvitedUsers?: () => void;
 }
 
 function OpponentDetailsPopup({
@@ -55,6 +57,7 @@ function OpponentDetailsPopup({
   appointmentId,
   startTime,
   endTime,
+  onResetInvitedUsers,
 }: OpponentDetailsPopupProps) {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [newlyInvitedUsers, setNewlyInvitedUsers] = useState<number[]>([]);
@@ -62,6 +65,14 @@ function OpponentDetailsPopup({
     useState<AppointmentRequest[]>(requests);
   const localActive = useLocale();
 
+  // Reset newlyInvitedUsers when the popup is shown
+  useEffect(() => {
+    if (show) {
+      setNewlyInvitedUsers([]); // Reset on show
+    }
+  }, [show]);
+
+  // Sync localRequests with incoming requests
   useEffect(() => {
     setLocalRequests((prev) => {
       const localOnlyRequests = prev.filter(
@@ -73,11 +84,14 @@ function OpponentDetailsPopup({
     });
   }, [requests]);
 
-  useEffect(() => {
-    if (!show) {
-      setNewlyInvitedUsers([]);
+  // Handle closing the popup and resetting invited users
+  const handleClose = () => {
+    onClose();
+    setNewlyInvitedUsers([]); // Reset on close
+    if (onResetInvitedUsers) {
+      onResetInvitedUsers();
     }
-  }, [show]);
+  };
 
   if (!show) return null;
 
@@ -95,8 +109,6 @@ function OpponentDetailsPopup({
     localRequests,
   });
 
-  // Handle token expiration with axios
-
   const allRequestsInvalid = filteredRequests.every(
     (request) =>
       request.status.toLowerCase() === "rejected" ||
@@ -113,7 +125,7 @@ function OpponentDetailsPopup({
     userRole === 1 || userRole === "Member";
 
   const isTopContributor = (userLabel: string | undefined) =>
-    userLabel === "top_contributor"; // Check for Top Contributor
+    userLabel === "top_contributor";
 
   interface Opponent {
     userId: number;
@@ -150,7 +162,6 @@ function OpponentDetailsPopup({
         appointmentId,
         startTime,
         endTime,
-
         totalPrice: 0,
       };
 
@@ -167,7 +178,6 @@ function OpponentDetailsPopup({
       );
 
       if (response.status === 401) {
-        // Show toast notification for token expiration
         toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", {
           position: "top-right",
           autoClose: 3000,
@@ -177,7 +187,6 @@ function OpponentDetailsPopup({
           draggable: true,
         });
 
-        // Clear authentication data
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("authData");
@@ -186,7 +195,6 @@ function OpponentDetailsPopup({
         document.cookie =
           "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
 
-        // Redirect to login page after a short delay to allow toast to be visible
         setTimeout(() => {
           window.location.href = `/${localActive}/login`;
         }, 2000);
@@ -246,7 +254,7 @@ function OpponentDetailsPopup({
           skillLevel: "",
           ranking: "",
           userRole: undefined,
-          userLabel: undefined, // Initialize userLabel
+          userLabel: undefined,
         },
       }));
 
@@ -279,7 +287,7 @@ function OpponentDetailsPopup({
               Danh sách người chơi (Bàn {tableId})
             </h3>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="text-gray-500 hover:text-gray-700"
             >
               <svg
@@ -450,7 +458,7 @@ function OpponentDetailsPopup({
 
           <div className="mt-8 flex justify-end">
             <Button
-              onClick={onClose}
+              onClick={handleClose}
               className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-lg"
             >
               Đóng

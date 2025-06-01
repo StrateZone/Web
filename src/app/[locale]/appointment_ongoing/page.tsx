@@ -17,9 +17,7 @@ import { Button } from "@material-tailwind/react";
 import TermsDialog from "../chess_appointment/chess_category/TermsDialog";
 import { toast } from "react-toastify";
 import ExtendAppointmentDialog from "./ExtendAppointmentDialog";
-import { time } from "console";
 
-// Interfaces
 interface GameType {
   typeId: number;
   typeName: string;
@@ -120,7 +118,7 @@ interface RefundInfo {
   cancellation_Block_TimeGate: string;
   cancellation_PartialRefund_TimeGate: string;
   numerOfTablesCancelledThisWeek: number;
-  isExtended: boolean; // Added isExtended to the interface
+  isExtended: boolean;
 }
 
 function Page() {
@@ -162,6 +160,7 @@ function Page() {
   const [currentTableAppointmentId, setCurrentTableAppointmentId] = useState<
     number | null
   >(null);
+  const [popupKey, setPopupKey] = useState(0); // Add key for remounting
 
   const authDataString = localStorage.getItem("authData");
   const authData = JSON.parse(authDataString || "{}");
@@ -175,7 +174,6 @@ function Page() {
   ] = useState<number | null>(null);
   const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
 
-  // Fetch data from API
   const fetchData = async () => {
     setIsLoading(true);
     setError(null);
@@ -241,7 +239,6 @@ function Page() {
     }
   };
 
-  // Fetch appointment details by ID
   const handleAppointmentClick = async (appointment: Appointment) => {
     setIsLoading(true);
     setError(null);
@@ -309,6 +306,7 @@ function Page() {
       date.toLocaleDateString("vi-VN") + " " + date.toLocaleTimeString("vi-VN")
     );
   };
+
   const fetchSystemSettings = async () => {
     setIsLoading(true);
     setError(null);
@@ -337,6 +335,7 @@ function Page() {
       setIsLoading(false);
     }
   };
+
   const formatTime = (timeString: string) => {
     const date = new Date(timeString);
     return date.toLocaleTimeString("vi-VN", {
@@ -354,6 +353,11 @@ function Page() {
 
   const handleBackToList = () => {
     setSelectedAppointment(null);
+    setShowOpponentDetails(false);
+    setCurrentOpponentRequests([]); // Clear currentOpponentRequests
+    setCurrentTableId(null); // Clear currentTableId
+    setCurrentScheduleTime(null); // Clear currentScheduleTime
+    setPopupKey((prev) => prev + 1); // Increment key to force remount
   };
 
   const handlePageChange = (newPage: number) => {
@@ -596,6 +600,7 @@ function Page() {
       setCurrentTableId(tableId);
       setCurrentScheduleTime(null);
       setShowOpponentDetails(true);
+      setPopupKey((prev) => prev + 1); // Increment key to force remount
       return;
     }
 
@@ -619,6 +624,7 @@ function Page() {
     setCurrentTableId(tableId);
     setCurrentScheduleTime(scheduleTime);
     setShowOpponentDetails(true);
+    setPopupKey((prev) => prev + 1); // Increment key to force remount
   };
 
   const handleExtendAppointment = (tableAppointmentId: number) => {
@@ -633,6 +639,10 @@ function Page() {
     }
   };
 
+  const handleResetInvitedUsers = () => {
+    console.log("Resetting invited users from Page component");
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -643,7 +653,6 @@ function Page() {
         />
 
         <div className="container mx-auto px-12 py-8 max-w-full">
-          {" "}
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold">Cuộc Hẹn Sắp Diễn Ra</h1>
             <Button
@@ -731,7 +740,6 @@ function Page() {
                     <tr className="bg-gray-100">
                       <th className="py-2 px-4 border">Mã đặt bàn</th>
                       <th className="py-2 px-4 border">Mã Bàn</th>
-
                       <th className="py-2 px-4 border">Loại Cờ</th>
                       <th className="py-2 px-4 border">Loại Phòng</th>
                       <th className="py-2 px-4 border">Tên Phòng</th>
@@ -739,11 +747,9 @@ function Page() {
                         Giờ Bắt Đầu Và Kết Thúc
                       </th>
                       <th className="py-2 px-4 border">Ngày</th>
-
                       <th className="py-2 px-4 border">Tổng Giá</th>
                       <th className="py-2 px-4 border">Trạng Thái</th>
                       <th className="py-2 px-4 border">Đối Thủ</th>
-
                       <th className="py-2 px-4 border">
                         Thanh Toán Cho Đối Thủ
                       </th>
@@ -790,7 +796,6 @@ function Page() {
                             {formatTime(tableAppointment.scheduleTime)} -{" "}
                             {formatTime(tableAppointment.endTime)}
                           </td>
-
                           <td className="py-2 px-4 border text-center">
                             {new Date(
                               tableAppointment.scheduleTime
@@ -799,7 +804,6 @@ function Page() {
                           <td className="py-2 px-4 border text-center">
                             {formatCurrency(tableAppointment.price)}
                           </td>
-
                           <td className="py-2 px-4 border text-center">
                             <span
                               className={`px-2 py-1 rounded ${getStatusColor(tableAppointment.status).bg} ${getStatusColor(tableAppointment.status).text}`}
@@ -911,7 +915,6 @@ function Page() {
                           <th className="py-3 px-5 text-left">
                             Phương thức đặt hẹn
                           </th>
-
                           <th className="py-3 px-4 text-left">Tổng Số Bàn</th>
                           <th className="py-3 px-4 text-left">Tổng Giá</th>
                           <th className="py-3 px-4 text-left">Trạng Thái</th>
@@ -995,6 +998,7 @@ function Page() {
             isLoading={isLoading}
           />
           <OpponentDetailsPopup
+            key={popupKey} // Add key to force remount
             show={showOpponentDetails}
             onClose={() => setShowOpponentDetails(false)}
             requests={currentOpponentRequests}
@@ -1021,6 +1025,7 @@ function Page() {
                   ta.scheduleTime === currentScheduleTime
               )?.endTime
             }
+            onResetInvitedUsers={handleResetInvitedUsers}
           />
           <ExtendAppointmentDialog
             open={showExtendDialog}
