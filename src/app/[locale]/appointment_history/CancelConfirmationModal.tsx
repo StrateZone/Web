@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 interface RefundInfo {
   message: string;
@@ -26,6 +26,37 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
   refundInfo,
   isLoading,
 }) => {
+  const [
+    max_NumberOfTables_CancelPerWeek,
+    setMax_NumberOfTables_CancelPerWeek,
+  ] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchSystemSettings = async () => {
+      try {
+        // Fetch system settings
+        const systemResponse = await fetch(
+          "https://backend-production-ac5e.up.railway.app/api/system/1",
+          {
+            method: "GET",
+            headers: {
+              Accept: "*/*",
+            },
+          }
+        );
+        const systemData = await systemResponse.json();
+
+        setMax_NumberOfTables_CancelPerWeek(
+          systemData.max_NumberOfTables_CancelPerWeek
+        );
+      } catch (error) {
+      } finally {
+      }
+    };
+
+    fetchSystemSettings();
+  }, []);
+
   if (!show || !refundInfo) {
     return null;
   }
@@ -72,51 +103,64 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
     }
 
     return (
-      <div className="text-left space-y-2">
-        <p>
-          {refundInfo.isExtended ? (
-            <>
-              Bạn sẽ được hoàn tiền{" "}
-              <strong>
+      <div className="text-left space-y-3">
+        <p className="grid grid-cols-2 gap-2">
+          <span className="font-medium text-gray-700">
+            Thông tin hoàn tiền:
+          </span>
+          <strong className="text-gray-900">
+            {refundInfo.isExtended ? (
+              <>
+                Bạn sẽ được hoàn tiền{" "}
                 {refundInfo.message.includes("100%")
                   ? "100%"
                   : refundInfo.message.includes("50%")
                     ? "50%"
                     : refundInfo.message}
-              </strong>
-            </>
-          ) : (
-            <>
-              Nếu hủy bàn ở thời điểm hiện tại bạn sẽ nhận lại được{" "}
-              <strong>
+              </>
+            ) : (
+              <>
+                Nếu hủy bàn ở thời điểm hiện tại bạn sẽ nhận lại được{" "}
                 {refundInfo.message.includes("100%")
                   ? "100%"
                   : refundInfo.message.includes("50%")
                     ? "50%"
                     : refundInfo.message}
-              </strong>
-            </>
-          )}
+              </>
+            )}
+          </strong>
         </p>
-        <p>
-          <span className="font-medium">Số tiền nhận lại được:</span>{" "}
-          <strong>{formatCurrency(refundInfo.refundAmount)}</strong>
+        <p className="grid grid-cols-2 gap-2">
+          <span className="font-medium text-gray-700">
+            Số tiền nhận lại được:
+          </span>
+          <strong className="text-gray-900">
+            {formatCurrency(refundInfo.refundAmount)}
+          </strong>
         </p>
-        <p>
-          <span className="font-medium">Thời gian hủy của bạn là:</span>{" "}
-          <strong>{formatDate(refundInfo.cancellationTime)}</strong>
+        <p className="grid grid-cols-2 gap-2">
+          <span className="font-medium text-gray-700">
+            Thời gian hủy của bạn là:
+          </span>
+          <strong className="text-gray-900">
+            {formatDate(refundInfo.cancellationTime)}
+          </strong>
         </p>
         {refundInfo.cancellation_PartialRefund_TimeGate && (
-          <p>
-            <span className="font-medium">Hạn hoàn tiền một phần:</span>{" "}
-            <strong>
+          <p className="grid grid-cols-2 gap-2">
+            <span className="font-medium text-gray-700">
+              Hạn hoàn tiền một phần:
+            </span>
+            <strong className="text-gray-900">
               {formatDate(refundInfo.cancellation_PartialRefund_TimeGate)}
             </strong>
           </p>
         )}
-        <p>
-          <span className="font-medium">Hạn chót hủy đơn:</span>{" "}
-          <strong>{formatDate(refundInfo.cancellation_Block_TimeGate)}</strong>
+        <p className="grid grid-cols-2 gap-2">
+          <span className="font-medium text-gray-700">Hạn chót hủy đơn:</span>
+          <strong className="text-gray-900">
+            {formatDate(refundInfo.cancellation_Block_TimeGate)}
+          </strong>
         </p>
       </div>
     );
@@ -124,18 +168,30 @@ const CancelConfirmationModal: React.FC<CancelConfirmationModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full">
+      <div className="bg-white rounded-lg p-6 max-w-[600px] w-full">
         <h3 className="text-xl font-bold mb-4 text-left text-black">
           Xác Nhận Hủy Bàn Đã Đặt
         </h3>
 
         <div className="space-y-2 mb-4">
           {renderRefundMessage()}
-          <p className="text-left">
-            <span className="font-medium">Số bàn đã hủy trong tuần:</span>{" "}
-            <strong>
+          <p className="grid grid-cols-2 gap-2">
+            <span className="font-medium text-gray-700">
+              Số bàn đã hủy trong tuần:
+            </span>
+            <strong className="text-gray-900">
               {typeof refundInfo.numerOfTablesCancelledThisWeek === "number"
                 ? refundInfo.numerOfTablesCancelledThisWeek
+                : "Không xác định"}
+            </strong>
+          </p>
+          <p className="grid grid-cols-2 gap-2">
+            <span className="font-medium text-gray-700">
+              Số bàn tối đa có thể hủy mỗi tuần:
+            </span>
+            <strong className="text-gray-900">
+              {typeof max_NumberOfTables_CancelPerWeek === "number"
+                ? max_NumberOfTables_CancelPerWeek
                 : "Không xác định"}
             </strong>
           </p>

@@ -169,7 +169,10 @@ function Page() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const localActive = useLocale();
-
+  const [
+    extendCancel_BeforeMinutes_FromPlayTime,
+    setExtendCancel_BeforeMinutes_FromPlayTime,
+  ] = useState<number | null>(null);
   const API_BASE_URL = "https://backend-production-ac5e.up.railway.app";
 
   // Fetch data from API
@@ -297,6 +300,7 @@ function Page() {
 
   useEffect(() => {
     fetchData();
+    fetchSystemSettings();
   }, [currentPage, pageSize, orderBy]);
 
   const formatDate = (dateString: string) => {
@@ -305,7 +309,34 @@ function Page() {
       date.toLocaleDateString("vi-VN") + " " + date.toLocaleTimeString("vi-VN")
     );
   };
+  const fetchSystemSettings = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const systemResponse = await fetch(`${API_BASE_URL}/api/system/1`, {
+        method: "GET",
+        headers: {
+          Accept: "*/*",
+        },
+      });
 
+      if (!systemResponse.ok) {
+        const errorData = await systemResponse.text();
+        throw new Error(errorData || "Không thể tải cài đặt hệ thống");
+      }
+
+      const systemData = await systemResponse.json();
+      setExtendCancel_BeforeMinutes_FromPlayTime(
+        systemData.extendCancel_BeforeMinutes_FromPlayTime
+      );
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Lỗi khi tải cài đặt hệ thống"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
   const formatTime = (timeString: string) => {
     const date = new Date(timeString);
     return date.toLocaleTimeString("vi-VN", {
@@ -818,7 +849,13 @@ function Page() {
                               (tableAppointment.status === "incoming" &&
                                 tableAppointment.extendedOf !== null &&
                                 new Date(tableAppointment.scheduleTime) >
-                                  new Date())) && (
+                                  new Date(
+                                    new Date().getTime() -
+                                      (extendCancel_BeforeMinutes_FromPlayTime ||
+                                        0) *
+                                        60 *
+                                        1000
+                                  ))) && (
                               <button
                                 onClick={() =>
                                   checkCancelCondition(tableAppointment.id)
@@ -831,7 +868,7 @@ function Page() {
                                   : "Hủy"}
                               </button>
                             )}
-                            {tableAppointment.allowExtend == true && (
+                            {tableAppointment.allowExtend === true && (
                               <button
                                 onClick={() =>
                                   handleExtendAppointment(tableAppointment.id)
