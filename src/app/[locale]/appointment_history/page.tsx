@@ -136,7 +136,7 @@ function Page() {
   const localActive = useLocale();
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
+  const [pageSize, setPageSize] = useState(20);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [hasPrevious, setHasPrevious] = useState(false);

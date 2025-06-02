@@ -664,7 +664,7 @@ function Page() {
               Xem Điều Khoản
             </Button>
           </div>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          {/* <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <div className="flex items-center gap-2">
               <label htmlFor="orderBy" className="font-medium">
                 Sắp xếp theo:
@@ -681,7 +681,7 @@ function Page() {
                 <option value="total-price">Giá thấp nhất</option>
               </select>
             </div>
-          </div>
+          </div> */}
           {isLoading ? (
             <div className="flex justify-center items-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
