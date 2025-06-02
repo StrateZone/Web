@@ -137,7 +137,7 @@ function Page() {
     hasNext: false,
   });
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
+  const [pageSize, setPageSize] = useState(20);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [hasPrevious, setHasPrevious] = useState(false);
@@ -972,7 +972,7 @@ function Page() {
                     </table>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row justify-center items-center mt-4 gap-4">
+                  {/* <div className="flex flex-col sm:flex-row justify-center items-center mt-4 gap-4">
                     {totalPages > 1 && (
                       <div className="flex justify-center mt-8 mb-8">
                         <DefaultPagination
@@ -982,7 +982,7 @@ function Page() {
                         />
                       </div>
                     )}
-                  </div>
+                  </div> */}
                 </>
               )}
             </div>
