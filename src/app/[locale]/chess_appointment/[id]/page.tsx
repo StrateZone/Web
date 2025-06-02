@@ -17,6 +17,7 @@ interface ChessBooking {
   gameType: {
     typeId: number;
     typeName: string;
+    status?: string;
   };
   gameTypeId: number;
   gameTypePrice: number;
@@ -27,8 +28,13 @@ interface ChessBooking {
   startDate: string;
   tableId: number;
   totalPrice: number;
-  tableNumber: number;
+  tableNumber?: number;
   imageUrl?: string;
+  roomDescription?: string;
+  bookingMode: "regular" | "monthly";
+  date?: string;
+  dayOfWeek?: number;
+  isAvailable?: boolean;
 }
 
 const TableDetailsPage = () => {
@@ -37,7 +43,7 @@ const TableDetailsPage = () => {
   const searchParams = useSearchParams();
   const [chessBooking, setChessBooking] = useState<ChessBooking | null>(null);
   const [loading, setLoading] = useState(true);
-  const [addingToCart, setAddingToCart] = useState(false); // Thêm state cho loading khi thêm vào giỏ
+  const [addingToCart, setAddingToCart] = useState(false);
   const [error, setError] = useState("");
   const [localBookings, setLocalBookings] = useState<ChessBooking[]>([]);
 
@@ -47,7 +53,12 @@ const TableDetailsPage = () => {
       try {
         const parsed = JSON.parse(storedBookings);
         if (Array.isArray(parsed)) {
-          setLocalBookings(parsed);
+          setLocalBookings(
+            parsed.map((booking: any) => ({
+              ...booking,
+              bookingMode: booking.bookingMode || "regular", // Default for backward compatibility
+            }))
+          );
         }
       } catch (error) {
         console.error("Lỗi khi parse dữ liệu từ localStorage:", error);
@@ -124,6 +135,7 @@ const TableDetailsPage = () => {
         const bookingWithImage = {
           ...data,
           imageUrl: getImageByGameType(data.gameType.typeName),
+          bookingMode: data.isForMonthlyBooking ? "monthly" : "regular", // Use isForMonthlyBooking to set bookingMode
         };
         setChessBooking(bookingWithImage);
       } catch (error) {
@@ -150,40 +162,6 @@ const TableDetailsPage = () => {
     return "https://png.pngtree.com/background/20230524/original/pngtree-the-game-of-chess-picture-image_2710450.jpg";
   };
 
-  const getPrivilegesByRoomType = (roomType: string) => {
-    switch (roomType.toLowerCase()) {
-      case "premium":
-        return [
-          "Miễn phí nước uống cao cấp",
-          "Hỗ trợ tư vấn cờ từ kiện tướng",
-          "Không gian VIP riêng tư",
-          "Wifi tốc độ cao",
-          "Bàn cờ cao cấp",
-          "Đồ ăn nhẹ miễn phí",
-        ];
-      case "basic":
-        return [
-          "Giá cả phải chăng",
-          "Có nhiều bàn, phù hợp với người thích đông đúc",
-        ];
-      case "openspace":
-        return [
-          "Không gian mở thoáng đãng",
-          "Khu vực chung rộng rãi",
-          "Wifi miễn phí",
-          "Bàn cờ tiêu chuẩn",
-          "Dễ dàng giao lưu",
-        ];
-      default:
-        return [
-          "Miễn phí nước uống",
-          "Hỗ trợ tư vấn cờ",
-          "Không gian yên tĩnh",
-          "Wifi miễn phí",
-        ];
-    }
-  };
-
   const GAME_TYPE_TRANSLATIONS: Record<string, string> = {
     chess: "Cờ Vua",
     xiangqi: "Cờ Tướng",
@@ -193,7 +171,8 @@ const TableDetailsPage = () => {
   const translateRoomType = (roomType: string): string => {
     const type = roomType.toLowerCase();
     if (type.includes("basic")) return "Phòng thường";
-    if (type.includes("premium")) return "Phòng cao cấp";
+    if (type.includes("premium") || type.includes("cao cấp"))
+      return "Phòng cao cấp";
     if (type.includes("openspace") || type.includes("open space"))
       return "Không gian mở";
     return roomType;
@@ -207,7 +186,7 @@ const TableDetailsPage = () => {
       const newStart = new Date(chessBooking.startDate);
       const newEnd = new Date(chessBooking.endDate);
 
-      // 1. Kiểm tra xem bàn đã được đặt chưa
+      // 1. Check for booking conflicts
       const isAlreadyBooked = localBookings.some((booking) => {
         if (booking.tableId !== chessBooking.tableId) return false;
 
@@ -248,7 +227,7 @@ const TableDetailsPage = () => {
         return;
       }
 
-      // 2. Kiểm tra các booking có thể gộp
+      // 2. Check for mergeable bookings
       const mergeableBookings = localBookings.filter((item) => {
         if (item.tableId !== chessBooking.tableId) return false;
         if (new Date(item.startDate).toDateString() !== newStart.toDateString())
@@ -259,7 +238,7 @@ const TableDetailsPage = () => {
 
         return (
           (newStart <= itemEnd && newEnd >= itemStart) ||
-          Math.abs(newStart.getTime() - itemEnd.getTime()) <= 3600000 ||
+          Math.abs(newStart.getTime() - itemEnd.getTime()) <= 3600000 || // 1 hour gap
           Math.abs(newEnd.getTime() - itemStart.getTime()) <= 3600000
         );
       });
@@ -315,7 +294,11 @@ const TableDetailsPage = () => {
           hour12: false,
         });
 
-        message = `Đã gộp bàn số ${chessBooking.tableId} từ ${startTimeStr} đến ${endTimeStr} (${formatDuration(durationInHours)})`;
+        message = `Đã gộp bàn số ${chessBooking.tableId} (${
+          chessBooking.bookingMode === "monthly" ? "Lịch Tháng" : "Lịch Thường"
+        }) từ ${startTimeStr} đến ${endTimeStr} (${formatDuration(
+          durationInHours
+        )})`;
       } else {
         updatedBookings = [...localBookings, chessBooking];
         const startTimeStr = newStart.toLocaleTimeString("vi-VN", {
@@ -328,7 +311,9 @@ const TableDetailsPage = () => {
           minute: "2-digit",
           hour12: false,
         });
-        message = `Đã thêm bàn số ${chessBooking.tableId} từ ${startTimeStr} đến ${endTimeStr} vào danh sách đặt!`;
+        message = `Đã thêm bàn số ${chessBooking.tableId} (${
+          chessBooking.bookingMode === "monthly" ? "Lịch Tháng" : "Lịch Thường"
+        }) từ ${startTimeStr} đến ${endTimeStr} vào danh sách đặt!`;
       }
 
       localStorage.setItem("chessBookings", JSON.stringify(updatedBookings));
@@ -360,14 +345,13 @@ const TableDetailsPage = () => {
   if (error) {
     return (
       <div className="min-h-screen flex flex-col">
-        {/* <Navbar /> */}
         <div className="flex-grow flex flex-col items-center justify-center gap-4">
           <div className="text-red-500 text-xl text-center">
             Bàn mà bạn chọn đã qua thời gian hợp lệ để đặt!!!
           </div>
           <button
-            // onClick={() => router.push(`/${locale}/chess_appointment/`)} // Thay đổi đường dẫn tùy theo route của bạn
             className="text-blue-500 text-xl underline hover:text-blue-700 cursor-pointer"
+            onClick={() => router.push("/chess_appointment/")}
           >
             Ấn vào đây để tiếp tục
           </button>
@@ -396,7 +380,6 @@ const TableDetailsPage = () => {
     month: "2-digit",
     year: "numeric",
   });
-  const privileges = getPrivilegesByRoomType(chessBooking?.roomType || "");
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -425,8 +408,11 @@ const TableDetailsPage = () => {
                   if (localBooking) {
                     return (
                       <p>
-                        Bạn đã đặt bàn này từ{" "}
-                        {formatShortTime(localBooking.startDate)} đến{" "}
+                        Bạn đã đặt bàn này (
+                        {localBooking.bookingMode === "monthly"
+                          ? "Lịch Tháng"
+                          : "Lịch Thường"}
+                        ) từ {formatShortTime(localBooking.startDate)} đến{" "}
                         {formatShortTime(localBooking.endDate)}
                       </p>
                     );
@@ -436,7 +422,6 @@ const TableDetailsPage = () => {
               </div>
             )}
           </div>
-          <div className="w-10"></div>
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 p-8">
               <div className="relative group overflow-hidden rounded-lg">
@@ -486,6 +471,14 @@ const TableDetailsPage = () => {
                         {endDate.getMinutes().toString().padStart(2, "0")}
                       </span>
                     </p>
+                    <p className="text-gray-700 text-base">
+                      <span className="text-gray-700">Loại Đặt Lịch:</span>{" "}
+                      <span className="text-black font-medium">
+                        {chessBooking.bookingMode === "monthly"
+                          ? "Lịch Tháng"
+                          : "Lịch Thường"}
+                      </span>
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-base text-gray-700">Thành Tiền</p>
@@ -516,41 +509,22 @@ const TableDetailsPage = () => {
                         {formatDuration(chessBooking.durationInHours)}
                       </p>
                     </div>
-
                     <div>
-                      <div>
-                        <p className="text-base text-gray-500">Loại Phòng</p>
-                        <p className="font-medium text-lg">
-                          {translateRoomType(chessBooking.roomType)}
-                        </p>
-                      </div>
+                      <p className="text-base text-gray-500">Loại Phòng</p>
+                      <p className="font-medium text-lg">
+                        {translateRoomType(chessBooking.roomType)}
+                      </p>
                     </div>
                   </div>
                 </div>
                 <div>
                   <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                    Tiện ích phòng
+                    Mô tả phòng
                   </h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {privileges.map((item, index) => (
-                      <div key={index} className="flex items-center">
-                        <div className="w-5 h-5 bg-amber-100 rounded-full flex items-center justify-center mr-2">
-                          <svg
-                            className="w-3 h-3 text-amber-600"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </div>
-                        <span className="text-black text-base">{item}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <p className="text-black text-base">
+                    {chessBooking.roomDescription ||
+                      "Không có mô tả chi tiết cho phòng này."}
+                  </p>
                 </div>
                 <div className="pt-6 flex flex-col sm:flex-row gap-4">
                   <Button
@@ -597,7 +571,9 @@ const TableDetailsPage = () => {
                     variant="text"
                     color="gray"
                     className="flex items-center gap-2 text-lg"
-                    onClick={() => router.back()}
+                    onClick={() =>
+                      router.push("/vn/chess_appointment/chess_category")
+                    }
                   >
                     <FaShoppingCart size={16} />
                     Tiếp Tục Chọn Bàn
